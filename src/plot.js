@@ -33,7 +33,7 @@ function drawPlot(g,L,ser,col,cross){const{pl,sx,sy,R,sp}=L;g.font='11px system-
 g.strokeStyle=col.fg;g.beginPath();g.moveTo(pl.x+.5,pl.y);g.lineTo(pl.x+.5,pl.y+pl.h+.5);g.lineTo(pl.x+pl.w,pl.y+pl.h+.5);g.stroke();
 for(const r of R){if(r.t==='lg'){g.fillStyle=r.c;g.fillRect(r.x,r.y+4,8,4);g.fillStyle=col.fg;g.fillText(r.s,r.x+12,r.y)}else{g.fillStyle=r.t==='yn'||r.t==='xn'?col.fg:((r.ax==='y'&&sp.ya.hot)||(r.ax==='x'&&sp.xa.hot))?col.ac:col.mu;g.fillText(r.s,r.x,r.y)}}
 g.save();g.beginPath();g.rect(pl.x,pl.y-1,pl.w+1,pl.h+2);g.clip();const lg=sp.xa.log;
-for(const q of ser){g.strokeStyle=q.c;g.lineWidth=q.w||1.6;g.beginPath();let s=0;const X=q.X,Y=q.Y,n=X.length;for(let i=0;i<n;i++){const u=X[i],v=Y[i];if(u!==u||v!==v||(lg&&(u<=0||v<=0))){s=0;continue}const px=sx(u),py=sy(v);s?g.lineTo(px,py):g.moveTo(px,py);s=1}g.stroke()}
+for(const q of ser){g.strokeStyle=q.c;g.lineWidth=q.w||1.6;g.beginPath();let s=0;const X=q.X,Y=q.Y,n=X.length;for(let i=0;i<n;i++){const u=X[i],v=Y[i];if(u!==u||v!==v||(lg&&(u<=0||v<=0))){s=0;continue}const px=sx(u),py=sy(v);s?g.lineTo(px,py):g.moveTo(px,py);s=1}g.stroke();if(q.mk){for(let i=0;i<n;i++){const u=X[i],v=Y[i];if(u!==u||v!==v)continue;g.beginPath();g.arc(sx(u),sy(v),3,0,2*PI);if(q.ho&&q.ho[i]){g.fillStyle=col.cd||'#fff';g.fill();g.stroke()}else{g.fillStyle=q.c;g.fill()}}}}
 if(cross!=null){const px=pl.x+cross*pl.w;g.strokeStyle=col.ac;g.lineWidth=1;g.beginPath();g.moveTo(px,pl.y);g.lineTo(px,pl.y+pl.h);g.stroke()}g.restore()}
 /* ===== screen specifications ===== */
 const CL={a:'#e8590c',b:'#1c7ed6',k:'#2f9e44',g:'#868e96',v:'#9c36b5'};
@@ -54,6 +54,10 @@ case 3:return[{xa:xth,ya:st(AX.m,'筒内質量 [mg]'),lg:[{n:'全体',c:CL.a},{n
 case 4:return[{xa:xth,ya:st(AX.tq,'トルク [N·m]'),lg:[{n:'図示',c:CL.a},{n:'始動',c:CL.k},{n:'摩擦',c:CL.v},{n:'動力計',c:CL.b}],ser:[S(TH0,t0.Ti,CL.a),S(TH0,t0.Ts,CL.k),S(TH0,t0.Tf,CL.v),S(TH0,t0.Td,CL.b)]},{xa:xth,ya:{a:AX.N.a,b:AX.N.b,name:'N [rpm]',hot:hot(AX.N)},ser:[S(TH0,t0.N,CL.b)]},{xa:xth,ya:st(AX.vp,'ピストン速度 [m/s]'),ser:[S(TH0,t0.vp,CL.k)]}];
 case 5:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:fx(0,90,'α [°]'),ser:[S(HX,H.al,CL.b)]},{xa:xt,ya:fx(0,120,'p_in [kPa]'),ser:[S(HX,H.pin,CL.a)]},{xa:xt,ya:{a:AX.Tw.a,b:AX.Tw.b,name:'T_w [K]',hot:hot(AX.Tw)},ser:[S(HX,H.Tw,CL.k)]}];
 default:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:st(AX.tb,'トルク [N·m]'),lg:[{n:'T_b',c:CL.a},{n:'T_dyno',c:CL.b}],ser:[S(HX,H.tb,CL.a),S(HX,H.td,CL.b)]},{xa:xt,ya:fx(0,1,'充水率 f [-]'),lg:[{n:'f_cmd',c:CL.a},{n:'f_eff',c:CL.b}],ser:[S(HX,H.fc,CL.a),S(HX,H.fe,CL.b)]}]}}
+const SWX={a:1000,b:7000,name:'N [rpm]',tv:[1000,2000,3000,4000,5000,6000,7000]};
+function sweepSpec(cur,ref,sub){const sets=[ref?{p:ref,c:CL.g,w:1.2}:null,cur?{p:cur,c:CL.a,w:1.8}:null].filter(Boolean),lg=ref?[{n:'基準',c:CL.g},{n:'現在',c:CL.a}]:null,
+G=(k,f,name,fix,d0)=>{let m=0;sets.forEach(q=>q.p.forEach(o=>{const v=f(o);if(v===v&&isFinite(v))m=Math.max(m,v)}));return{xa:SWX,ya:fix||{a:0,b:m>0?niceCeil(m*1.08):d0,name},lg,ser:sets.map(q=>({X:q.p.map(o=>o.N),Y:q.p.map(f),c:q.c,w:q.w,mk:1,ho:q.p.map(o=>!o.ok)}))}};
+return[[G('tb',o=>o.tb,'T_b [N·m]',null,50),G('pb',o=>o.pb/1e3,'P_b [kW]',null,20)],[G('ev',o=>o.ev,'η_v [-]',{a:0,b:1.2,name:'η_v [-]'})],[G('bsfc',o=>o.bsfc,'bsfc [g/kWh]',null,500),G('eb',o=>o.eb,'η_b [-]',{a:0,b:.5,name:'η_b [-]'})],[G('spa',o=>o.spa,'点火時期 [°BTDC]',null,40),G('xr',o=>o.xr,'x_r [-]',null,.2)]][sub]}
 function camSpec(P,G,ref,refCam){const v=valves(P,G),mk=(vv,cm,k)=>Float32Array.from({length:1440},(_,j)=>lift(k?vv.e:vv.i,((360+j/2)*D)%P4,cm)*1e3),
 cl=Float32Array.from({length:1440},(_,j)=>(G.hc+kin(G,((360+j/2)*D)%P4).x)*1e3),ser=[],lg=[];
 if(ref){ser.push({X:TH,Y:mk(ref,refCam,0),c:CL.g,w:1.2},{X:TH,Y:mk(ref,refCam,1),c:CL.g,w:1.2});lg.push({n:'基準',c:CL.g})}
