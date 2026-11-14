@@ -41,11 +41,11 @@ function prep(c){const W=c.clientWidth,H=c.clientHeight;if(!W||!H)return null;fi
 /* ===== WOT sweep tab (REQ-26) ===== */
 const SW={run:null,cur:null,ref:null,sub:0,t0:0,maxMs:0};
 function swStart(){if((U.busy&&!U.swTest)||SW.run)return;SW.run=new Sweep({...LP});SW.t0=NOW();$('swg').textContent='中止';swText()}
-function swStop(){SW.run=null;$('swg').textContent='掃引開始';swText()}
+function swStop(){SW.run=null;$('swg').textContent='計測開始';swText()}
 function swTick(ms){if(!SW.run)return false;const t=performance.now(),d=SW.run.run(ms);SW.maxMs=Math.max(SW.maxMs,performance.now()-t);if(d){if(SW.cur)SW.ref=SW.cur;SW.cur={pts:SW.run.pts,sig:SW.run.sig,el:(NOW()-SW.t0)/1e3};swStop()}return d}
 function swSub(n){SW.sub=n;[...$('sws').children].forEach((b,j)=>b.className=j===n?'on':'')}
-function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){const n=R.pts.length;a=`掃引中 ${n}/${SWN.length}（${SWN[Math.min(n,SWN.length-1)]} rpm）`}else if(SW.cur){const p=SW.cur.pts,mt=p.reduce((m,o)=>o.tb>m.tb?o:m,p[0]),mp=p.reduce((m,o)=>o.pb>m.pb?o:m,p[0]);a=`完了 ${SW.cur.el.toFixed(1)} s（全開・回転数固定・MBT）`;c=`最大 ${mt.tb.toFixed(1)} N·m @ ${mt.N}，${(mp.pb/1e3).toFixed(1)} kW @ ${mp.N} rpm`}else a='掃引開始で全開トルクカーブを計算します（回転数固定・MBT）';
-if(!R&&SW.cur&&SW.cur.sig!==JSON.stringify(LP))b='設定が変わりました（再掃引で更新）';else if(SW.ref)b='灰色：基準（前回の掃引）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
+function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){const n=R.pts.length;a=`計測中 ${n}/${SWN.length}（${SWN[Math.min(n,SWN.length-1)]} rpm）`}else if(SW.cur){const p=SW.cur.pts,mt=p.reduce((m,o)=>o.tb>m.tb?o:m,p[0]),mp=p.reduce((m,o)=>o.pb>m.pb?o:m,p[0]);a=`完了 ${SW.cur.el.toFixed(1)} s（全開・回転数固定・MBT）`;c=`最大 ${mt.tb.toFixed(1)} N·m @ ${mt.N}，${(mp.pb/1e3).toFixed(1)} kW @ ${mp.N} rpm`}else{a='計測開始で全開の性能曲線を求めます';c='回転数 1000〜7000 rpm を固定して順に計測（点火 MBT）'}
+if(!R&&SW.cur&&SW.cur.sig!==JSON.stringify(LP))b='設定が変わりました（再計測で更新）';else if(SW.ref)b='灰色：基準（前回の計測）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
 let SLAY=[];function drawSw(){const q=prep($('tc'));if(!q)return;const cur=SW.run?SW.run.pts:SW.cur&&SW.cur.pts;SLAY=drawScreen(q.g,q.W,q.H,sweepSpec(cur,SW.ref&&SW.ref.pts,SW.sub),COL,null)}
 function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-NTB,COL);ntRender()}
 /* ===== target-rpm slider (REQ-23) ===== */
@@ -65,8 +65,8 @@ let LAY=[];function drawCh(){const q=prep($('ch'));if(!q)return;LAY=drawScreen(q
 const cr=U.cross[U.sub];if(cr!=null&&U.sub>0){const g=q.g,th=U.sub<5;g.font='11px system-ui,sans-serif';g.textBaseline='top';g.fillStyle=COL.ac;LAY.forEach(L=>{const sp=L.sp,xv=sp.xa.a+cr*(sp.xa.b-sp.xa.a),txt=sp.ser.map(s=>{let bi=0,bd=1e9;for(let i=0;i<s.X.length;i++){const dd=Math.abs(s.X[i]-xv);if(dd<bd){bd=dd;bi=i}}const v=s.Y[bi];return v==null||v!==v?'–':(+v).toPrecision(4)}).join(' / ');g.textAlign='right';g.fillText((th?'θ='+xv.toFixed(0)+'°: ':'t='+xv.toFixed(1)+'s: ')+txt,L.pl.x+L.pl.w,L.pl.y+2)})}}
 const camPg=()=>U.pg===1||U.pg===2;
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref}),COL,null)}
-function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=`<div>${t[0]}</div><div>${t[1]}</div>`}
-function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b>${q[0]}</b><span>${q[1]}</span></div>`).join('')}
+function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
+function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b><small>${q[2]}</small>${q[0]==='点火'?'':q[0]}</b><span>${q[1]}</span></div>`).join('')}
 /* ===== tabs ===== */
 let docTop=0;
 function show(i){if(U.tab===4)docTop=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){docVals();fitMath($('s4'));$('s4').scrollTop=docTop}}
@@ -89,7 +89,7 @@ $('pl').innerHTML=PAGES.map((n,i)=>`<button data-p="${i}">${n}</button>`).join('
 tap($('Pg'),e=>{const b=e.target.closest('button[data-k]');if(!b||b.disabled)return;const it=IT[b.dataset.k];if(b.dataset.c!=null)setParam(it.k,it.vals?it.vals[+b.dataset.c]:+b.dataset.c);else stepItem(it.k,+b.dataset.s)});
 tap($('x10'),()=>{U.x10^=1;rs()});tap($('un'),undo);tap($('df'),defaults);tap($('bs'),()=>{Base.set(live);note('現在のサイクルを基準にしました')});tap($('ap'),applyPend);tap($('ds'),()=>{U.pend={};note('保留を破棄しました');rs()});
 tap($('rt'),()=>{U.busy?(U.cancel=1):runAll()});tap($('cp'),e=>{const b=e.target.closest('button');if(b){U.sel=+b.dataset.i;const r=TR[U.sel];U.ix=r?Math.max(0,r.findIndex(q=>!q.ok)):0;dtl()}});tap($('pvb'),()=>{const r=TR[U.sel];if(r&&r.length){U.ix=(U.ix+r.length-1)%r.length;dtl()}});tap($('nxb'),()=>{const r=TR[U.sel];if(r&&r.length){U.ix=(U.ix+1)%r.length;dtl()}});
-buildDoc();setSub(0);sp();rs();rchips();show(0);
+buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(a)docGo(+a.dataset.go)});tap($('dtop'),()=>{$('s4').scrollTop=0});setSub(0);sp();rs();rchips();show(0);
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;

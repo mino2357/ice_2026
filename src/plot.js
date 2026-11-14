@@ -64,11 +64,11 @@ if(ref){ser.push({X:TH,Y:mk(ref,refCam,0),c:CL.g,w:1.2},{X:TH,Y:mk(ref,refCam,1)
 ser.push({X:TH,Y:cl,c:CL.v,w:1.2},{X:TH,Y:mk(v,P.cam,0),c:CL.b},{X:TH,Y:mk(v,P.cam,1),c:CL.a});lg.push({n:'吸気',c:CL.b},{n:'排気',c:CL.a},{n:'ピストン余裕',c:CL.v});
 const Lm=Math.max(P.Lv,ref?ref.i.L:0)*1e3;return{xa:{a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},ya:{a:0,b:niceCeil(Lm*1.05),name:'リフト [mm]'},lg,ser}}
 const camText=(P,G)=>{const v=valves(P,G),dg=a=>(a/D).toFixed(0),ov=(v.e.c-(v.i.o+P4))/D;return`IVO ${dg(v.i.o)}° IVC ${dg(v.i.c)}° EVO ${dg(v.e.o)}° EVC ${dg(v.e.c)}°  オーバーラップ ${ov.toFixed(0)}°CA`};
-function ctlText(c){const s=c.s,P=c.P,R=(k,t)=>`<span class="r${k}">${t}</span>`,Nb=Math.round(s.Nb),sp=(P.sauto?R('a','自動'):R('f','固定'))+` 点火 ${s.spa.toFixed(1)}°`;
-if(!s.fired&&!s.starter)return['停止中','START で始動'];const NT=`${R('c','制御量')} N̄ ${Nb} rpm`;
-if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} α ${(s.al/D).toFixed(1)}°（始動開度）｜${sp}`];
-if(s.mode===0){const sat=s.al>=P.amax-1e-12||s.al<=0;return[`A スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} α ${(s.al/D).toFixed(1)}°${sat?' 飽和':''}｜${R('f','固定')} f ${P.fm.toFixed(2)}｜${sp}`]}
-const sat=s.fc>=1||s.fc<=0;return[`B 動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} f ${s.fc.toFixed(2)}${sat?' 飽和':''}｜${R('f','固定')} α ${(P.alm/D).toFixed(1)}°｜${sp}`]}
+function ctlText(c){const s=c.s,P=c.P,R=(k,t)=>`<span class="r${k}">${t}</span>`,Nb=Math.round(s.Nb),sp=(P.sauto?R('a','自動'):R('f','固定'))+` 点火時期 ${s.spa.toFixed(1)}° BTDC`,TH=a=>`スロットル開度 α ${(a/D).toFixed(1)}°`,FF=f=>`動力計の充水率 f ${f.toFixed(2)}`;
+if(!s.fired&&!s.starter)return['停止中','START で始動','',''];const NT=`${R('c','制御量')} N̄ ${Nb} rpm`;
+if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} ${TH(s.al)}（始動開度）`,'',sp];
+if(s.mode===0){const sat=s.al>=P.amax-1e-12||s.al<=0;return[`A スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat?' 飽和':''}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
+const sat=s.fc>=1||s.fc<=0;return[`B 動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat?' 飽和':''}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 function drawScreen(g,w,h,specs,col,cross){const n=specs.length,ph=h/n,Ls=[];specs.forEach((sp,i)=>{const L=layout(g,2,i*ph+2,w-4,ph-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
 /* ===== engine scene (pure geometry) ===== */
 const gasHue=T=>215+165*Math.min(1,Math.max(0,(T-300)/1700));
