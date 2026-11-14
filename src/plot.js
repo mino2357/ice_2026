@@ -40,7 +40,7 @@ const CL={a:'#e8590c',b:'#1c7ed6',k:'#2f9e44',g:'#868e96',v:'#9c36b5'};
 const TH=Float32Array.from({length:1440},(_,i)=>360+i/2);
 const TH0=Float32Array.from({length:1440},(_,i)=>i/2);
 const rot=a=>{const o=new Float32Array(1440);for(let i=0;i<1440;i++)o[i]=a[(i+720)%1440];return o};
-function screenSpec(c,AX,sub,o){o=o||{};const t0=c.tr,t=new Proxy({},{get:(o,k)=>o[k]||(o[k]=rot(t0[k]))}),H=c.H,G=c.G,now=o.now||0,hot=a=>now-a.tc<1000,xth={a:0,b:720,name:'θ [°CA]（0 = 吸気上死点）',tv:[0,180,360,540,720]},xtv={a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},S=(X,Y,cc,w)=>({X,Y,c:cc,w});
+function screenSpec(c,AX,sub,o){o=o||{};const t0=c.tr,t=new Proxy({},{get:(o,k)=>o[k]||(o[k]=rot(t0[k]))}),H=c.H,G=c.G,now=o.now||0,hot=a=>now-a.tc<1000,xth={a:0,b:720,name:'θ [°CA]（0 = 吸気上死点）',tv:[0,180,360,540,720]},xpt={a:180,b:540,name:'θ [°CA]（360 = 圧縮上死点）',tv:[180,270,360,450,540]},xtv={a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},S=(X,Y,cc,w)=>({X,Y,c:cc,w});
 const st=(a,name)=>({a:a.a,b:a.b,name,hot:hot(a)}),fx=(a,b,name)=>({a,b,name});
 const tn=H.t.length?H.t[H.t.length-1]:0,HX=Float32Array.from(H.t,v=>v-tn),xt={a:-30,b:0,name:'t [s]（0 = 現在）'};
 const pvS=()=>{const cur=o.last?(c.last?S(c.last.V,c.last.p,CL.a):null):S(t0.V,t0.p,CL.a),ser=[];if(o.ref)ser.push(S(o.ref.V,o.ref.p,CL.g,1.2));if(cur)ser.push(cur);const lg=[{n:'現在',c:CL.a}];if(o.ref)lg.unshift({n:'基準',c:CL.g});
@@ -48,7 +48,7 @@ if(o.log){const vm=(G.Vc+G.Vd)*1e6,v0=G.Vc*1e6,pm=Math.max(AX.p.F,1e4);return{xa
 return{xa:fx(0,niceCeil((G.Vc+G.Vd)*1e6),'V [cm³]'),ya:st(AX.p,'p [kPa]'),lg,ser}};
 switch(sub){
 case 0:return[pvS()];
-case 1:return[{xa:xth,ya:st(AX.p,'p [kPa]'),ser:[S(TH0,t0.p,CL.a)]},{xa:xth,ya:st(AX.T,'T [K]'),ser:[S(TH0,t0.T,CL.b)]},{xa:xth,ya:st(AX.dq,'熱発生率 [J/°CA]'),ser:[S(TH0,t0.dq,CL.k)]}];
+case 1:return[{xa:xpt,ya:st(AX.p,'p [kPa]'),ser:[S(TH0,t0.p,CL.a)]},{xa:xpt,ya:st(AX.T,'T [K]'),ser:[S(TH0,t0.T,CL.b)]},{xa:xpt,ya:st(AX.dq,'熱発生率 [J/°CA]'),ser:[S(TH0,t0.dq,CL.k)]}];
 case 2:return[{xa:xtv,ya:fx(0,niceCeil(c.P.Lv*1e3),'リフト [mm]'),lg:[{n:'吸気',c:CL.b},{n:'排気',c:CL.a}],ser:[S(TH,t.Li,CL.b),S(TH,t.Le,CL.a)]},{xa:xtv,ya:st(AX.mf,'弁流量 [g/s]'),lg:[{n:'吸気',c:CL.b},{n:'排気',c:CL.a}],ser:[S(TH,t.mi,CL.b),S(TH,t.me,CL.a)]}];
 case 3:return[{xa:xth,ya:st(AX.m,'筒内質量 [mg]'),lg:[{n:'全体',c:CL.a},{n:'新気',c:CL.b}],ser:[S(TH0,t0.m,CL.a),S(TH0,t0.mu,CL.b)]},{xa:xth,ya:fx(0,120,'p_in [kPa]'),ser:[S(TH0,t0.pin,CL.b)]},{xa:xth,ya:st(AX.mth,'スロットル流量 [g/s]'),ser:[S(TH0,t0.mt,CL.k)]}];
 case 4:return[{xa:xth,ya:st(AX.tq,'トルク [N·m]'),lg:[{n:'図示',c:CL.a},{n:'始動',c:CL.k},{n:'摩擦',c:CL.v},{n:'動力計',c:CL.b}],ser:[S(TH0,t0.Ti,CL.a),S(TH0,t0.Ts,CL.k),S(TH0,t0.Tf,CL.v),S(TH0,t0.Td,CL.b)]},{xa:xth,ya:{a:AX.N.a,b:AX.N.b,name:'N [rpm]',hot:hot(AX.N)},ser:[S(TH0,t0.N,CL.b)]},{xa:xth,ya:st(AX.vp,'ピストン速度 [m/s]'),ser:[S(TH0,t0.vp,CL.k)]}];
