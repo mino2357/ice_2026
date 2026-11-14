@@ -38,8 +38,9 @@ if(cross!=null){const px=pl.x+cross*pl.w;g.strokeStyle=col.ac;g.lineWidth=1;g.be
 /* ===== screen specifications ===== */
 const CL={a:'#e8590c',b:'#1c7ed6',k:'#2f9e44',g:'#868e96',v:'#9c36b5'};
 const TH=Float32Array.from({length:1440},(_,i)=>360+i/2);
+const TH0=Float32Array.from({length:1440},(_,i)=>i/2);
 const rot=a=>{const o=new Float32Array(1440);for(let i=0;i<1440;i++)o[i]=a[(i+720)%1440];return o};
-function screenSpec(c,AX,sub,o){o=o||{};const t0=c.tr,t=new Proxy({},{get:(o,k)=>o[k]||(o[k]=rot(t0[k]))}),H=c.H,G=c.G,now=o.now||0,hot=a=>now-a.tc<1000,xth={a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},S=(X,Y,cc,w)=>({X,Y,c:cc,w});
+function screenSpec(c,AX,sub,o){o=o||{};const t0=c.tr,t=new Proxy({},{get:(o,k)=>o[k]||(o[k]=rot(t0[k]))}),H=c.H,G=c.G,now=o.now||0,hot=a=>now-a.tc<1000,xth={a:0,b:720,name:'θ [°CA]（0 = 吸気上死点）',tv:[0,180,360,540,720]},xtv={a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},S=(X,Y,cc,w)=>({X,Y,c:cc,w});
 const st=(a,name)=>({a:a.a,b:a.b,name,hot:hot(a)}),fx=(a,b,name)=>({a,b,name});
 const tn=H.t.length?H.t[H.t.length-1]:0,HX=Float32Array.from(H.t,v=>v-tn),xt={a:-30,b:0,name:'t [s]（0 = 現在）'};
 const pvS=()=>{const cur=o.last?(c.last?S(c.last.V,c.last.p,CL.a):null):S(t0.V,t0.p,CL.a),ser=[];if(o.ref)ser.push(S(o.ref.V,o.ref.p,CL.g,1.2));if(cur)ser.push(cur);const lg=[{n:'現在',c:CL.a}];if(o.ref)lg.unshift({n:'基準',c:CL.g});
@@ -47,10 +48,10 @@ if(o.log){const vm=(G.Vc+G.Vd)*1e6,v0=G.Vc*1e6,pm=Math.max(AX.p.F,1e4);return{xa
 return{xa:fx(0,niceCeil((G.Vc+G.Vd)*1e6),'V [cm³]'),ya:st(AX.p,'p [kPa]'),lg,ser}};
 switch(sub){
 case 0:return[pvS()];
-case 1:return[{xa:xth,ya:st(AX.p,'p [kPa]'),ser:[S(TH,t.p,CL.a)]},{xa:xth,ya:st(AX.T,'T [K]'),ser:[S(TH,t.T,CL.b)]},{xa:xth,ya:st(AX.dq,'熱発生率 [J/°CA]'),ser:[S(TH,t.dq,CL.k)]}];
-case 2:return[{xa:xth,ya:fx(0,niceCeil(c.P.Lv*1e3),'リフト [mm]'),lg:[{n:'吸気',c:CL.b},{n:'排気',c:CL.a}],ser:[S(TH,t.Li,CL.b),S(TH,t.Le,CL.a)]},{xa:xth,ya:st(AX.mf,'弁流量 [g/s]'),lg:[{n:'吸気',c:CL.b},{n:'排気',c:CL.a}],ser:[S(TH,t.mi,CL.b),S(TH,t.me,CL.a)]}];
-case 3:return[{xa:xth,ya:st(AX.m,'筒内質量 [mg]'),lg:[{n:'全体',c:CL.a},{n:'新気',c:CL.b}],ser:[S(TH,t.m,CL.a),S(TH,t.mu,CL.b)]},{xa:xth,ya:fx(0,120,'p_in [kPa]'),ser:[S(TH,t.pin,CL.b)]},{xa:xth,ya:st(AX.mth,'スロットル流量 [g/s]'),ser:[S(TH,t.mt,CL.k)]}];
-case 4:return[{xa:xth,ya:st(AX.tq,'トルク [N·m]'),lg:[{n:'図示',c:CL.a},{n:'始動',c:CL.k},{n:'摩擦',c:CL.v},{n:'動力計',c:CL.b}],ser:[S(TH,t.Ti,CL.a),S(TH,t.Ts,CL.k),S(TH,t.Tf,CL.v),S(TH,t.Td,CL.b)]},{xa:xth,ya:{a:AX.N.a,b:AX.N.b,name:'N [rpm]',hot:hot(AX.N)},ser:[S(TH,t.N,CL.b)]},{xa:xth,ya:st(AX.vp,'ピストン速度 [m/s]'),ser:[S(TH,t.vp,CL.k)]}];
+case 1:return[{xa:xth,ya:st(AX.p,'p [kPa]'),ser:[S(TH0,t0.p,CL.a)]},{xa:xth,ya:st(AX.T,'T [K]'),ser:[S(TH0,t0.T,CL.b)]},{xa:xth,ya:st(AX.dq,'熱発生率 [J/°CA]'),ser:[S(TH0,t0.dq,CL.k)]}];
+case 2:return[{xa:xtv,ya:fx(0,niceCeil(c.P.Lv*1e3),'リフト [mm]'),lg:[{n:'吸気',c:CL.b},{n:'排気',c:CL.a}],ser:[S(TH,t.Li,CL.b),S(TH,t.Le,CL.a)]},{xa:xtv,ya:st(AX.mf,'弁流量 [g/s]'),lg:[{n:'吸気',c:CL.b},{n:'排気',c:CL.a}],ser:[S(TH,t.mi,CL.b),S(TH,t.me,CL.a)]}];
+case 3:return[{xa:xth,ya:st(AX.m,'筒内質量 [mg]'),lg:[{n:'全体',c:CL.a},{n:'新気',c:CL.b}],ser:[S(TH0,t0.m,CL.a),S(TH0,t0.mu,CL.b)]},{xa:xth,ya:fx(0,120,'p_in [kPa]'),ser:[S(TH0,t0.pin,CL.b)]},{xa:xth,ya:st(AX.mth,'スロットル流量 [g/s]'),ser:[S(TH0,t0.mt,CL.k)]}];
+case 4:return[{xa:xth,ya:st(AX.tq,'トルク [N·m]'),lg:[{n:'図示',c:CL.a},{n:'始動',c:CL.k},{n:'摩擦',c:CL.v},{n:'動力計',c:CL.b}],ser:[S(TH0,t0.Ti,CL.a),S(TH0,t0.Ts,CL.k),S(TH0,t0.Tf,CL.v),S(TH0,t0.Td,CL.b)]},{xa:xth,ya:{a:AX.N.a,b:AX.N.b,name:'N [rpm]',hot:hot(AX.N)},ser:[S(TH0,t0.N,CL.b)]},{xa:xth,ya:st(AX.vp,'ピストン速度 [m/s]'),ser:[S(TH0,t0.vp,CL.k)]}];
 case 5:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:fx(0,90,'α [°]'),ser:[S(HX,H.al,CL.b)]},{xa:xt,ya:fx(0,120,'p_in [kPa]'),ser:[S(HX,H.pin,CL.a)]},{xa:xt,ya:{a:AX.Tw.a,b:AX.Tw.b,name:'T_w [K]',hot:hot(AX.Tw)},ser:[S(HX,H.Tw,CL.k)]}];
 default:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:st(AX.tb,'トルク [N·m]'),lg:[{n:'T_b',c:CL.a},{n:'T_dyno',c:CL.b}],ser:[S(HX,H.tb,CL.a),S(HX,H.td,CL.b)]},{xa:xt,ya:fx(0,1,'充水率 f [-]'),lg:[{n:'f_cmd',c:CL.a},{n:'f_eff',c:CL.b}],ser:[S(HX,H.fc,CL.a),S(HX,H.fe,CL.b)]}]}}
 function camSpec(P,G,ref,refCam){const v=valves(P,G),mk=(vv,cm,k)=>Float32Array.from({length:1440},(_,j)=>lift(k?vv.e:vv.i,((360+j/2)*D)%P4,cm)*1e3),
@@ -86,7 +87,7 @@ const pr=Math.min(1.1,s.y[6]/P.pa);poly(q.portIn);g.fillStyle=`hsl(212 75% ${28+
 const arrow=(x,y,dir,m,cc)=>{const a=Math.min(1,Math.abs(m)/.05);if(a<.02)return;const w=(.006+.008*a)*sc,px=X(x),py=Y(y);g.fillStyle=cc;g.beginPath();g.moveTo(px+dir*w*1.4,py);g.lineTo(px-dir*w,py-w);g.lineTo(px-dir*w,py+w);g.closePath();g.fill()};
 if(c.X){arrow(-(xo+.012),-.04,c.X.mi>=0?1:-1,c.X.mi,CL.b);arrow(xo+.012,-.04,c.X.me>=0?1:-1,c.X.me,CL.a)}
 const tq=Math.min(1,Math.max(0,(T-300)/1700));g.fillStyle=`hsl(${gasHue(T)%360} 80% ${42+12*tq}%)`;g.globalAlpha=.85;rect(-b,0,b,yc);g.globalAlpha=1;
-if(s.C.on&&s.fuel){const zz=md4(tt-s.C.th0)/s.C.db;if(zz>0&&zz<1){const xb=1-Math.exp(-K.wa*zz**(K.wm+1)),Rf=Math.max(.004,Math.sqrt(xb)*1.25*b);g.save();g.beginPath();g.rect(X(-b),Y(0),2*b*sc,yc*sc);g.clip();const gr=g.createRadialGradient(X(0),Y(.002),0,X(0),Y(.002),Rf*sc);gr.addColorStop(0,'rgba(255,255,200,.95)');gr.addColorStop(.7,'rgba(255,170,40,.8)');gr.addColorStop(1,'rgba(255,90,20,0)');g.fillStyle=gr;g.beginPath();g.arc(X(0),Y(.002),Rf*sc,0,7);g.fill();g.restore()}}
+if(s.C.on&&s.fuel){const zz=md4(tt-s.C.th0)/s.C.db;if(zz>0&&zz<1){const xb=1-Math.exp(-K.wa*zz**((s.C.m??K.wm)+1)),Rf=Math.max(.004,Math.sqrt(xb)*1.25*b);g.save();g.beginPath();g.rect(X(-b),Y(0),2*b*sc,yc*sc);g.clip();const gr=g.createRadialGradient(X(0),Y(.002),0,X(0),Y(.002),Rf*sc);gr.addColorStop(0,'rgba(255,255,200,.95)');gr.addColorStop(.7,'rgba(255,170,40,.8)');gr.addColorStop(1,'rgba(255,90,20,0)');g.fillStyle=gr;g.beginPath();g.arc(X(0),Y(.002),Rf*sc,0,7);g.fill();g.restore()}}
 g.fillStyle=pc;rect(-b+.0008,yc,b-.0008,yc+.012);rect(-b+.0008,yc+.012,-b+.0043,yc+hp);rect(b-.0043,yc+.012,b-.0008,yc+hp);rect(-b+.0008,yc+pp-.014,b-.0008,yc+pp+.014);
 g.strokeStyle=md;g.lineWidth=1;g.beginPath();for(const o of[.004,.008,.012])ln(-b+.0008,yc+o,b-.0008,yc+o);g.stroke();
 g.lineCap='round';g.strokeStyle='#d6dbe4';g.lineWidth=Math.max(3,.011*sc);g.beginPath();g.moveTo(q.pin[0],q.pin[1]);g.lineTo(q.cpin[0],q.cpin[1]);g.stroke();

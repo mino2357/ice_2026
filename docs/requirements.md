@@ -257,7 +257,7 @@ $$\frac{dm_u}{dt} = \dot{m}_{u,\text{in}} - \dot{m}_{u,\text{ex}} - \dot{m}_{u,\
 ---
 
 ### REQ-07：乱流火炎伝播連動Single-Wiebe燃焼モデル
-点火時期 $\theta_{\text{spark}}$，当量比 $\phi$，残留ガス率 $x_r$，および機関回転速度 $\omega$ に応じて着火遅れ角 $\Delta\theta_d$ と燃焼期間 $\Delta\theta_b$ が物理的に変化する乱流火炎伝播連動Single-Wiebeモデルを実装すること（Manualモード時はユーザー指定の $\Delta\theta_b, m_w$ を直接使用可能とすること）．
+点火時期 $\theta_{\text{spark}}$，当量比 $\phi$，残留ガス率 $x_r$，および機関回転速度 $\omega$ に応じて着火遅れ角 $\Delta\theta_d$ と燃焼期間 $\Delta\theta_b$ が物理的に変化する乱流火炎伝播連動Single-Wiebeモデルを実装すること．着火遅れと熱発生の速さは，物理モデルの値に掛かる係数と Wiebe 形状係数で利用者が調整できること（第8版．旧版の「Manualモード」は未実装だったため，この調整機能で置き換える）．
 
 #### 【数式導出と定義】
 1. **Metghalchi & Keckの層流燃焼速度式**：
@@ -267,15 +267,22 @@ $$\frac{dm_u}{dt} = \dot{m}_{u,\text{in}} - \dot{m}_{u,\text{ex}} - \dot{m}_{u,\
    $$S_L = S_{L,0}(\phi) \left( \frac{T_{\text{spark}}}{T_{\text{ref}}} \right)^\alpha \left( \frac{p_{\text{spark}}}{p_{\text{ref}}} \right)^\beta \max\left( 0.15, \ 1 - 2.06 x_r^{0.77} \right)$$
 2. **乱流燃焼速度 $S_T$ と着火遅れ $\Delta\theta_d$・燃焼期間 $\Delta\theta_b$ の算出**：
    平均ピストン速度 $c_m = \frac{S \omega}{\pi}$ $[\text{m/s}]$ に比例する筒内乱流強度を $u' = 0.5 c_m$ とすると，Damköhlerの乱流火炎伝播スケーリングより有効乱流燃焼速度は $S_T = S_L + C_{\text{turb}} u'$ となる．また，点火を圧縮上死点後（ATDC）へ大きく遅角（リタード）させた場合，膨張に伴う乱流減衰と温度低下によって火炎伝播が緩慢になる効果を反映するため，点火角 $\theta_{\text{spark}}$（圧縮TDC $\tilde{\theta}=2\pi$ からの相対角 $\Delta\theta_{\text{ign}} = \theta_{\text{spark}} - 2\pi$）に対する膨張遅角ペナルティ係数 $f_{\text{ret}} = 1 + 0.025 \max(0, \Delta\theta_{\text{ign,deg}})$ を導入し，着火遅れ角 $\Delta\theta_d$ $[\text{rad}]$ と燃焼期間 $\Delta\theta_b$ $[\text{rad}]$ を次式で算出する：
-   $$\Delta\theta_d = \frac{\ell_{\text{kernel}} \omega}{S_L + 0.2 u'}, \quad \Delta\theta_b = f_{\text{ret}} \frac{\ell_{\text{chamber}} \omega}{S_T}$$
+   $$\Delta\theta_d = c_d\,\frac{\ell_{\text{kernel}} \omega}{S_L + 0.2 u'}, \quad \Delta\theta_b = \frac{f_{\text{ret}}}{c_b} \frac{\ell_{\text{chamber}} \omega}{S_T}$$
+   **調整係数（第8版で追加，設定「燃焼速度」ページ，即時項目）**：着火遅れ係数 $c_d$（$0.1$〜$10$，刻み $0.1$，既定 $1$），燃焼速度係数 $c_b$（$0.1$〜$10$，刻み $0.1$，既定 $1$．$c_b = 2$ で燃焼期間が半分＝熱発生が2倍速い），Wiebe 形状係数 $m_w$（$0$〜$6$，刻み $0.5$，既定 $2$．大きいほど熱発生のピークが燃焼期間の後ろへ寄る）．$m_w$ は点火時の値をそのサイクルの燃焼に固定する．
    （ここで $\ell_{\text{kernel}} \approx 0.05 B$，$\ell_{\text{chamber}} \approx 0.65 B$ は火炎核形成距離および代表燃焼室伝播距離）．
 3. **Single-Wiebe関数と熱発生率（ROHR）**：
-   燃焼開始角を $\theta_0 = \theta_{\text{spark}} + \Delta\theta_d$，正規化燃焼進行度を $\zeta = \frac{\tilde{\theta} - \theta_0}{\Delta\theta_b}$ とすると，質量燃焼割合 $x_b(\tilde{\theta})$ とそのクランク角微分 $\frac{dx_b}{d\theta}$ は次式で与えられる（$a = 5.0$，形状因子 $m_w = 2.0$）：
+   燃焼開始角を $\theta_0 = \theta_{\text{spark}} + \Delta\theta_d$，正規化燃焼進行度を $\zeta = \frac{\tilde{\theta} - \theta_0}{\Delta\theta_b}$ とすると，質量燃焼割合 $x_b(\tilde{\theta})$ とそのクランク角微分 $\frac{dx_b}{d\theta}$ は次式で与えられる（$a = 5.0$，形状因子 $m_w$：設定値，既定 $2.0$）：
    $$x_b(\tilde{\theta}) = \begin{cases} 0 & (\zeta \le 0) \\ 1 - \exp\left( -a \zeta^{m_w + 1} \right) & (0 < \zeta \le 1) \\ 1 - \exp(-a) & (\zeta > 1) \end{cases}$$
    $$\frac{dx_b}{d\theta} = \begin{cases} \frac{a (m_w + 1)}{\Delta\theta_b} \zeta^{m_w} \exp\left( -a \zeta^{m_w + 1} \right) & (0 < \zeta \le 1) \\ 0 & (\text{otherwise}) \end{cases}$$
 4. **1サイクル総投入熱量 $Q_{\text{in}}$ と瞬時熱発生率 $\dot{Q}_{\text{comb}}$**：
    理論空燃比を $\text{AF}_{\text{stoich}} = 14.7$，ガソリン低位発熱量を $Q_{\text{LHV}} = 44.0 \times 10^6\ \text{J/kg}$ とすると，トラップ新気質量 $m_{u,\text{trapped}}$ に含まれる空気質量は $m_{\text{air}} = \frac{m_{u,\text{trapped}}}{1 + \phi / \text{AF}_{\text{stoich}}}$，燃料質量は $m_f = \frac{\phi}{\text{AF}_{\text{stoich}}} m_{\text{air}}$ である．リッチ領域（$\phi > 1$）では酸素不足により未燃燃料が残るため，酸素律速を考慮した有効燃焼熱量 $Q_{\text{in}}$ $[\text{J}]$ と時間あたり熱発生率 $\dot{Q}_{\text{comb}}$ $[\text{W}]$ は次式となる：
-   $$Q_{\text{in}} = m_{\text{air}} \frac{\min(\phi, 1.0)}{\text{AF}_{\text{stoich}}} Q_{\text{LHV}} \eta_{\text{comb}}, \quad \dot{Q}_{\text{comb}} = \frac{dQ_{\text{comb}}}{dt} = Q_{\text{in}} \frac{dx_b}{d\theta} \omega$$
+   $$Q_{\text{in}} = m_f\, Q_{\text{LHV}}\, \eta_{\text{comb}}\, \varepsilon(\phi), \quad \dot{Q}_{\text{comb}} = Q_{\text{in}} \frac{dx_b}{d\theta} \omega$$
+   **リッチ側の不完全燃焼（第8版で修正）**：旧版は $Q_{\text{in}} \propto \min(\phi, 1)/(1 + \phi/\text{AF})$ で，$\phi > 1$ の燃料を「燃えない」としか扱わず，$\phi = 1 \to 1.3$ で IMEP が $1.7\%$ しか変わらなかった．第8版では，燃料を $\text{CH}_y$（$y = 1.87$）とし，酸素不足のときの生成物 $a\,\text{CO}_2 + b\,\text{CO} + c\,\text{H}_2\text{O} + d\,\text{H}_2$ を元素保存と水性ガスシフト平衡で決める（Heywood, 1988, Sec. 4.9.1）：
+   $$a + b = 1,\quad 2c + 2d = y,\quad 2a + b + c = \frac{2(1 + y/4)}{\phi},\quad K = \frac{b\,c}{a\,d} = 3.5$$
+   第1〜3式から $b + d = S \equiv \left(2 + \frac{y}{2}\right)\left(1 - \frac{1}{\phi}\right)$，これと $K$ の式から $b$ の2次方程式 $(K - 1)\,b^2 - \left[\frac{y}{2} - S + K(1 + S)\right] b + K S = 0$ を得て，$[0, \min(1, S)]$ の根を取る．燃え残る CO と H₂ が持ち去る発熱量の割合を差し引き，
+   $$\varepsilon(\phi) = 1 - \frac{b\,\Delta h_{\text{CO}} + d\,\Delta h_{\text{H}_2}}{M_f\, Q_{\text{LHV}}} \quad (\phi > 1), \qquad \varepsilon(\phi) = 1 \quad (\phi \le 1)$$
+   とする（$\Delta h_{\text{CO}} = 283.0\ \text{kJ/mol}$，$\Delta h_{\text{H}_2} = 241.8\ \text{kJ/mol}$，$M_f = 13.896\ \text{g/mol}$）．空気量あたりの熱発生 $\phi\,\varepsilon(\phi)$ は $\phi = 1$ で最大の $1$，$\phi = 1.1$ で $0.969$，$\phi = 1.2$ で $0.938$ となる．
+   **限界**：生成物のモル数の増加と比熱比の変化（実機で出力最大が $\phi \approx 1.1$ になる要因）は扱わない．このため本モデルの出力最大は $\phi = 1$ にある．
 
 * **出典**：
   * [M. Metghalchi and J. C. Keck, "Burning Velocities of Mixtures of Air with Methanol, Isooctane, and Indolene at High Pressure and Temperature", *Combustion and Flame*, Vol. 48, pp. 191-210 (1982)](https://doi.org/10.1016/0010-2180(82)90127-4)
@@ -291,6 +298,11 @@ $$\theta_0 \leftarrow \theta_0 + \sigma_{\theta}\,z_1, \qquad \Delta\theta_b \le
 
   3. [S]（サイクル変動）S4V（S4 の定常からサイクル変動 ON で $10\ \text{s}$）：直近60サイクルの COV(IMEP) が $0.5$〜$5\%$，平均 IMEP が OFF（S4）と $2\%$ 以内，摂動 $z_1, z_2$ の標本平均の絶対値が $0.3$ 未満・標準偏差が $1 \pm 0.25$・$|z| \le \sqrt{3}$，平均 CA50 が ATDC $10 \pm 1^\circ$．
   4. [S]（決定性）S4 の終端を複製してサイクル変動 ON で $10\ \text{s}$ 積分した状態が S4V の終端と完全一致．OFF では摂動が $0$．
+
+  5. [A]（リッチ燃焼，第8版）$\varepsilon(1) = 1$．$\phi = 1.1, 1.2, 1.4$ で，求めた $a, b, c, d$ が元素保存3式と $K = 3.5$ を相対誤差 $10^{-12}$ で満たし，$0 \le a, b, c, d$．$\phi\,\varepsilon(\phi)$ が $\phi \ge 1$ で単調減少し，$\phi = 1.1$ で $0.969 \pm 0.002$，$1.2$ で $0.938 \pm 0.002$．
+  6. [S]（当量比の効果，第8版）S4 の定常から当量比だけを変えて各 $3\ \text{s}$：モードB（開度固定）の IMEP が $\phi = 0.8 < 0.9 < 1.0$ で増加し，$1.0 > 1.1 > 1.2$ で減少する．モードA（S2 の定常から）では $\phi = 1.2$ の燃料流量が $\phi = 1.0$ より $15\%$ 以上多く，回転数は目標 $\pm 25\ \text{rpm}$ に保たれる．
+  7. [A]（調整係数，第8版）同じ状態で `burn` を評価すると，$c_d = 2$ で着火遅れ（$\theta_0 - \theta_{\text{spark}}$）がちょうど2倍，$c_b = 2$ で燃焼期間がちょうど半分．$m_w = 0.5, 2, 4$ で $\int_0^1 \frac{dx_b}{d\zeta} d\zeta = 1 - e^{-a}$（$10^{-5}$），$x_b(\zeta_{50}) = 0.5$（$\zeta_{50} = (\ln 2 / a)^{1/(m_w+1)}$）．
+  8. [S]（調整係数の効果）S4 の定常から点火固定（自動最適化 OFF）で $c_b = 2$ にすると $p_{\max}$ が $5\%$ 以上上がる．自動最適化 ON では点火時期が遅角側へ動き，CA50 が ATDC $10 \pm 0.5^\circ$ に戻る．
 
 ---
 
@@ -517,7 +529,9 @@ $$I_{\text{tot}} \frac{d\omega}{dt} = T_{\text{ind}}(\theta) + T_{\text{starter}
 * **図示平均有効圧（$\text{IMEP}_{\text{net}}$, $\text{IMEP}_{\text{gross}}$, $\text{PMEP}$）**：
   $$\text{IMEP}_{\text{net}} = \frac{W_{i,\text{net}}}{V_d}, \quad \text{IMEP}_{\text{gross}} = \frac{W_{i,\text{gross}}}{V_d}, \quad \text{PMEP} = \frac{W_{\text{pump}}}{V_d}$$
 * **図示熱効率 $\eta_{i,\text{net}}$ と図示出力 $P_i$ $[\text{W}]$**：
-  $$\eta_{i,\text{net}} = \frac{W_{i,\text{net}}}{Q_{\text{in}}}, \quad P_i = \frac{W_{i,\text{net}} \bar{N}}{120}$$
+  $$\eta_{i,\text{net}} = \frac{W_{i,\text{net}}}{m_f\, Q_{\text{LHV}}}, \quad P_i = \frac{W_{i,\text{net}} \bar{N}}{120}$$
+  （第8版で修正：旧版は分母を実際の発熱 $Q_{\text{in}}$ としていたため，燃え残りや燃焼効率の損失が効率に現れなかった．燃料転換効率の定義（Heywood, 1988, Eq. 2.23）に合わせ，分母を供給燃料の発熱量とする．）
+* **燃料流量の表示（第8版で追加）**：メトリクス2ページ目の先頭を $N_{\text{target}}$（制御状態カードと重複）から燃料流量 $\dot{m}_f$ [g/s] に替える．
 * **体積効率 $\eta_v$（大気基準および吸気管基準）**：
   $$\eta_{v,\text{atm}} = \frac{m_{\text{air,trapped}}}{\rho_{\text{atm}} V_d} \quad \left(\rho_{\text{atm}} = \frac{p_{\text{atm}}}{R T_{\text{amb}}},\ p_{\text{atm}} \text{ は設定中の現在値}\right)$$
   $$\eta_{v,\text{man}} = \frac{m_{\text{air,trapped}}}{\rho_{\text{in}} V_d} \quad \left(\rho_{\text{in}} = \frac{p_{\text{in}}(\text{IVC})}{R T_{\text{in}}}\right)$$
@@ -535,6 +549,8 @@ $$I_{\text{tot}} \frac{d\omega}{dt} = T_{\text{ind}}(\theta) + T_{\text{starter}
   4. [S]（動力収支）直近5サイクル平均で $|W_{i,\text{net}} - W_f - W_{\text{dyno}}| / W_{i,\text{net}} \le 2\%$（$W_{\text{dyno}} = \oint T_{\text{dyno}}\,d\theta$）．
   5. [S] 基準サイクルを保存した後，点火時期と開度を変えて $1\ \text{s}$ 積分しても，保存済み配列が書き換わらない（ディープコピー）．
   6. [S]（表示規則）S1 の全期間（$0.05\ \text{s}$ ごと）で，完爆前の IMEP・効率類の表示が「–」であり，$\eta$ 類の表示が $[0, 1.5]$ の外に出ず，`NaN`・`Infinity` を表示しない．
+
+  7. [S]（第8版）$\eta_{i,\text{net}} = W_{i,\text{net}} / (m_f Q_{\text{LHV}})$ が相対誤差 $10^{-12}$ で成立し，$\phi = 1.2$ の $\eta_{i,\text{net}}$ が $\phi = 1.0$ より $10\%$ 以上低い（モードB，開度固定）．
 
 ---
 
@@ -626,7 +642,7 @@ $$I_{\text{tot}} \frac{d\omega}{dt} = T_{\text{ind}}(\theta) + T_{\text{starter}
 1. 各グラフは，プロット領域の左に縦軸，下に横軸を持ち，目盛線（薄色のグリッド），目盛数値，軸名を表示する．軸名は「量 [単位]」の形式（例：`p [kPa]`，`V [cm³]`，`θ [°CA]`，`t [s]`）とする．
 2. 目盛間隔 $d$ は $\Lambda = \{1, 2, 5\} \times 10^k$（$k \in \mathbb{Z}$）から選び，目盛区間数が4〜8となるようにする．目盛数値は互いに重ならず，Canvas の外へはみ出さない．
 3. 複数系列を描くグラフには凡例（系列名と色）をプロット領域内の隅に表示する．色だけに頼らず系列名を文字で示す．
-4. 体積の表示単位は $\text{cm}^3$，クランク角は $^\circ\text{CA}$ とする．**クランク角の横軸は $360$〜$1080^\circ$**（第6版で変更：$360$ = 圧縮上死点，$720$ = 吸気上死点，$1080 \equiv 360$）とし，弁オーバーラップ（吸気上死点前後）がグラフ中央に来るようにする．$\theta < 360^\circ$ のデータは $\theta + 720^\circ$ として配列ごと並べ替え，$1080 \to 360$ の折返しで線をつながない．目盛は $180^\circ$ ごと（$360, 540, 720, 900, 1080$）．
+4. 体積の表示単位は $\text{cm}^3$，クランク角は $^\circ\text{CA}$ とする．**クランク角の横軸は $0$〜$720^\circ$**（$0$ = 吸気上死点，$360$ = 圧縮上死点）を基本とし，**弁オーバーラップを見るグラフ（線図③「弁」とカム線図）だけ $360$〜$1080^\circ$**（$720$ = 吸気上死点）とする（第8版で変更．第6版は全グラフを $360$ 起点にしていた）．$\theta < 360^\circ$ のデータは $\theta + 720^\circ$ として配列ごと並べ替え，$1080 \to 360$ の折返しで線をつながない．目盛は $180^\circ$ ごと（$360, 540, 720, 900, 1080$）．
 
 #### B. レンジの方式
 各軸は次の4方式のいずれかを取る．フルスケールを $F$，評価窓（$\theta$ 系は直近の完了1サイクル，トレンド系は表示中の時間窓）でのデータの最大値を $M$（対称型では $\max|\cdot|$）とする．
@@ -676,7 +692,7 @@ $$I_{\text{tot}} \frac{d\omega}{dt} = T_{\text{ind}}(\theta) + T_{\text{starter}
   5. [U] $p$-$V$ 図に既知の長方形サイクル（$V \in [100, 500]\ \text{cm}^3$，$p \in [1000, 4000]\ \text{kPa}$）を与え，4頂点の座標変換が目盛位置と $\pm 1\ \text{px}$ で一致し，実際に描画した4辺の中点に曲線の画素があり，長方形の中心には無い．
   6. [S] S2 の終端で $p$ 軸の $F$ が $M$ の $1.25$〜$3.2$ 倍にあり，直近 $5\ \text{s}$ で範囲変更が0回．
 
-  7. [U]（クランク角軸）クランク角を横軸に持つ全グラフ（②③④⑤と設定のカム線図）で，横軸の範囲が $[360, 1080]$，目盛が $\{360, 540, 720, 900, 1080\}$，各系列の横座標が単調増加（折返しの線が無い）であり，並べ替えた系列の $\theta = 720^\circ$ の値が元の配列の $\theta = 0$ の値と一致する．
+  7. [U]（クランク角軸，第8版）線図③とカム線図の横軸が $[360, 1080]$（目盛 $\{360, 540, 720, 900, 1080\}$），線図②④⑤の横軸が $[0, 720]$（目盛 $\{0, 180, 360, 540, 720\}$）であり，各系列の横座標が単調増加（折返しの線が無い）であり，並べ替えた系列の $\theta = 720^\circ$ の値が元の配列の $\theta = 0$ の値と一致する．
 
 ---
 
@@ -698,7 +714,7 @@ $$I_{\text{tot}} \frac{d\omega}{dt} = T_{\text{ind}}(\theta) + T_{\text{starter}
 
 #### C. ページ構成
 1. ページ選択は1行のページ送り `◀ ［ページ名 k/n］ ▶` とし，中央のページ名をタップすると全ページの一覧（大きなボタン）が開いて直接移動できる．
-2. ページ（各6項目以内）：**機関**（$B, S, l, \varepsilon$；$\lambda$，$V_d$，$V_c$ を導出値として表示）／**VVT・カム**（吸気位相 $\varphi_{\text{in}}$，排気位相 $\varphi_{\text{ex}}$，カム種，最大リフト，吸気弁径）／**弁タイミング**（基本 IVO，IVC，EVO，EVC）／**吸気**（$p_{\text{atm}}$，$D_{\text{th}}$，$A_{\text{leak}}$，$V_{\text{in}}$）／**燃焼**（点火時期，点火の自動最適化，サイクル変動，$\phi$，Woschni係数，比熱モデル）／**運転**（運転モード，$N_{\text{target}}$，$\alpha_{\text{manual}}$，$f_{\text{manual}}$，$f_{\text{base}}$）／**ECU**（$\tau_N$，$\alpha_{\text{crank}}$，$\alpha_{\text{base}}$，$K_p$，$K_i$，$\alpha_{\max}$）／**動力計**（$T_{\text{rated}}$，$N_{\text{rated}}$，$\tau_d$，$I_{\text{dyno}}$，$K_{pd}$，$K_{id}$）／**解法**（ソルバ種別，$\Delta\theta_{\text{step}}$，rtol）．
+2. ページ（各6項目以内）：**機関**（$B, S, l, \varepsilon$；$\lambda$，$V_d$，$V_c$ を導出値として表示）／**VVT・カム**（吸気位相 $\varphi_{\text{in}}$，排気位相 $\varphi_{\text{ex}}$，カム種，最大リフト，吸気弁径）／**弁タイミング**（基本 IVO，IVC，EVO，EVC）／**吸気**（$p_{\text{atm}}$，$D_{\text{th}}$，$A_{\text{leak}}$，$V_{\text{in}}$）／**燃焼**（点火時期，点火の自動最適化，サイクル変動，$\phi$，Woschni係数，比熱モデル）／**燃焼速度**（着火遅れ係数 $c_d$，燃焼速度係数 $c_b$，Wiebe 形状係数 $m_w$．第8版で追加）／**運転**（運転モード，$N_{\text{target}}$，$\alpha_{\text{manual}}$，$f_{\text{manual}}$，$f_{\text{base}}$）／**ECU**（$\tau_N$，$\alpha_{\text{crank}}$，$\alpha_{\text{base}}$，$K_p$，$K_i$，$\alpha_{\max}$）／**動力計**（$T_{\text{rated}}$，$N_{\text{rated}}$，$\tau_d$，$I_{\text{dyno}}$，$K_{pd}$，$K_{id}$）／**解法**（ソルバ種別，$\Delta\theta_{\text{step}}$，rtol）．
 
 #### D. 設定画面の効果確認パネル（$p$-$V$ 図／カム線図）
 0. **カム線図（第6版で追加）**：「VVT・カム」と「弁タイミング」のページでは，$p$-$V$ 図の代わりに**カム線図**を表示する．横軸はクランク角 $360$〜$1080^\circ$（REQ-17），縦軸はリフト [mm]（$0$〜$L_{\max}$ 以上の目盛倍数）．描く系列は，吸気・排気の現在のリフト曲線（VVT 位相を含む有効値），変更前の基準（灰色，$p$-$V$ の基準サイクルと同じ $3\ \text{s}$ 規則で保存），ピストン冠面までの余裕 $h_c + x(\theta)$（弁がこれを超えると `VALVE HIT`）．パネル上の1行に，有効な IVO・IVC・EVO・EVC とオーバーラップ角 $\text{EVC} - (\text{IVO} + 720^\circ)$ を表示する．
@@ -919,7 +935,7 @@ $$q_n = F\,A_n \left(\frac{e(\psi)}{e_{\text{ref}}}\right)^2 w_{\text{bp}}, \qqu
 | `REQ-04` | 圧縮性オリフィス流量モデル | `TEST-04` | $\Delta p=0$ で流量 $0$，$r_p \le r_{\text{crit}}$ でのチョーク流量飽和，圧力反転時の反対称性 |
 | `REQ-05` | スロットル・吸気マニホールド（大気圧可変） | `TEST-05` | $A_{\text{th}}$ の端点・単調性，マニホールド質量保存（相対誤差 $10^{-6}$），チョーク流量の $p_{\text{atm}}$ 比例，スロットル流量と吸気弁流量のサイクル平均一致（$1\%$ 以内） |
 | `REQ-06` | 筒内2成分ガス組成追跡 | `TEST-06` | 全サイクルでの有界性 $0 \le m_u \le m$，燃焼終了時の新気消費整合性 |
-| `REQ-07` | 乱流火炎伝播連動Wiebe燃焼 | `TEST-07` | $\int \frac{dx_b}{d\theta}d\theta = 1 - e^{-a}$（誤差 $<10^{-5}$），残留ガス・遅角に対する燃焼期間感度 |
+| `REQ-07` | 乱流火炎伝播連動Wiebe燃焼 | `TEST-07` | $\int \frac{dx_b}{d\theta}d\theta = 1 - e^{-a}$（誤差 $<10^{-5}$），残留ガス・遅角に対する燃焼期間感度，リッチ燃焼の生成物（元素保存・水性ガスシフト）と $\phi\varepsilon(\phi)$，当量比の効果（モードA・B），着火遅れ・燃焼速度・形状係数の効果 |
 | `REQ-08` | Woschni壁面熱伝達・壁温モデル | `TEST-08` | $C_{\text{woschni}}=0$ での断熱性，燃焼増圧による熱伝達率 $h_c$ の増大 |
 | `REQ-09` | 開サイクル熱力学第一法則 | `TEST-09` | 断熱閉サイクルでの $p(2\pi) = p(\pi)\varepsilon^{\gamma_0}$（誤差 $<10^{-5}$）および膨張後の可逆性 |
 | `REQ-10` | クランク運動・スターター・摩擦（Chen–Flynn） | `TEST-10` | FMEP 式の数値，無燃焼クランキング平衡回転数，完爆判定とスターター離脱，$W_f = \text{FMEP}\cdot V_d$ |
@@ -1022,3 +1038,11 @@ $$q_n = F\,A_n \left(\frac{e(\psi)}{e_{\text{ref}}}\right)^2 w_{\text{bp}}, \qqu
 
 **第7版の実装検証**：ヘッドレス Chromium の3ビューポートで 22/22（検証項目 251 件）PASS，所要約 $42\ \text{s}$．
 
+### 7.4 第8版（利用者の指摘3件）の対応
+| 指摘 | 原因・対応 | 要件 |
+| :--- | :--- | :--- |
+| 当量比を動かしても出力に影響しない | 2つの原因を確認した．(1) 既定のモードA では回転数が制御量で，ECU が開度で打ち消す（設計どおり．燃料流量は変わるので，メトリクスに燃料流量を表示する）．(2) リッチ側の物理が不足：$\phi > 1$ の燃料を「燃えない」としか扱わず，IMEP がほぼ一定だった．不完全燃焼（CO・H₂）を元素保存と水性ガスシフト平衡で扱う．あわせて，図示熱効率の分母が実際の発熱になっていた定義の誤りを，供給燃料の発熱量に直した | REQ-07 4，REQ-14，TEST-07 項目5・6，TEST-14 項目7 |
+| 弁オーバーラップを見るときだけ 360° から，他は 0° から | 線図③「弁」とカム線図だけ $360$〜$1080^\circ$ | REQ-17 A.4，TEST-17 項目7 |
+| 着火遅れや熱発生の速度を変えるパラメータ | 着火遅れ係数，燃焼速度係数，Wiebe 形状係数を追加（「燃焼速度」ページ） | REQ-07 2・3，REQ-18 C.2，TEST-07 項目7・8 |
+
+**第8版の実装検証**：`npm test`（3ビューポート＋極端な利用者状態）で 22/22（検証項目 265 件）PASS，状態復元 OK．実測値：モードB・開度固定の IMEP は $\phi = 0.8 / 0.9 / 1.0 / 1.1 / 1.2$ で $798 / 883 / 962 / 930 / 901\ \text{kPa}$，$\eta_{i}$ は $\phi = 1.0 \to 1.2$ で $0.393 \to 0.311$．モードA（アイドル）の燃料流量は $\phi = 1.0 \to 1.2$ で $0.032 \to 0.041\ \text{g/s}$（回転数は $800\ \text{rpm}$ のまま）．$c_b = 2$（点火固定）で $p_{\max}$ $5249 \to 7196\ \text{kPa}$，自動最適化 ON では点火が $45.5 \to 30.9^\circ$ に遅角し CA50 $9.97^\circ$．
