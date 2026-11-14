@@ -1,0 +1,14 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark"><meta name="theme-color" content="#14181f">
+<title>単気筒4ストロークSI機関シミュレータ</title>
+<style>/*CSS*/</style></head><body>
+<nav id="N"><button>運転</button><button>線図</button><button>設定</button><button>検証</button><button>解説</button></nav>
+<section id="s0"><canvas id="eng"></canvas><div class="ctl" id="ctl"></div><div class="gr g3"><button id="b1">START</button><button id="b2">FUEL CUT</button><button id="b3">RESET 長押し</button></div><div class="gr g6" id="sp"><button data-v="0.02">0.02×</button><button data-v="0.1">0.1×</button><button data-v="0.5">0.5×</button><button data-v="1">1×</button><button id="mp">指標1</button><button id="snd">音ON</button></div><div class="m" id="M"></div></section>
+<section id="s1"><div class="gr g7" id="sg"></div><div class="gr g3" id="pvo"><button id="lin">Linear</button><button id="lg">log-log</button><button id="bs2">基準を現在に</button></div><canvas id="ch"></canvas></section>
+<section id="s2"><div class="gr" style="grid-template-columns:44px 1fr 44px"><button id="pp">◀</button><button id="pt"></button><button id="pn">▶</button></div><div id="Pg"></div><div class="gr" id="act"><button id="x10"></button><button id="un">元に戻す</button><button id="df">既定値</button><button id="bs">基準更新</button><button id="ap">適用</button><button id="ds">破棄</button></div><div class="ln" id="ts"></div><div class="ln" id="pvt"></div><canvas id="pv"></canvas><div class="card" id="drv" style="flex:1;font-size:13px;line-height:1.7"></div><div id="pl"></div></section>
+<section id="s3"><button id="rt" style="flex:none">全テスト実行</button><div id="sm" class="card" style="flex:none;font-size:13px"></div><div class="gr g7" id="cp"></div><div id="dt" class="card"></div><div class="gr" style="grid-template-columns:1fr 1fr"><button id="pvb">◀</button><button id="nxb">▶</button></div></section>
+<section id="s4"></section>
+<script>/*JS*/
+initUI();
+</script></body></html>

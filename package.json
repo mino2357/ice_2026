@@ -1,0 +1,14 @@
+{
+  "name": "single-cylinder-si-engine-sim",
+  "private": true,
+  "description": "単気筒4ストロークSI機関シミュレータ（単一HTML，スマートフォン向け）",
+  "scripts": {
+    "build": "python3 src/build.py",
+    "test": "npm run build && node tests/headless.js",
+    "font": "python3 src/fonts/make_subset.py",
+    "wav": "node tools/wav_demo.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
