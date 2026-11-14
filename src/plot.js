@@ -68,6 +68,7 @@ const sat=s.fc>=1||s.fc<=0;return[`B 動力計制御｜${R('g','目標')} ${P.nt
 function drawScreen(g,w,h,specs,col,cross){const n=specs.length,ph=h/n,Ls=[];specs.forEach((sp,i)=>{const L=layout(g,2,i*ph+2,w-4,ph-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
 /* ===== engine scene (pure geometry) ===== */
 const gasHue=T=>215+165*Math.min(1,Math.max(0,(T-300)/1700));
+const NTB=48,NTS={lo:500,hi:8000,st:50};
 function scene(c,W,Hh){const G=c.G,P=c.P,s=c.s,th=s.y[0],tt=md4(th),k=kin(G,th),B=G.B,b=B/2,wt=.012,r=G.r,l=G.l,hc=G.hc,pp=.32*B,hp=.62*B,V=c.V,hh=.062,
 yc=hc+k.x,yC=hc+pp+r+l,top=-.1,bot=yC+1.7*r+.006,xo=b+wt+.045,sc=Math.min(W*.6/(2*xo+.02),(Hh-8)/(bot-top)),ox=W*.6,oy=(Hh-(bot-top)*sc)/2,X=x=>ox+x*sc,Y=y=>oy+(y-top)*sc,
 xi=-.26*B,xe=.26*B,di=V.i.d,de=V.e.d,Li=lift(V.i,tt,P.cam),Le=lift(V.e,tt,P.cam),yb=hc+G.S+.45*B;

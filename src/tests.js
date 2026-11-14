@@ -1,5 +1,5 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=22,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=23,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{const e=Math.abs(val-ref)/(Math.abs(ref)||1);(TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})};
 const chkB=(id,n,ok,val,ref)=>{(TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})};
@@ -126,7 +126,7 @@ show(0);yield;const b=$('sp').querySelector('button[data-v="1"]'),[x,y]=ctr(b),s
 pev(b,'pointerdown',x,y);pev(b,'pointerup',x+10,y);const r1=Sim.spd===.1;pev(b,'pointerdown',x,y);ft+=600;pev(b,'pointerup',x,y);const r2=Sim.spd===.1;tapEl(b,100);const r3=Sim.spd===1;NOW=now0;Sim.spd=s0;sp();
 chkB(15,'移動量 ≥ 8 px の入力はタップにならない',r1);chkB(15,'接触 ≥ 500 ms の入力はタップにならない',r2);chkB(15,'接触幅 100 px のタップも受理される',r3);
 live.s.Nb=123.4;tapEl($('b3'));const r4=live.s.Nb===123.4;const[x3,y3]=ctr($('b3'));pev($('b3'),'pointerdown',x3,y3);yield*wait(750);pev($('b3'),'pointerup',x3,y3);chkB(15,'COLD RESET は単押しで無効',r4);chkB(15,'COLD RESET は 0.6 s 長押しで有効',live.s.Nb===0&&live.s.t===0);
-show(3);yield;let okc=0;for(let i=1;i<=NT;i++){tapEl($('cp').children[i-1]);if(U.sel===i&&$('dt').textContent.startsWith('TEST-'+pad(i)))okc++}chkB(15,'20 チップすべてがタップで選択できる',okc===NT,okc+' / 20','20 / 20');
+show(3);yield;let okc=0;for(let i=1;i<=NT;i++){tapEl($('cp').children[i-1]);if(U.sel===i&&$('dt').textContent.startsWith('TEST-'+pad(i)))okc++}chkB(15,NT+' チップすべてがタップで選択できる',okc===NT,okc+' / 20','20 / 20');
 const run=function*(dt){const c=new Core(mkPT()),st={debt:0,spd:.1};c.start();const n=Math.round(2/dt);for(let i=0;i<n;i++){advance(st,c,dt,0);if(RUN.over())yield}return c.s.t},t1=yield*run(1/120),t2=yield*run(1/60);chk(15,'120 Hz と 60 Hz で時間進行が一致（実 2 s）',t2,t1,.01);
 const c=new Core(mkPT()),st={debt:0,spd:1};c.start();advance(st,c,10,0);chkB(15,'復帰直後の1フレームの進みが 50 ms×速度＋最大刻み 1 ms 以下',c.s.t<=.051,(c.s.t*1e3).toFixed(1)+' ms','≤ 51 ms')};
 TST[16]=function*(){uiDefault();docVals();show(4);yield;const S=$('s4'),secs=[...S.querySelectorAll('h3[data-sec]')].map(h=>+h.dataset.sec),need=Array.from({length:17},(_,i)=>i);chkB(16,'§0〜§16 がすべて存在',need.every(n=>secs.includes(n)),secs.length+' 章');
@@ -253,6 +253,29 @@ P.mode=1;s.mode=1;s.fc=.734;P.alm=15*D;P.sauto=0;s.spa=P.spb;x=txt();chkB(22,'�
 s.fc=1;x=txt();chkB(22,'モードB：f = 1 で「飽和」',x.includes('飽和'),x);
 s.Nb=12345.6;P.nt=20000;s.fc=1;P.alm=90*D;s.spa=-20;x=txt();const rows=[...$('ctl').children],ov=rows.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(22,'最長の表示内容でも 2 行が折り返さない（はみ出し無し）',ov===0&&rows.length===2&&rows.every(r=>r.getBoundingClientRect().height<=20),ov+' 行はみ出し');
 const sec=$('s0');chkB(22,'運転タブがスクロールしない',sec.scrollHeight<=sec.clientHeight+1&&document.body.scrollHeight<=innerHeight+1);show(3)};
+/* ---- TEST-23 target-rpm slider ---- */
+TST[23]=function*(){uiDefault();show(0);yield 'frame';drawEng();const ew=$('ew'),bd=$('ntb'),k=$('ntk'),r=$('ntr'),bm=$('ntm'),bp=$('ntp'),cv=$('eng'),sec=$('s0');
+const R=e=>e.getBoundingClientRect(),sz=e=>{const q=R(e);return q.width>=44-.5&&q.height>=44-.5},at=(x,y)=>document.elementFromPoint(x,y)||r;
+const re=R(ew),rb=R(bd),rc=R(cv);chkB(23,'帯・つまみ・[−]・[＋] があり，3 部品とも 44×44 px 以上',!!(bd&&k&&bm&&bp)&&sz(k)&&sz(bm)&&sz(bp),[k,bm,bp].map(e=>R(e).width.toFixed(0)+'×'+R(e).height.toFixed(0)).join('，'));
+chkB(23,'帯が Canvas の下端に収まる（高さ 48 px）',Math.abs(rb.bottom-rc.bottom)<=1&&rb.top>=rc.top&&Math.abs(rb.height-NTB)<=1&&rb.left>=re.left-1&&rb.right<=re.right+1,`帯 ${rb.top.toFixed(0)}〜${rb.bottom.toFixed(0)}，Canvas ${rc.top.toFixed(0)}〜${rc.bottom.toFixed(0)}`);
+chkB(23,'Canvas の高さ ≥ 140 px，運転タブがスクロールしない',cv.clientHeight>=140&&sec.scrollHeight<=sec.clientHeight+1&&document.body.scrollHeight<=innerHeight+1,cv.clientHeight+' px');
+chkB(23,'DOM に input[type="range"] が無い',!document.querySelector('input[type="range"]'));
+const w=()=>R(r).width-44,uOf=()=>(R(k).left-R(r).left)/w(),drag=(dx,mid)=>{const[x,y]=ctr(k);pev(at(x,y),'pointerdown',x,y);pev(k,'pointermove',x+dx/2,y);mid&&mid();pev(k,'pointermove',x+dx,y);pev(k,'pointerup',x+dx,y)};
+ntRender();const u0=uOf(),dx=.4*w(),ex=NTS.lo+Math.round(Math.min(1,u0+dx/w())*(NTS.hi-NTS.lo)/NTS.st)*NTS.st;let mid=NaN;drag(dx,()=>{mid=LP.nt});
+chkB(23,`つまみを右へ ${dx.toFixed(0)} px：N_target = つまみ位置の値`,LP.nt===ex&&live.P.nt===ex&&$('ntv').textContent.includes(String(ex)),`${LP.nt}（solver ${live.P.nt}）`,`${ex} rpm`);
+chkB(23,'ドラッグ中に値が即時反映される',mid>800&&mid<ex,mid+' rpm');yield 'frame';
+ntRender();chkB(23,'離した後，つまみ位置が値に一致（±1 px）',Math.abs(uOf()-ntU(LP.nt))*w()<=1,(uOf()*w()).toFixed(1)+' px',(ntU(LP.nt)*w()).toFixed(1)+' px');
+drag(-3*w());const lo=LP.nt;ntRender();drag(3*w());const hi=LP.nt;chkB(23,'左端・右端までドラッグ：500，8000 rpm',lo===500&&hi===8000,`${lo}，${hi}`,'500，8000');
+setParam('nt',800);ntRender();yield 'frame';const rr=R(r),[kx,ky]=ctr(k),tx=rr.right-30,t0=at(tx,ky);pev(t0,'pointerdown',tx,ky);pev(t0,'pointerup',tx,ky);
+chkB(23,'トラックのつまみ以外をタップ：値は変わらない',LP.nt===800&&!k.contains(t0),`${LP.nt} rpm（押下対象 ${t0.tagName}）`,'800 rpm');
+pev(t0,'pointerdown',tx,ky);pev(t0,'pointermove',kx,ky);pev(k,'pointermove',kx+80,ky);pev(t0,'pointerup',kx+80,ky);pev(k,'pointerup',kx+80,ky);
+chkB(23,'つまみ以外から始めたドラッグ：値は変わらない',LP.nt===800,LP.nt+' rpm','800 rpm');
+tapEl(bp);const a1=LP.nt;tapEl(bm);const a2=LP.nt;chkB(23,'[＋]・[−] で ±50 rpm',a1===850&&a2===800&&live.P.nt===800,`${a1}，${a2}`,'850，800');
+setParam('nt',8000);tapEl(bp);tapEl(bp);ntRender();yield 'frame';ntRender();const rk=R(k),rt=R(r);chkB(23,'8000 rpm から [＋]×2：8100 rpm，つまみは右端，ラベル 8100',LP.nt===8100&&Math.abs(rk.right-rt.right)<=1&&$('ntv').textContent.includes('8100'),`${LP.nt} rpm，右端差 ${(rt.right-rk.right).toFixed(1)} px，「${$('ntv').textContent}」`);
+setParam('nt',500);ntRender();tapEl(bm);chkB(23,'500 rpm で [−] は無効（値も変わらない）',bm.disabled&&LP.nt===500,`disabled=${bm.disabled}，${LP.nt} rpm`);
+const W=cv.clientWidth,Hh=cv.clientHeight-NTB;let b=0,n=0;for(const B of[.04,.15])for(const S of[.04,.15])for(const l of[.06,.3])for(const e of[1.1,100]){if(S/2/l>.5)continue;const c=new Core({...mkPT(),B,S,lr:l,eps:e});for(const th of[0,PI]){c.s.y[0]=th;const q=scene(c,W,Hh);n++;const pts=[[q.ext[0],q.ext[1]],[q.ext[2],q.ext[3]],...q.portIn,...q.portEx,q.pin,q.cpin,[q.cc[0],q.cc[1]+1.7*c.G.r*q.sc]];if(!(q.sc>0)||pts.some(p=>!(p[1]>=-.5&&p[1]<=Hh+.5)))b++}}
+{const c=new Core(mkPT());for(const th of[0,PI]){c.s.y[0]=th;const q=scene(c,W,Hh);n++;if(q.ext[3]>Hh+.5||q.cc[1]+1.7*c.G.r*q.sc>Hh+.5)b++}}
+chkB(23,`機関断面図（${n} 状態）が帯の上端より上に収まる（W=${W}，帯上端 ${Hh} px）`,b===0,b+' 件違反','0 件');show(3)};
 /* ---- runner ---- */
 const axc=o=>{const r={cyc:o.cyc};for(const k in o)if(o[k]&&o[k].up)r[k]=Object.assign(Object.create(Object.getPrototypeOf(o[k])),o[k]);return r};
 function snapLive(){return{s:structuredClone(live.s),P:{...LP},tr:live.tr,H:live.H,last:live.last,lastM:live.lastM,X:live.X,U:{...U,pend:{...U.pend},cross:U.cross.slice()},ref:Base.ref,tl:Base.tl,spd:Sim.spd,debt:Sim.debt,ax:axc(AX),top:$('s4').scrollTop,note:$('ts').textContent}}
@@ -260,10 +283,10 @@ function restLive(q){Object.assign(LP,q.P);live.s=structuredClone(q.s);live.G=ge
 const nextFrame=()=>new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};requestAnimationFrame(f);setTimeout(f,60)});
 const ST={};
 async function runAll(only){if(U.busy)return;U.busy=1;U.cancel=0;U.uiDraw=0;TR={};SC={};for(let i=1;i<=NT;i++)ST[i]='';const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();RUN.maxF=0;$('rt').textContent='中止';let lastF=performance.now();
-for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
+for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
 while(!done&&!U.cancel){await nextFrame();const n0=performance.now();if(n0-lastF>RUN.maxF){RUN.maxF=n0-lastF;RUN.maxId=id}lastF=n0;RUN.t0=n0;try{for(;;){const r=it.next(send);send=undefined;if(r.done){done=true;break}if(r.value&&typeof r.value.then==='function'){try{send=await r.value}catch(e){send={err:String(e)}}lastF=performance.now();break}if(r.value==='frame'||RUN.over())break}}catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}}
-if((id>=15&&id<=18)||id===22)restLive(snap);
-if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21, 22 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'21 / 21');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 90 s',RUN.total<=90,RUN.total.toFixed(1)+' s','≤ 90 s')}
+if((id>=15&&id<=18)||id===22||id===23)restLive(snap);
+if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21〜23 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'22 / 22');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 90 s',RUN.total<=90,RUN.total.toFixed(1)+' s','≤ 90 s')}
 ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'}else ST[id]=''}
 restLive(snap);U.busy=0;U.uiDraw=0;$('rt').textContent='全テスト実行';show(3);rchips();window.__done=1}
 function rchips(cur){const ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng'),np=ids.filter(k=>ST[k]==='ok').length,ni=ids.reduce((s,k)=>s+TR[k].length,0),nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0);
@@ -272,4 +295,4 @@ $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="
 function dtl(){const r=TR[U.sel],n=pad(U.sel),st=ST[U.sel];[...$('cp').children].forEach((b,j)=>b.classList.toggle('sl',j+1===U.sel));
 if(!r||!r.length){$('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}<br>${st==='run'?'実行中':'未実行'}`;return}U.ix=Math.min(U.ix,r.length-1);const x=r[U.ix],nf=r.filter(q=>!q.ok).length;
 $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok?'ok':'ng'}">${x.ok?'PASS':'FAIL'}</b>`}
-const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示'];
+const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ'];

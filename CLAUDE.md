@@ -18,7 +18,7 @@
 ## 構成
 | パス | 内容 |
 | :--- | :--- |
-| `docs/requirements.md` | 要件定義書（REQ-01〜22，TEST-01〜22） |
+| `docs/requirements.md` | 要件定義書（REQ-01〜23，TEST-01〜23） |
 | `src/core.js` | `EngineCore`：物理モデル・ECU・動力計・ソルバ・項目定義表 `ITEMS`（DOM 非依存） |
 | `src/audio.js` | エンジン音の合成器 `Synth`（AudioWorklet と共用，DOM 非依存） |
 | `src/plot.js` | グラフの軸・自動レンジ・レイアウト，機関断面図の場面記述と描画，制御状態の文言 |
