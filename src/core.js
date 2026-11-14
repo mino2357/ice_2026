@@ -31,7 +31,7 @@ const ITEMS=[
 {k:'phi',n:'当量比 φ',u:'',f:1,lo:.6,hi:1.4,st:.01,d:1,c:'i',pg:4},
 {k:'cw',n:'Woschni係数',u:'',f:1,lo:0,hi:2,st:.05,d:1,c:'i',pg:4},
 {k:'gam',n:'比熱',u:'',ch:['γ(T)','γ一定'],d:0,c:'i',pg:4},
-{k:'mode',n:'モード',u:'',ch:['A: ISC','B: 動力計'],d:0,c:'i',pg:5},
+{k:'mode',n:'回転数の制御',u:'',ch:['スロットル制御','動力計制御'],d:0,c:'i',pg:5},
 {k:'nt',n:'目標回転数',u:'rpm',f:1,lo:500,hi:null,st:50,d:800,c:'i',pg:5},
 {k:'alm',n:'手動開度 (B)',u:'°',f:D,lo:0,hi:90,st:1,d:15,c:'i',pg:5},
 {k:'fm',n:'f_manual (A)',u:'',f:1,lo:0,hi:1,st:.05,d:0,c:'i',pg:5},
@@ -167,7 +167,7 @@ const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':
 const SWN=Array.from({length:13},(_,i)=>1000+500*i);
 class Sweep{constructor(P0){const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:PI/2});c.fixw=1;c.fixTw=1;c.s.y[5]=K.Twc;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
 begin(){const c=this.c,N=SWN[this.i];c.s.y[1]=N*PI/30;c.s.Nb=N;c.P.nt=N;if(!c.s.fuel)c.start();this.h=[];this.cy=c.s.cyc;this.nc=0}
-run(ms){const c=this.c,t0=performance.now();let n=0;while(!this.done){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}if((++n&31)===0&&performance.now()-t0>ms)break}return this.done}
+run(ms){const c=this.c,t0=performance.now();let n=0;while(!this.done){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}if((++n&3)===0&&performance.now()-t0>ms)break}return this.done}
 check(){const h=this.h;let ok=false;if(h.length>=4){const a=h.slice(-3),T=a.map(m=>m.tb),S=a.map(m=>m.spa);ok=Math.max(...T)-Math.min(...T)<=.003*Math.abs(T[2])+.02&&Math.max(...S)-Math.min(...S)<=.3}
 if(ok||h.length>=60||this.nc>=120){const M=h[h.length-1]||{};this.pts.push({N:SWN[this.i],Na:M.N,Nw:this.c.s.y[1]*30/PI,tb:M.tb,pb:M.pb,bmep:M.bmep,ev:M.ev,bsfc:M.bsfc,eb:M.eb,spa:M.spa,xr:M.xr,ok,cyc:h.length});this.i++;if(this.i>=SWN.length)this.done=true;else this.begin()}}}
 function metricList0(c,pg){const s=c.s,m=s.Mx||{},P=c.P,y=s.y,e=[0,1.5];

@@ -67,7 +67,7 @@ const ITEMS=[
 {k:'phi',n:'当量比 φ',u:'',f:1,lo:.6,hi:1.4,st:.01,d:1,c:'i',pg:4},
 {k:'cw',n:'Woschni係数',u:'',f:1,lo:0,hi:2,st:.05,d:1,c:'i',pg:4},
 {k:'gam',n:'比熱',u:'',ch:['γ(T)','γ一定'],d:0,c:'i',pg:4},
-{k:'mode',n:'モード',u:'',ch:['A: ISC','B: 動力計'],d:0,c:'i',pg:5},
+{k:'mode',n:'回転数の制御',u:'',ch:['スロットル制御','動力計制御'],d:0,c:'i',pg:5},
 {k:'nt',n:'目標回転数',u:'rpm',f:1,lo:500,hi:null,st:50,d:800,c:'i',pg:5},
 {k:'alm',n:'手動開度 (B)',u:'°',f:D,lo:0,hi:90,st:1,d:15,c:'i',pg:5},
 {k:'fm',n:'f_manual (A)',u:'',f:1,lo:0,hi:1,st:.05,d:0,c:'i',pg:5},
@@ -203,7 +203,7 @@ const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':
 const SWN=Array.from({length:13},(_,i)=>1000+500*i);
 class Sweep{constructor(P0){const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:PI/2});c.fixw=1;c.fixTw=1;c.s.y[5]=K.Twc;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
 begin(){const c=this.c,N=SWN[this.i];c.s.y[1]=N*PI/30;c.s.Nb=N;c.P.nt=N;if(!c.s.fuel)c.start();this.h=[];this.cy=c.s.cyc;this.nc=0}
-run(ms){const c=this.c,t0=performance.now();let n=0;while(!this.done){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}if((++n&31)===0&&performance.now()-t0>ms)break}return this.done}
+run(ms){const c=this.c,t0=performance.now();let n=0;while(!this.done){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}if((++n&3)===0&&performance.now()-t0>ms)break}return this.done}
 check(){const h=this.h;let ok=false;if(h.length>=4){const a=h.slice(-3),T=a.map(m=>m.tb),S=a.map(m=>m.spa);ok=Math.max(...T)-Math.min(...T)<=.003*Math.abs(T[2])+.02&&Math.max(...S)-Math.min(...S)<=.3}
 if(ok||h.length>=60||this.nc>=120){const M=h[h.length-1]||{};this.pts.push({N:SWN[this.i],Na:M.N,Nw:this.c.s.y[1]*30/PI,tb:M.tb,pb:M.pb,bmep:M.bmep,ev:M.ev,bsfc:M.bsfc,eb:M.eb,spa:M.spa,xr:M.xr,ok,cyc:h.length});this.i++;if(this.i>=SWN.length)this.done=true;else this.begin()}}}
 function metricList0(c,pg){const s=c.s,m=s.Mx||{},P=c.P,y=s.y,e=[0,1.5];
@@ -329,8 +329,8 @@ const camText=(P,G)=>{const v=valves(P,G),dg=a=>(a/D).toFixed(0),ov=(v.e.c-(v.i.
 function ctlText(c){const s=c.s,P=c.P,R=(k,t)=>`<span class="r${k}">${t}</span>`,Nb=Math.round(s.Nb),sp=(P.sauto?R('a','自動'):R('f','固定'))+` 点火時期 ${s.spa.toFixed(1)}° BTDC`,TH=a=>`スロットル開度 α ${(a/D).toFixed(1)}°`,FF=f=>`動力計の充水率 f ${f.toFixed(2)}`;
 if(!s.fired&&!s.starter)return['停止中','START で始動','',''];const NT=`${R('c','制御量')} N̄ ${Nb} rpm`;
 if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} ${TH(s.al)}（始動開度）`,'',sp];
-if(s.mode===0){const sat=s.al>=P.amax-1e-12||s.al<=0;return[`A スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat?' 飽和':''}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
-const sat=s.fc>=1||s.fc<=0;return[`B 動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat?' 飽和':''}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
+if(s.mode===0){const sat=s.al>=P.amax-1e-12||s.al<=0;return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat?' 飽和':''}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
+const sat=s.fc>=1||s.fc<=0;return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat?' 飽和':''}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 function drawScreen(g,w,h,specs,col,cross){const n=specs.length,ph=h/n,Ls=[];specs.forEach((sp,i)=>{const L=layout(g,2,i*ph+2,w-4,ph-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
 /* ===== engine scene (pure geometry) ===== */
 const gasHue=T=>215+165*Math.min(1,Math.max(0,(T-300)/1700));
@@ -368,7 +368,7 @@ g.fillStyle='#e8e2d0';rect(-.004,-.095,.004,-.05);g.fillStyle=mt;rect(-.009,-.07
 const sa=P4/2-s.spa*D;if(s.C.on&&s.fuel&&tt>sa&&tt<sa+.25){g.strokeStyle='#ffe44d';g.lineWidth=2;g.beginPath();ln(0,.002,-.004,.005);ln(-.004,.005,.003,.007);g.stroke();g.fillStyle='rgba(255,230,90,.5)';g.beginPath();g.arc(X(0),Y(.005),.01*sc,0,7);g.fill()}
 g.strokeStyle=col.fg;g.lineWidth=1.5;g.beginPath();ln(-(b+wt),-hh,b+wt,-hh);ln(-(b+wt),-hh,-(b+wt),yb);ln(b+wt,-hh,b+wt,yb);ln(-b,0,-b,yb);ln(b,0,b,yb);g.stroke();
 const ph=['吸気','圧縮','膨張','排気'][Math.floor(tt/PI)%4];g.textBaseline='alphabetic';g.textAlign='left';g.fillStyle=col.fg;g.font='bold 13px system-ui,sans-serif';g.fillText((s.fired?'RUN':s.starter?'CRANK':'STOP')+'  '+(s.y[1]*30/PI|0)+' rpm',8,18);
-g.font='12px system-ui,sans-serif';const fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':'');[`モード${s.mode?'B':'A'}`,`θ ${(tt/D).toFixed(0)}°CA ${ph}`,`p ${(s.y[2]/1e3).toFixed(0)} kPa`,`T ${T.toFixed(0)} K`,`吸気弁 ${(Li*1e3).toFixed(1)} mm`,`排気弁 ${(Le*1e3).toFixed(1)} mm`,`B×S ${(q.B*1e3).toFixed(0)}×${(c.G.S*1e3).toFixed(0)}`,`l/r ${(q.l/r).toFixed(2)}`,`ε ${c.G.eps.toFixed(1)}`].forEach((t,i)=>{g.fillStyle=col.mu;g.fillText(t,8,36+i*15)});
+g.font='12px system-ui,sans-serif';const fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':'');[s.mode?'動力計制御':'スロットル制御',`θ ${(tt/D).toFixed(0)}°CA ${ph}`,`p ${(s.y[2]/1e3).toFixed(0)} kPa`,`T ${T.toFixed(0)} K`,`吸気弁 ${(Li*1e3).toFixed(1)} mm`,`排気弁 ${(Le*1e3).toFixed(1)} mm`,`B×S ${(q.B*1e3).toFixed(0)}×${(c.G.S*1e3).toFixed(0)}`,`l/r ${(q.l/r).toFixed(2)}`,`ε ${c.G.eps.toFixed(1)}`].forEach((t,i)=>{g.fillStyle=col.mu;g.fillText(t,8,36+i*15)});
 g.fillStyle=col.ng;g.font='bold 12px system-ui,sans-serif';if(fl)g.fillText(fl.trim(),8,36+9*15);if(c.vhit)g.fillText('VALVE HIT',8,36+10*15);return q}
 
 /* ===== explanation tab (MathML, generated from constants) ===== */
@@ -688,12 +688,13 @@ if(res.path.startsWith('AudioWorklet')){const ref=syn(o,res.y.length).y;let d=0;
 TST[22]=function*(){uiDefault();show(0);yield;const s=live.s,P=LP,txt=()=>{ctlRender();return $('ctl').textContent},has=(x,arr)=>arr.every(w=>x.includes(w));
 s.fired=0;s.starter=0;let x=txt();chkB(22,'停止：「停止中」',x.includes('停止中'),x);
 s.starter=1;s.fuel=1;s.Nb=312.4;s.al=P.alc;x=txt();chkB(22,'始動中：目標（完爆 550 rpm）・制御量 N̄・固定 スロットル開度・点火時期',has(x,['始動中','目標','完爆 N̄ > 550','制御量','N̄ 312','固定','スロットル開度 α 6.0°','点火時期','BTDC']),x);
-s.starter=0;s.fired=1;P.mode=0;s.mode=0;s.Nb=812.4;s.al=3.21*D;P.fm=.25;P.sauto=1;s.spa=31.27;x=txt();chkB(22,'モードA：目標・制御量 N̄・操作量 α・固定 f・自動 点火',has(x,['A スロットル制御','目標 800','制御量','N̄ 812','操作量','スロットル開度 α 3.2°','固定','動力計の充水率 f 0.25','自動','点火時期 31.3° BTDC'])&&!x.includes('飽和'),x);
+s.starter=0;s.fired=1;P.mode=0;s.mode=0;s.Nb=812.4;s.al=3.21*D;P.fm=.25;P.sauto=1;s.spa=31.27;x=txt();chkB(22,'モードA：目標・制御量 N̄・操作量 α・固定 f・自動 点火',has(x,['スロットル制御','目標 800','制御量','N̄ 812','操作量','スロットル開度 α 3.2°','固定','動力計の充水率 f 0.25','自動','点火時期 31.3° BTDC'])&&!x.includes('飽和'),x);
 s.al=P.amax;x=txt();chkB(22,'モードA：α = α_max で「飽和」',x.includes('飽和'),x);
-P.mode=1;s.mode=1;s.fc=.734;P.alm=15*D;P.sauto=0;s.spa=P.spb;x=txt();chkB(22,'モードB：目標・制御量・操作量 f・固定 α・固定 点火',has(x,['B 動力計制御','目標 800','制御量','操作量','動力計の充水率 f 0.73','固定','スロットル開度 α 15.0°','固定 点火時期 18.0° BTDC'])&&!x.includes('飽和')&&!x.includes('自動'),x);
+P.mode=1;s.mode=1;s.fc=.734;P.alm=15*D;P.sauto=0;s.spa=P.spb;x=txt();chkB(22,'モードB：目標・制御量・操作量 f・固定 α・固定 点火',has(x,['動力計制御','目標 800','制御量','操作量','動力計の充水率 f 0.73','固定','スロットル開度 α 15.0°','固定 点火時期 18.0° BTDC'])&&!x.includes('飽和')&&!x.includes('自動'),x);
 s.fc=1;x=txt();chkB(22,'用語：スロットル開度 α，動力計の充水率 f，点火時期，BTDC',has(x,['スロットル開度 α','動力計の充水率 f','点火時期','BTDC']),x);chkB(22,'モードB：f = 1 で「飽和」',x.includes('飽和'),x);
 s.Nb=12345.6;P.nt=20000;s.fc=1;P.alm=90*D;s.spa=-20;x=txt();const rows=[...$('ctl').children],ov=rows.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(22,'最長の表示内容でも 4 行が折り返さない（はみ出し無し）',ov===0&&rows.length===4&&rows.every(r=>r.getBoundingClientRect().height<=20),ov+' 行はみ出し');
-{let bad=[],n=0;for(const pg of[0,1]){U.mpg=pg;met();for(const d of $('M').children){n++;const sm=d.querySelector('small'),sp=d.querySelector('span');if(!sm||!/[\u3040-\u30ff\u4e00-\u9fff]/.test(sm.textContent)||[d,sm,sp].some(e=>e.scrollWidth>e.clientWidth+1))bad.push(sm?sm.textContent:'?')}}U.mpg=0;met();chkB(22,`メトリクス ${n} 項目に日本語名，名称・値が切れない`,n===24&&bad.length===0,bad.length?bad.join(' '):'0 件','0 件')}
+{const look=jp=>{let bad=[],n=0;for(const pg of[0,1]){U.mpg=pg;met();for(const d of $('M').children){n++;const sm=d.querySelector('small'),sp=d.querySelector('span'),b=d.querySelector('b');if(jp?(!sm||!/[\u3040-\u30ff\u4e00-\u9fff]/.test(sm.textContent)):!!sm)bad.push(b.textContent);if([d,b,sp,sm].some(e=>e&&e.scrollWidth>e.clientWidth+1))bad.push('切れ:'+b.textContent)}}U.mpg=0;met();return{n,bad}};
+const a=look(0);tapEl($('M'));const b=look(1);tapEl($('M'));const c=look(0);chkB(22,`メトリクス：既定は記号，タップで日本語名（${b.n} 項目），再タップで記号．名称・値が切れない`,a.n===24&&b.n===24&&!a.bad.length&&!b.bad.length&&!c.bad.length&&U.mjp===0,[...a.bad,...b.bad,...c.bad].join(' ')||'0 件','0 件')}
 const sec=$('s0');chkB(22,'運転タブがスクロールしない',sec.scrollHeight<=sec.clientHeight+1&&document.body.scrollHeight<=innerHeight+1);show(3)};
 /* ---- TEST-23 target-rpm slider ---- */
 TST[23]=function*(){uiDefault();show(0);yield 'frame';drawEng();const ew=$('ew'),bd=$('ntb'),k=$('ntk'),r=$('ntr'),bm=$('ntm'),bp=$('ntp'),cv=$('eng'),sec=$('s0');
@@ -750,7 +751,7 @@ chkB(25,'慣性過給：L_r = 450 mm の Δη_v の最大 ≥ 0.02',Math.max(...
 TST[26]=function*(){const keep={cur:SW.cur,ref:SW.ref,sub:SW.sub,run:SW.run};uiDefault();show(5);yield 'frame';const nb=[...$('N').children];
 chkB(26,'6 タブ（運転・線図・性能曲線・設定・検証・解説），全タブ 44 px 以上，文字が切れない，画面に「掃引」が無い',JSON.stringify(nb.map(b=>b.textContent))==='["運転","線図","性能曲線","設定","検証","解説"]'&&nb.every(b=>{const r=b.getBoundingClientRect();return r.width>=44&&r.height>=44&&b.scrollWidth<=b.clientWidth})&&![...document.querySelectorAll('nav,section:not(#s4)')].some(e=>e.textContent.includes('掃引')),nb.map(b=>b.getBoundingClientRect().width.toFixed(0)).join('，')+' px');
 const S=yield*swRun('def',{...mkPT()});SW.cur={pts:S.pts,sig:JSON.stringify(LP),el:S.el};SW.ref=null;let bl=0;const sec=$('s5');for(let k=0;k<4;k++){swSub(k);drawSw();if(sec.scrollHeight>sec.clientHeight+1||document.body.scrollHeight>innerHeight+1)bl++;for(const L of SLAY){const sp=L.sp;if(!/\[.+\]/.test(sp.ya.name)||!/\[.+\]/.test(sp.xa.name)||L.yt.length<2||L.xt.length<2)bl++}}
-chkB(26,'特性タブ 4 表示：スクロール無し，全グラフに単位付き軸名と目盛',bl===0,bl+' 件違反','0 件');yield;SW.ref=SW.cur;swText();const rw=[...$('swt').children],ov=rw.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(26,'完了表示の 3 行が切れない（基準あり）',ov===0&&rw.length===3,rw.map(r=>r.textContent).join(' / '));SW.ref=null;
+chkB(26,'性能曲線タブ 4 表示：スクロール無し，全グラフに単位付き軸名と目盛',bl===0,bl+' 件違反','0 件');yield;SW.ref=SW.cur;swText();const rw=[...$('swt').children],ov=rw.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(26,'完了表示の 3 行が切れない（基準あり）',ov===0&&rw.length===3,rw.map(r=>r.textContent).join(' / '));SW.ref=null;
 const p=S.pts,w=o=>2*PI*o.Na/60;chkB(26,'各点で角速度 ω が目標と一致（10⁻⁹），サイクル時間からの回転数は目標 ±1 rpm',p.every(o=>Math.abs(o.Nw-o.N)<=1e-9*o.N&&Math.abs(o.Na-o.N)<=1),'最大差 '+Math.max(...p.map(o=>Math.abs(o.Na-o.N))).toFixed(2)+' rpm');
 chkB(26,'P_b = T_b ω，BMEP V_d = 4π T_b（10⁻⁹）',p.every(o=>Math.abs(o.pb-o.tb*w(o))<=1e-9*Math.abs(o.pb)&&Math.abs(o.bmep*geo(mkPT()).Vd-P4*o.tb)<=1e-9*Math.abs(P4*o.tb)));
 const S2=new Sweep({...mkPT()});while(!S2.run(10))yield;chkB(26,'同じ設定で2回の計測が完全一致',JSON.stringify(S2.pts)===JSON.stringify(p));
@@ -788,7 +789,7 @@ const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mjp:0,swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 const Sim={debt:0,spd:.1};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
 cam:null,camC:0,change(c,now){if(now-this.tl>=3000){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.cam=null;this.tl=-1e9}};
@@ -852,7 +853,7 @@ const cr=U.cross[U.sub];if(cr!=null&&U.sub>0){const g=q.g,th=U.sub<5;g.font='11p
 const camPg=()=>U.pg===1||U.pg===2;
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref}),COL,null)}
 function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
-function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b><small>${q[2]}</small>${q[0]==='点火'?'':q[0]}</b><span>${q[1]}</span></div>`).join('')}
+function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b>${U.mjp?`<small>${q[2]}</small>${q[0]==='点火'?'':q[0]}`:q[0]}</b><span>${q[1]}</span></div>`).join('')}
 /* ===== tabs ===== */
 let docTop=0;
 function show(i){if(U.tab===4)docTop=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){docVals();fitMath($('s4'));$('s4').scrollTop=docTop}}
@@ -861,7 +862,7 @@ const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();
-tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
+tap($('M'),()=>{U.mjp^=1;met()});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();

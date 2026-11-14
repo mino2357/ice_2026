@@ -2,7 +2,7 @@
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mjp:0,swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 const Sim={debt:0,spd:.1};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
 cam:null,camC:0,change(c,now){if(now-this.tl>=3000){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.cam=null;this.tl=-1e9}};
@@ -66,7 +66,7 @@ const cr=U.cross[U.sub];if(cr!=null&&U.sub>0){const g=q.g,th=U.sub<5;g.font='11p
 const camPg=()=>U.pg===1||U.pg===2;
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref}),COL,null)}
 function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
-function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b><small>${q[2]}</small>${q[0]==='点火'?'':q[0]}</b><span>${q[1]}</span></div>`).join('')}
+function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b>${U.mjp?`<small>${q[2]}</small>${q[0]==='点火'?'':q[0]}`:q[0]}</b><span>${q[1]}</span></div>`).join('')}
 /* ===== tabs ===== */
 let docTop=0;
 function show(i){if(U.tab===4)docTop=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){docVals();fitMath($('s4'));$('s4').scrollTop=docTop}}
@@ -75,7 +75,7 @@ const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();
-tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
+tap($('M'),()=>{U.mjp^=1;met()});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
