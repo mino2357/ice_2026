@@ -1,7 +1,7 @@
 'use strict';
 /* ===== constants (single source) ===== */
 const R=287,TA=298.15,TI=298.15,TX=800,PI=Math.PI,D=PI/180,P4=4*PI;
-const K={wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,pexo:4e3,g0:1.35};
+const K={lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,pexo:4e3,g0:1.35};
 /* ===== item definition table (single source for settings, doc, tests) ===== */
 const PAGES=['機関','VVT・カム','弁タイミング','吸気','燃焼','運転','ECU','動力計','解法','音響','燃焼速度'];
 const ITEMS=[
@@ -83,7 +83,7 @@ const Ath=(P,a)=>K.Cdt*(P.Al+PI/4*P.Dt*P.Dt*(1-Math.cos(a)));
 const kwf=P=>P.Tr/((PI*P.Nr/30)**2);
 const fmepCF=(G,pmx,om)=>K.cfA+K.cfB*pmx+K.cfC*G.S*om/PI;                 /* Chen-Flynn [Pa] */
 const SLf=(T,p,xr,ph)=>{const S0=Math.max(.05,.305-.549*(ph-1.1)**2),al=2.18-.8*(ph-1),be=-.16+.22*(ph-1);return S0*(T/298)**al*(p/101325)**be*Math.max(.15,1-2.06*xr**.77)};
-function burn(G,T,p,xr,ph,om,spb,cd=1,cb=1){const SL=SLf(T,p,xr,ph),u=.5*G.S*om/PI,ST=SL+6*u,fr=1+.025*Math.max(0,-spb);return{SL,th0:2*PI-spb*D+cd*.05*G.B*om/(SL+.2*u),db:fr*.65*G.B*om/ST/cb}}
+function burn(G,T,p,xr,ph,om,spb,cd=1,cb=1){const SL=SLf(T,p,xr,ph),u=.5*G.S*om/PI,ST=SL+6*u,fr=1+.025*Math.max(0,-spb);return{SL,th0:2*PI-spb*D+cd*K.lk*G.B*om/(SL+K.Ck*u),db:fr*.65*G.B*om/ST/cb}}
 /* rich-mixture incomplete combustion: CH_y products by element balance + water-gas shift (K=3.5) */
 const RICH={y:1.87,K:3.5,hCO:283.0e3,hH2:241.8e3,Mf:(12.011+1.87*1.008)*1e-3};
 function richProd(phi){const{y,K}=RICH;if(phi<=1){const o=2*(1+y/4)/phi;return{a:1,b:0,c:y/2,d:0,S:0}}const S=(2+y/2)*(1-1/phi),A=K-1,B=y/2-S+K*(1+S),C=K*S,disc=Math.sqrt(B*B-4*A*C);let b=(B-disc)/(2*A);b=Math.min(b,1,S);const d=S-b;return{a:1-b,b,c:y/2-d,d,S}}
@@ -99,18 +99,18 @@ const DPa=[[1/5],[3/40,9/40],[44/45,-56/15,32/9],[19372/6561,-25360/2187,64448/6
 DPb5=[35/384,0,500/1113,125/192,-2187/6784,11/84,0],DPb4=[5179/57600,0,7571/16695,393/640,-92097/339200,187/2100,1/40];
 function dp45(f,y,h,k1){const k=[k1||f(y)];for(let s=0;s<6;s++){const yy=y.slice();for(let j=0;j<=s;j++){const a=DPa[s][j];if(a)for(let i=0;i<y.length;i++)yy[i]+=h*a*k[j][i]}k.push(f(yy))}
 const y5=y.slice(),y4=y.slice();for(let j=0;j<7;j++)for(let i=0;i<y.length;i++){y5[i]+=h*DPb5[j]*k[j][i];y4[i]+=h*DPb4[j]*k[j][i]}return{y5,y4}}
-const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1];
+const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9];
 /* ===== EngineCore ===== */
 const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m','mu','dq','vp'];
 class Core{
 constructor(P){this.P=P;this.reset()}
 reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),m=P.pa*k.V/(R*320);
-this.s={y:[PI,0,P.pa,m,m,298.15,P.pa],spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:320},tp:PI,t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null};
+this.s={y:[PI,0,P.pa,m,m,298.15,P.pa,0],spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:320},tp:PI,t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null};
 this.rc();this.tr={};TRK.forEach(n=>this.tr[n]=new Float32Array(1440).fill(NaN));this.H={t:[],N:[],Nt:[],pin:[],al:[],Tw:[],tb:[],td:[],fc:[],fe:[]};this.last=null;this.X=null;this.sig=NaN;this.vhit=0;this.updV()}
-rc(){this.s.cw={n:0,g:0,wf:0,wd:0,tt:0,mt:0,mi:0};this.s.cx={pmax:0,Tmax:0,xr:this.s.cx?this.s.cx.xr:0}}
+rc(){this.s.cw={n:0,g:0,wf:0,wd:0,tt:0,mt:0,mi:0,yb:0,bo:0,bi:0};this.s.cx={pmax:0,Tmax:0,xr:this.s.cx?this.s.cx.xr:0}}
 updV(){const P=this.P,sg=P.ivo+P.phin*1.7+P.ivc*2.3+P.evo*3.1+P.evc*4.3+P.phex*5.9+P.Lv*71+P.dv*13+P.cam;if(sg!==this.sig){this.sig=sg;this.V=valves(P,this.G);this.vhit=valveHit(P,this.G)}}
-f(y){const P=this.P,G=this.G,s=this.s,C=s.C,th=y[0],om=y[1],p=y[2],m=Math.max(y[3],1e-7),mu=y[4],Tw=y[5],pin=y[6],cst=P.gam,tt=md4(th),k=kin(G,th),T=p*k.V/(m*R),g=gmT(T,cst),Yu=Math.min(1,Math.max(0,mu/m)),pex=P.pa+K.pexo;
-const mi=mdot(pin,p,pin>p?TI:T,Aeff(this.V.i,tt,P.cam),cst),me=mdot(p,pex,p>pex?T:TX,Aeff(this.V.e,tt,P.cam),cst),mui=mi>=0?mi:Yu*mi,mue=me>=0?Yu*me:0;
+f(y){const P=this.P,G=this.G,s=this.s,C=s.C,th=y[0],om=y[1],p=y[2],m=Math.max(y[3],1e-7),mu=y[4],Tw=y[5],pin=y[6],mbi=Math.max(0,y[7]),cst=P.gam,tt=md4(th),k=kin(G,th),T=p*k.V/(m*R),g=gmT(T,cst),Yu=Math.min(1,Math.max(0,mu/m)),pex=P.pa+K.pexo;
+const mi=mdot(pin,p,pin>p?TI:T,Aeff(this.V.i,tt,P.cam),cst),me=mdot(p,pex,p>pex?T:TX,Aeff(this.V.e,tt,P.cam),cst),Ybi=Math.min(1,mbi*R*TI/(pin*P.Vin)),mui=mi>=0?(1-Ybi)*mi:Yu*mi,mue=me>=0?Yu*me:0;
 const mt=mdot(P.pa,pin,P.pa>pin?TA:TI,Ath(P,s.al),cst);
 const dxb=C.on?wiebe((tt-C.th0)/C.db,C.m??K.wm)/C.db:0,Q=C.Q*dxb*om,dmc=C.mut*dxb*om,cm=G.S*om/PI,gx=tt>=md4(this.V.i.c)&&tt<md4(this.V.e.o);
 const ws=woschni(G,p,T,cm,gx,s.I0,k.V,P.cw),Qw=ws.hc*k.A*(T-Tw);
@@ -118,17 +118,17 @@ const Hi=mi>=0?mi*cpT(TI,cst)*TI:mi*cpT(T,cst)*T,He=me>=0?me*cpT(T,cst)*T:me*cpT
 const dp=-g*p/k.V*k.dV*om+(g-1)/k.V*(Q-Qw+Hi-He);
 const Ts=s.starter&&!s.fired?K.Tst*Math.max(0,1-om/K.wnl):0,Ti=(p-P.pa)*k.dV,Td=s.fe*kwf(P)*om*om,Tf=om>0?fmepCF(G,s.pmx,om)*G.Vd/P4:0;
 let dom=(Ti+Ts-Tf-Td)/(K.I+P.Id),dth=om;if(om<=0&&dom<0){dom=0;dth=0}
-this.X={T,k,mi,me,Ts,Ti,Td,Tf,tt,Yu,mt,Q,Qw,hc:ws.hc};
-return[dth,dom,dp,mi-me,mui-mue-dmc,(Qw-K.Gw*(Tw-K.Twc))/K.Cw,R*TI/P.Vin*(mt-mi)]}
+this.X={T,k,mi,me,Ts,Ti,Td,Tf,tt,Yu,mt,Q,Qw,hc:ws.hc,Ybi};
+return[dth,dom,dp,mi-me,mui-mue-dmc,(Qw-K.Gw*(Tw-K.Twc))/K.Cw,R*TI/P.Vin*(mt-mi),-mi*(mi>=0?Ybi:1-Yu)+Math.min(0,mt)*Ybi]}
 rnd(){const s=this.s;let t=(s.rs=(s.rs+0x6D2B79F5)>>>0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}
 uz(){return(2*this.rnd()-1)*Math.sqrt(3)}
 ign(X){const s=this.s,P=this.P,C=s.C,om=Math.max(s.y[1],20),b=burn(this.G,X.T,s.y[2],1-X.Yu,P.phi,om,s.spa,P.cid,P.cbr);C.th0=b.th0;C.db=b.db;C.m=P.wm;if(P.cvar){const z1=this.uz(),z2=this.uz();s.cz=[z1,z2];C.th0+=CCV.s0*D*z1;C.db*=Math.max(.5,1+CCV.sb*z2)}else s.cz=[0,0];C.Q=s.fuel?C.mut/(1+P.phi/K.AFR)*P.phi/K.AFR*K.Hu*K.etac*richEps(P.phi):0;C.on=!!s.fuel}
 step(){const s=this.s,P=this.P,G=this.G;this.updV();if(!P.sauto||!s.fired)s.spa=P.spb;const y0=s.y,om=Math.max(y0[1],20),V0=kin(G,y0[0]).V,p0=y0[2],F=y=>this.f(y);let dt,X0,y1;
 if(P.sol===0){dt=Math.min(P.dth/om,1e-4);const k1=F(y0);X0=this.X;const k2=F(axpy(y0,k1,dt/2)),k3=F(axpy(y0,k2,dt/2)),k4=F(axpy(y0,k3,dt));y1=y0.map((v,i)=>v+dt/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]))}
-else{let h=Math.min(s.h,.5*D/om,1e-3);const k1=F(y0);X0=this.X;for(let n=0;;n++){const r=dp45(F,y0,h,k1);let E=0;for(let i=0;i<7;i++)E=Math.max(E,Math.abs(r.y5[i]-r.y4[i])/(ATOL[i]+P.rtol*Math.max(Math.abs(y0[i]),Math.abs(r.y5[i]))));const fac=Math.min(2.5,Math.max(.2,.9*Math.pow(Math.max(E,1e-10),-.2)));if(E<=1||n>12||h<1e-8){y1=r.y5;dt=h;s.h=h*fac;break}h*=fac}}
-y1[3]=Math.max(y1[3],1e-7);y1[4]=Math.min(y1[3],Math.max(0,y1[4]));y1[1]=Math.max(y1[1],0);y1[2]=Math.max(y1[2],1e3);s.y=y1;
+else{let h=Math.min(s.h,.5*D/om,1e-3);const k1=F(y0);X0=this.X;for(let n=0;;n++){const r=dp45(F,y0,h,k1);let E=0;for(let i=0;i<8;i++)E=Math.max(E,Math.abs(r.y5[i]-r.y4[i])/(ATOL[i]+P.rtol*Math.max(Math.abs(y0[i]),Math.abs(r.y5[i]))));const fac=Math.min(2.5,Math.max(.2,.9*Math.pow(Math.max(E,1e-10),-.2)));if(E<=1||n>12||h<1e-8){y1=r.y5;dt=h;s.h=h*fac;break}h*=fac}}
+y1[3]=Math.max(y1[3],1e-7);y1[7]=Math.max(0,y1[7]);y1[4]=Math.min(y1[3],Math.max(0,y1[4]));y1[1]=Math.max(y1[1],0);y1[2]=Math.max(y1[2],1e3);s.y=y1;
 const X=this.X=X0,k=kin(G,y1[0]),tt=md4(y1[0]),dW=(p0+y1[2])/2*(k.V-V0),da=y1[0]-y0[0],cw=s.cw,cx=s.cx;
-cw.n+=dW;if(X.tt>=PI&&X.tt<3*PI)cw.g+=dW;cw.wf+=X.Tf*da;cw.wd+=X.Td*da;cw.tt+=dt;cw.mt+=X.mt*dt;cw.mi+=X.mi*dt;cx.pmax=Math.max(cx.pmax,p0);cx.Tmax=Math.max(cx.Tmax,X.T);
+cw.n+=dW;if(X.tt>=PI&&X.tt<3*PI)cw.g+=dW;cw.wf+=X.Tf*da;cw.wd+=X.Td*da;cw.tt+=dt;cw.mt+=X.mt*dt;cw.mi+=X.mi*dt;cw.yb+=X.Ybi*dt;if(X.mi<0)cw.bo-=X.mi*(1-X.Yu)*dt;else cw.bi+=X.mi*X.Ybi*dt;cx.pmax=Math.max(cx.pmax,p0);cx.Tmax=Math.max(cx.Tmax,X.T);
 const i=Math.round(X.tt/D*2)%1440,tr=this.tr,vals=[p0/1e3,V0*1e6,X.T,X.mi*1e3,X.me*1e3,lift(this.V.i,X.tt,P.cam)*1e3,lift(this.V.e,X.tt,P.cam)*1e3,X.Ti,X.Ts,X.Td,X.Tf,y0[1]*30/PI,y0[6]/1e3,X.mt*1e3,y0[3]*1e6,y0[4]*1e6,X.Q/om*D,X.k.dV/G.Ap*y0[1]];
 let j=s.li<0||md4((i-s.li)*.5*D)>8*D?i:(s.li+1)%1440;for(let n=0;n<16;n++){for(let q=0;q<18;q++)tr[TRK[q]][j]=vals[q];if(j===i)break;j=(j+1)%1440}s.li=i;
 const cr=a=>{a=md4(a);return s.tp<=a&&tt>a};
@@ -141,7 +141,7 @@ if(s.t>=s.hn*.05){s.hn++;const H=this.H,M=s.Mx;H.t.push(s.t);H.N.push(s.Nb);H.Nt
 return dt}
 cycleEnd(){const s=this.s,P=this.P,G=this.G,cw=s.cw,cx=s.cx,C=s.C,W=cw.n,tc=cw.tt;s.Wg=cw.g;if(cx.pmax>0)s.pmx=cx.pmax;s.cyc++;s.ca=C.on&&C.Q>0?ca50(C):NaN;if(P.sauto&&s.fired&&s.ca===s.ca)s.spa+=KS*(s.ca-CA50T);
 const ma=C.mut/(1+P.phi/K.AFR),mf=P.phi*ma/K.AFR,mfd=mf/tc,imep=W/G.Vd,fmep=cw.wf/G.Vd,Pb=(W-cw.wf)/tc,wb=P4/tc;
-const M={imep,pmep:(W-cw.g)/G.Vd,W,Wg:cw.g,Wf:cw.wf,Wd:cw.wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/(R*TA)*G.Vd),xr:cx.xr,pm:cx.pmax,Tm:cx.Tmax,tb:(W-cw.wf)/P4,pb:Pb,bmep:imep-fmep,fmep,em:imep>0?(imep-fmep)/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:cw.wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:cw.wd/tc,Pf:cw.wf/tc,mth:cw.mt/tc,min:cw.mi/tc,YuE:s.YuE};
+const M={imep,pmep:(W-cw.g)/G.Vd,W,Wg:cw.g,Wf:cw.wf,Wd:cw.wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/(R*TA)*G.Vd),xr:cx.xr,ybi:cw.yb/tc,bo:cw.bo,bi:cw.bi,pm:cx.pmax,Tm:cx.Tmax,tb:(W-cw.wf)/P4,pb:Pb,bmep:imep-fmep,fmep,em:imep>0?(imep-fmep)/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:cw.wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:cw.wd/tc,Pf:cw.wf/tc,mth:cw.mt/tc,min:cw.mi/tc,YuE:s.YuE};
 s.Mx=s.cf&&s.fired?M:null;this.lastM=M;this.last={p:Float32Array.from(this.tr.p),V:Float32Array.from(this.tr.V),me:Float32Array.from(this.tr.me),imep,pm:cx.pmax,N:M.N,ok:!!s.Mx};s.cf=s.fired;this.rc()}
 ecu(dt,om){const s=this.s,P=this.P;s.Nb+=(om*30/PI-s.Nb)*Math.min(1,dt/P.tN);
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
@@ -161,5 +161,5 @@ run(T){const t1=this.s.t+T;while(this.s.t<t1)this.step()}
 /* ===== metrics display (validity rule) ===== */
 const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':x.toFixed(n)+u;
 function metricList(c,pg){const s=c.s,m=s.Mx||{},P=c.P,y=s.y,e=[0,1.5];
-return pg?[['ṁ_f',fmtv(m.mfd*1e3,3,' g/s')],['T_b',fmtv(m.tb,1,' N·m')],['P_b',fmtv(m.pb/1e3,2,' kW')],['BMEP',fmtv(m.bmep/1e3,0,' kPa')],['FMEP',fmtv(m.fmep/1e3,0,' kPa')],['ηm',fmtv(m.em,3,'',...e)],['bsfc',fmtv(m.bsfc,0,' g/kWh',0,1e5)],['ηb',fmtv(m.eb,3,'',...e)],['T_dyno',fmtv(s.fe*kwf(P)*y[1]*y[1],1,' N·m')],['f_eff',fmtv(s.fe,2,'')],['f_cmd',fmtv(s.fc,2,'')],['点火',fmtv(s.spa,1,'°')]]
+return pg?[['ṁ_f',fmtv(m.mfd*1e3,3,' g/s')],['T_b',fmtv(m.tb,1,' N·m')],['P_b',fmtv(m.pb/1e3,2,' kW')],['BMEP',fmtv(m.bmep/1e3,0,' kPa')],['FMEP',fmtv(m.fmep/1e3,0,' kPa')],['ηm',fmtv(m.em,3,'',...e)],['bsfc',fmtv(m.bsfc,0,' g/kWh',0,1e5)],['ηb',fmtv(m.eb,3,'',...e)],['T_dyno',fmtv(s.fe*kwf(P)*y[1]*y[1],1,' N·m')],['f_eff',fmtv(s.fe,2,'')],['Yb,in',fmtv(m.ybi,3,'',0,1)],['点火',fmtv(s.spa,1,'°')]]
 :[['N̄',fmtv(s.Nb,0,' rpm')],['IMEP',fmtv(m.imep/1e3,0,' kPa')],['PMEP',fmtv(m.pmep/1e3,0,' kPa')],['ηi',fmtv(m.ei,3,'',...e)],['Pi',fmtv(m.pi/1e3,2,' kW')],['ηv',fmtv(m.ev,3,'',...e)],['xr',fmtv(m.xr,3,'',0,1)],['p_max',fmtv(m.pm/1e3,0,' kPa')],['T_max',fmtv(m.Tm,0,' K')],['T_w',fmtv(y[5],0,' K')],['α',fmtv(s.al/D,1,'°')],['p_in',fmtv(y[6]/1e3,1,' kPa')]]}

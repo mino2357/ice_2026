@@ -1,5 +1,5 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=23,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=24,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{const e=Math.abs(val-ref)/(Math.abs(ref)||1);(TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})};
 const chkB=(id,n,ok,val,ref)=>{(TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})};
@@ -49,7 +49,10 @@ TST[5]=function*(){const P=mkPT();chk(5,'A_th(0) = C_d A_leak',K.Cdt*P.Al,Ath(P,
 {const al=20*D,f=y=>{const mt=mdot(P.pa,y[0],TA,Ath(P,al),0);return[R*TI/P.Vin*mt,mt]};let y=[.3*P.pa,0],mono=1;for(let i=0;i<4000;i++){const y2=rk4s(f,y,5e-5);if(y2[0]<y[0]-1e-9)mono=0;y=y2}chkB(5,'弁閉で p_in が単調増加し p_atm へ収束',mono&&Math.abs(y[0]-P.pa)/P.pa<1e-3,(y[0]/1e3).toFixed(2)+' kPa',(P.pa/1e3).toFixed(1)+' kPa');chk(5,'マニホールド質量保存 ∫ṁ_th dt',P.Vin/(R*TI)*(y[0]-.3*P.pa),y[1],1e-6)}
 const A=Ath(P,10*D),ch=A*P.pa/Math.sqrt(R*TA)*psiF(.1,gmT(TA,0));chk(5,'チョーク流量（p_in = 0.3 p_atm）',ch,mdot(P.pa,.3*P.pa,TA,A,0),1e-12);chk(5,'チョーク流量が p_in に依存しない',mdot(P.pa,.2*P.pa,TA,A,0),mdot(P.pa,.4*P.pa,TA,A,0),1e-12);chk(5,'チョーク流量 ∝ p_atm（80 kPa）',8e4/P.pa,mdot(8e4,.3*8e4,TA,A,0)/mdot(P.pa,.3*P.pa,TA,A,0),1e-12);
 const s=yield*scen('S3');chk(5,'S3 定常：スロットル流量 = 吸気弁流量（5サイクル平均）',avg(s.rec,5,'mth'),avg(s.rec,5,'min'),.01);
-const c=new Core({...P,pa:8e4});c.f(c.s.y);chkB(5,'初期状態：p = p_in = p_atm，T_ind = 0',c.s.y[2]===8e4&&c.s.y[6]===8e4&&c.X.Ti===0)};
+const c=new Core({...P,pa:8e4});c.f(c.s.y);chkB(5,'初期状態：p = p_in = p_atm，T_ind = 0',c.s.y[2]===8e4&&c.s.y[6]===8e4&&c.X.Ti===0);
+{const s2=yield*scen('S2'),q=s2.c.clone();let yb0=Infinity,yb1=-Infinity,n=0,bo=0,bi=0,m0=NaN,m1=NaN;const cy0=q.s.cyc;while(q.s.cyc<cy0+6){const k=q.s.cyc;q.step();const yb=q.X.Ybi;yb0=Math.min(yb0,yb);yb1=Math.max(yb1,yb);if(q.s.cyc!==k){if(q.s.cyc===cy0+1)m0=q.s.y[7];else{bo+=q.lastM.bo;bi+=q.lastM.bi;m1=q.s.y[7]}}if((++n&63)===0&&RUN.over())yield}
+chkB(5,'S2 から 6 サイクル：全時刻で 0 ≤ Y_b,in ≤ 1',yb0>=0&&yb1<=1,`${yb0.toFixed(4)}〜${yb1.toFixed(4)}`);const cr=new Core(mkPT());cr.start();cr.run(.2);cr.reset();chkB(5,'コールドリセット直後に m_b,in = 0',cr.s.y[7]===0);
+chk(5,'S2 定常 5 サイクル：吹き返した既燃ガス = 戻った既燃ガス',(bo+bi)/2,bo,.02);chkB(5,'5 サイクルの m_b,in の増分 = 既燃ガスの収支（差 ≤ 吹き返し量の 10⁻³）',Math.abs((m1-m0)-(bo-bi))<=1e-3*bo,`増分 ${(m1-m0).toExponential(3)}，収支 ${(bo-bi).toExponential(3)}，吹き返し ${bo.toExponential(3)} kg`)}};
 TST[6]=function*(){const s=yield*scen('S3'),t=yield*scen('S4');chkB(6,'全サイクルで 0 ≤ m_u ≤ m（S3, S4）',s.rec.bad===0&&t.rec.bad===0,(s.rec.bad+t.rec.bad)+' 点違反','0 点');const y=lastM(s.rec,5).map(m=>m.YuE),y2=lastM(t.rec,5).map(m=>m.YuE);chkB(6,'EVO 時の未燃割合 Y_u < 0.01',Math.max(...y,...y2)<.01,Math.max(...y,...y2).toExponential(2),'< 0.01');chkB(6,'残留ガス率 x_r ∈ [0,1]',lastM(s.rec,5).every(m=>m.xr>=0&&m.xr<=1))};
 TST[7]=function*(){let s=0;const n=2000;for(let i=0;i<=n;i++)s+=wiebe(i/n)*(i===0||i===n?.5:1)/n;chk(7,'∫dx_b = 1 − e^(−a)',1-Math.exp(-K.wa),s,1e-5);chkB(7,'x_r 0.05→0.25 で S_L 減少',SLf(700,1.5e6,.25,1)<SLf(700,1.5e6,.05,1),`${SLf(700,1.5e6,.05,1).toFixed(3)} → ${SLf(700,1.5e6,.25,1).toFixed(3)} m/s`);const G=geo(mkPT());chkB(7,'点火 20°BTDC→10°ATDC で燃焼期間増大',burn(G,700,1.5e6,.1,1,150,-10).db>burn(G,700,1.5e6,.1,1,150,20).db);chkB(7,'φ=1.1 付近で S_L 最大',SLf(700,1.5e6,.1,1.1)>SLf(700,1.5e6,.1,.8)&&SLf(700,1.5e6,.1,1.1)>SLf(700,1.5e6,.1,1.4));
 const v=yield*scen('S4V'),b4=yield*scen('S4'),M=lastM(v.rec,60),im=M.map(m=>m.imep),av=q=>q.reduce((s,x)=>s+x,0)/q.length,sd=q=>{const m=av(q);return Math.sqrt(av(q.map(x=>(x-m)**2)))},cov=sd(im)/av(im);
@@ -276,6 +279,22 @@ setParam('nt',500);ntRender();tapEl(bm);chkB(23,'500 rpm で [−] は無効（�
 const W=cv.clientWidth,Hh=cv.clientHeight-NTB;let b=0,n=0;for(const B of[.04,.15])for(const S of[.04,.15])for(const l of[.06,.3])for(const e of[1.1,100]){if(S/2/l>.5)continue;const c=new Core({...mkPT(),B,S,lr:l,eps:e});for(const th of[0,PI]){c.s.y[0]=th;const q=scene(c,W,Hh);n++;const pts=[[q.ext[0],q.ext[1]],[q.ext[2],q.ext[3]],...q.portIn,...q.portEx,q.pin,q.cpin,[q.cc[0],q.cc[1]+1.7*c.G.r*q.sc]];if(!(q.sc>0)||pts.some(p=>!(p[1]>=-.5&&p[1]<=Hh+.5)))b++}}
 {const c=new Core(mkPT());for(const th of[0,PI]){c.s.y[0]=th;const q=scene(c,W,Hh);n++;if(q.ext[3]>Hh+.5||q.cc[1]+1.7*c.G.r*q.sc>Hh+.5)b++}}
 chkB(23,`機関断面図（${n} 状態）が帯の上端より上に収まる（W=${W}，帯上端 ${Hh} px）`,b===0,b+' 件違反','0 件');show(3)};
+/* ---- TEST-24 internal EGR and spark timing ---- */
+TST[24]=function*(){const t0=performance.now(),ol=(iv,ev)=>({ivo:iv*D,evc:ev*D}),OL=[ol(-10,730),ol(-25,745),ol(-40,760)];
+const go=function*(c,T){const r=mkRec();yield*runC(c,T,r);return r},a5=(r,k)=>avg(r,5,k),fx=(v,d)=>v.toFixed(d);
+let c=new Core({...mkPT(),nt:1500,fm:.1});c.start();const L=[];L.push(yield*go(c,10));for(const o of OL.slice(1)){Object.assign(c.P,o);L.push(yield*go(c,4))}
+const xr=L.map(r=>a5(r,'xr')),yb=L.map(r=>a5(r,'ybi')),sp=L.map(r=>a5(r,'spa'));
+chkB(24,'軽負荷 1500 rpm：OL 20→50→80° で x_r と Y_b,in が単調増加，x_r の増分 ≥ 0.10',xr[0]<xr[1]&&xr[1]<xr[2]&&yb[0]<yb[1]&&yb[1]<yb[2]&&xr[2]-xr[0]>=.1,`x_r ${xr.map(v=>fx(v,3)).join('，')}／Y_b,in ${yb.map(v=>fx(v,3)).join('，')}`);
+chkB(24,'軽負荷：MBT が OL 80° で 20° より 3° 以上進む（希釈）',sp[2]-sp[0]>=3,`${fx(sp[0],1)} → ${fx(sp[2],1)}° BTDC`);yield;
+c=new Core({...mkPT(),nt:2000,fm:.3});c.start();const p0=yield*go(c,10);Object.assign(c.P,OL[2]);const p1=yield*go(c,4);const g=k=>[a5(p0,k),a5(p1,k)],X=g('xr'),PM=g('pmep'),TM=g('Tm'),EB=g('eb');
+chkB(24,'部分負荷 2000 rpm：OL 20→80° で x_r +0.04 以上，PMEP +4 kPa 以上，T_max −80 K 以上，η_b が下がらない',X[1]-X[0]>=.04&&PM[1]-PM[0]>=4e3&&TM[0]-TM[1]>=80&&EB[1]>=EB[0],`x_r ${fx(X[0],3)}→${fx(X[1],3)}，PMEP ${fx(PM[0]/1e3,1)}→${fx(PM[1]/1e3,1)} kPa，T_max ${fx(TM[0],0)}→${fx(TM[1],0)} K，η_b ${fx(EB[0],3)}→${fx(EB[1],3)}`);yield;
+const wf=function*(n){const q=new Core({...mkPT(),mode:1,alm:90*D,nt:n,Tr:200});q.start();return yield*go(q,8)},w3=yield*scen('W3000'),W=[yield*wf(1500),w3.rec,yield*wf(5000)];{const q=w3.c.clone(),t0=q.s.C.th0;let sp=q.s.spa;while(q.s.C.th0===t0){sp=q.s.spa;q.step()}const C=q.s.C,m=C.m??K.wm,z10=Math.pow(-Math.log(.9)/K.wa,1/(m+1));W.fd=(C.th0-(2*PI-sp*D)+z10*C.db)/D}
+const Ns=W.map(r=>a5(r,'N')),ms=W.map(r=>a5(r,'spa')),x3=a5(W[1],'xr'),y3=a5(W[1],'ybi');
+chkB(24,'全開 3000 rpm：x_r ≤ 0.08，Y_b,in ≤ 0.02',x3<=.08&&y3<=.02,`x_r ${fx(x3,3)}，Y_b,in ${fx(y3,4)}（N̄ ${fx(Ns[1],0)}）`);
+chkB(24,'全開・目標 1500／3000／5000 rpm：MBT が 15〜35° BTDC で回転とともに進角',ms.every(v=>v>=15&&v<=35)&&ms[0]<ms[1]&&ms[1]<ms[2]&&Ns[0]<Ns[1]&&Ns[1]<Ns[2],ms.map(v=>fx(v,1)).join('，')+'°（N̄ '+Ns.map(v=>fx(v,0)).join('，')+'）');
+chkB(24,'全開 3000 rpm：火炎発達角（点火→x_b = 0.1）が 15〜35°CA',W.fd>=15&&W.fd<=35,fx(W.fd,1)+'°CA');yield;
+const s2=yield*scen('S2'),xi=avg(s2.rec,5,'xr');chkB(24,'アイドル（S2）：0.15 ≤ x_r ≤ 0.35',xi>=.15&&xi<=.35,fx(xi,3));
+const el=(performance.now()-t0)/1e3;chkB(24,'TEST-24 の所要 ≤ 25 s',el<=25,fx(el,1)+' s','≤ 25 s')};
 /* ---- runner ---- */
 const axc=o=>{const r={cyc:o.cyc};for(const k in o)if(o[k]&&o[k].up)r[k]=Object.assign(Object.create(Object.getPrototypeOf(o[k])),o[k]);return r};
 function snapLive(){return{s:structuredClone(live.s),P:{...LP},tr:live.tr,H:live.H,last:live.last,lastM:live.lastM,X:live.X,U:{...U,pend:{...U.pend},cross:U.cross.slice()},ref:Base.ref,tl:Base.tl,spd:Sim.spd,debt:Sim.debt,ax:axc(AX),top:$('s4').scrollTop,note:$('ts').textContent}}
@@ -283,10 +302,10 @@ function restLive(q){Object.assign(LP,q.P);live.s=structuredClone(q.s);live.G=ge
 const nextFrame=()=>new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};requestAnimationFrame(f);setTimeout(f,60)});
 const ST={};
 async function runAll(only){if(U.busy)return;U.busy=1;U.cancel=0;U.uiDraw=0;TR={};SC={};for(let i=1;i<=NT;i++)ST[i]='';const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();RUN.maxF=0;$('rt').textContent='中止';let lastF=performance.now();
-for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
+for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
 while(!done&&!U.cancel){await nextFrame();const n0=performance.now();if(n0-lastF>RUN.maxF){RUN.maxF=n0-lastF;RUN.maxId=id}lastF=n0;RUN.t0=n0;try{for(;;){const r=it.next(send);send=undefined;if(r.done){done=true;break}if(r.value&&typeof r.value.then==='function'){try{send=await r.value}catch(e){send={err:String(e)}}lastF=performance.now();break}if(r.value==='frame'||RUN.over())break}}catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}}
 if((id>=15&&id<=18)||id===22||id===23)restLive(snap);
-if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21〜23 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'22 / 22');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 90 s',RUN.total<=90,RUN.total.toFixed(1)+' s','≤ 90 s')}
+if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21〜24 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'23 / 23');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 90 s',RUN.total<=90,RUN.total.toFixed(1)+' s','≤ 90 s')}
 ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'}else ST[id]=''}
 restLive(snap);U.busy=0;U.uiDraw=0;$('rt').textContent='全テスト実行';show(3);rchips();window.__done=1}
 function rchips(cur){const ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng'),np=ids.filter(k=>ST[k]==='ok').length,ni=ids.reduce((s,k)=>s+TR[k].length,0),nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0);
@@ -295,4 +314,4 @@ $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="
 function dtl(){const r=TR[U.sel],n=pad(U.sel),st=ST[U.sel];[...$('cp').children].forEach((b,j)=>b.classList.toggle('sl',j+1===U.sel));
 if(!r||!r.length){$('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}<br>${st==='run'?'実行中':'未実行'}`;return}U.ix=Math.min(U.ix,r.length-1);const x=r[U.ix],nf=r.filter(q=>!q.ok).length;
 $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok?'ok':'ng'}">${x.ok?'PASS':'FAIL'}</b>`}
-const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ'];
+const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期'];
