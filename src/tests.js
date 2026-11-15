@@ -265,7 +265,8 @@ s.fc=1;x=txt();chkB(22,'用語：スロットル開度 α，動力計の充水�
 s.Nb=12345.6;P.nt=20000;s.fc=1;P.alm=90*D;s.spa=-20;x=txt();const rows=[...$('ctl').children],ov=rows.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(22,'最長の表示内容でも 4 行が折り返さない（はみ出し無し）',ov===0&&rows.length===4&&rows.every(r=>r.getBoundingClientRect().height<=20),ov+' 行はみ出し');
 {const mj0=U.mj;U.mj={};let n=0,bad=[];const ok=(d,jp)=>{const b=d.querySelector('b');if(jp!==b.classList.contains('jp'))return false;if(jp&&!/[\u3040-\u30ff\u4e00-\u9fff]/.test(b.textContent))return false;return[d,b,d.querySelector('span')].every(e=>e.scrollWidth<=e.clientWidth+1&&e.scrollHeight<=e.clientHeight+1)};
 for(const pg of[0,1]){U.mpg=pg;met();for(let i=0;i<12;i++){n++;let d=$('M').children[i];const k=d.dataset.k;if(!ok(d,false))bad.push(k+':記号');tapEl(d);d=$('M').children[i];const others=[...$('M').children].filter((x,j)=>j!==i).every(x=>!x.querySelector('b.jp'));if(!ok(d,true)||!others)bad.push(k+':日本語');tapEl(d);d=$('M').children[i];if(!ok(d,false))bad.push(k+':戻り');tapEl($('M').children[i]);tapEl($('M').children[i]);if(!ok($('M').children[i],false))bad.push(k+':再')}}
-U.mpg=0;U.mj=mj0;met();chkB(22,`メトリクス ${n} 項目：既定は記号，その項目のタップで日本語名，再タップで記号（何度でも），他の項目は変わらない，切れない`,n===24&&bad.length===0,bad.join(' ')||'0 件','0 件')}
+U.mpg=0;met();{U.mj={};met();const d0=$('M').children[1],k=d0.dataset.k,[x,y]=ctr(d0);pev(d0,'pointerdown',x,y);met();const same=$('M').children[1]===d0;pev(d0,'pointerup',x,y);met();const jp=!!U.mj[k];U.mj={};met();chkB(22,'実機のタップの再現：押下と離しの間に再描画があっても切り替わり，要素は作り直されない',jp&&same,`切替 ${jp}，同一要素 ${same}`)}
+U.mj=mj0;met();chkB(22,`メトリクス ${n} 項目：既定は記号，その項目のタップで日本語名，再タップで記号（何度でも），他の項目は変わらない，切れない`,n===24&&bad.length===0,bad.join(' ')||'0 件','0 件')}
 const sec=$('s0');chkB(22,'運転タブがスクロールしない',sec.scrollHeight<=sec.clientHeight+1&&document.body.scrollHeight<=innerHeight+1);show(3)};
 /* ---- TEST-23 target-rpm slider ---- */
 TST[23]=function*(){uiDefault();show(0);yield 'frame';drawEng();const ew=$('ew'),bd=$('ntb'),k=$('ntk'),r=$('ntr'),bm=$('ntm'),bp=$('ntp'),cv=$('eng'),sec=$('s0');
@@ -307,7 +308,7 @@ chkB(24,'全開 3000 rpm：火炎発達角（点火→x_b = 0.1）が 15〜35°C
 const s2=yield*scen('S2'),xi=avg(s2.rec,5,'xr');chkB(24,'アイドル（S2）：0.15 ≤ x_r ≤ 0.35',xi>=.15&&xi<=.35,fx(xi,3));
 const el=(performance.now()-t0)/1e3;chkB(24,'TEST-24 の所要 ≤ 25 s',el<=25,fx(el,1)+' s','≤ 25 s')};
 /* ---- TEST-25 intake runner ---- */
-const SWC={};function*swRun(key,P){if(SWC[key])return SWC[key];const S=new Sweep(P),t0=performance.now();while(!S.run(10))yield;S.el=(performance.now()-t0)/1e3;return SWC[key]=S}
+const SWC={};function*swRun(key,P,Ns){if(SWC[key])return SWC[key];const S=new Sweep(P,Ns),t0=performance.now();while(!S.run(10))yield;S.el=(performance.now()-t0)/1e3;return SWC[key]=S}
 TST[25]=function*(){const P0={...mkPT(),run:1,Lr:.45,dr:.04};
 {const c=new Core({...P0,Al:0});c.s.y[0]=2*PI;c.s.y[1]=0;c.s.al=0;c.s.fuel=0;const y=c.s.y.slice();y[6]=P0.pa;y[9]=P0.pa;y[8]=1e-4;const fr=K.fr,ze=K.ze;K.fr=0;K.ze=0;let Y=y,h=1e-6,zc=[];try{for(let i=0;i<20000;i++){const y2=rk4s(q=>c.f(q),Y,h);if(Y[8]<0&&y2[8]>=0)zc.push((i+Y[8]/(Y[8]-y2[8]))*h);Y=y2}}finally{K.fr=fr;K.ze=ze}
 const Ar=PI/4*P0.dr**2,Vp=.5*Ar*P0.Lr,wH=Math.sqrt(Ar/P0.Lr*(K.gp*R*TI/Vp+R*TI/P0.Vin)),Tm=(zc[zc.length-1]-zc[0])/(zc.length-1);chk(25,`弁閉の共鳴周期 = 2π/ω_H（${zc.length} 回のゼロ交差）`,2*PI/wH,Tm,.01)}yield;
@@ -328,6 +329,9 @@ chkB(26,'P_b = T_b ω，BMEP V_d = 4π T_b（10⁻⁹）',p.every(o=>Math.abs(o.
 const S2=new Sweep({...mkPT()});while(!S2.run(10))yield;chkB(26,'同じ設定で2回の計測が完全一致',JSON.stringify(S2.pts)===JSON.stringify(p));
 const it=p.map(o=>o.tb),ip=p.map(o=>o.pb),kt=it.indexOf(Math.max(...it)),kp=ip.indexOf(Math.max(...ip));chkB(26,'T_b の最大が端点以外，P_b 最大の回転数 > T_b 最大の回転数，全点整定',kt>0&&kt<p.length-1&&SWN[kp]>SWN[kt]&&p.every(o=>o.ok),`T_b 最大 ${Math.max(...it).toFixed(1)} N·m @ ${SWN[kt]}，P_b 最大 ${(Math.max(...ip)/1e3).toFixed(2)} kW @ ${SWN[kp]} rpm`);
 chkB(26,'13 点の計測の所要 ≤ 15 s',S.el<=15,S.el.toFixed(2)+' s','≤ 15 s');yield;
+{let worst='',ok=true;for(const[nm,cfg,uk]of[['既定',{},'def'],['L_r 900',{run:1,Lr:.9},'on90'],['ランナ OFF',{run:0},'off']]){const P=()=>({...mkPT(),...cfg}),up=yield*swRun(uk,P()),dn=yield*swRun('dn'+nm,P(),SWN.slice().reverse());const by=S=>{const m={};S.pts.forEach(q=>m[q.N]=q);return m},U1=by(up),D1=by(dn),I1={},NI=SWN.filter((N,i)=>i%2===0);for(const N of NI){const S=new Sweep(P(),[N]);while(!S.run(10))yield;I1[N]=S.pts[0]}
+const tm=Math.max(...SWN.map(N=>U1[N].tb));let dt=0,de=0;for(const N of SWN)for(const X of[D1,I1])if(X[N]){dt=Math.max(dt,Math.abs(U1[N].tb-X[N].tb));de=Math.max(de,Math.abs(U1[N].ev-X[N].ev))}if(!(dt<=.005*tm&&de<=.005))ok=false;worst+=`${nm} ${(100*dt/tm).toFixed(2)}%/${de.toFixed(4)}　`}
+chkB(26,'上り・下り・単独の計測が一致（|ΔT_b| ≤ 0.5% max，|Δη_v| ≤ 0.005；既定，L_r 900，ランナ OFF）',ok,worst.trim())}yield;
 U.swTest=1;SW.cur=null;SW.ref=null;const lp0=JSON.stringify(LP),ls0=JSON.stringify(live.s);SW.maxMs=0;const ui=function*(){tapEl($('swg'));while(SW.run){swTick(8);yield}};
 yield*ui();const c1=SW.cur;yield*ui();swSub(0);drawSw();const lg1=(sweepSpec(SW.cur.pts,SW.ref&&SW.ref.pts,0)[0].lg||[]).map(q=>q.n);
 chkB(26,'計測の前後で運転中のエンジンの設定と状態が一致，1 回の計算 ≤ 30 ms',JSON.stringify(LP)===lp0&&JSON.stringify(live.s)===ls0&&SW.maxMs<=30,SW.maxMs.toFixed(1)+' ms');

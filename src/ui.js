@@ -66,7 +66,7 @@ const cr=U.cross[U.sub];if(cr!=null&&U.sub>0){const g=q.g,th=U.sub<5;g.font='11p
 const camPg=()=>U.pg===1||U.pg===2;
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref}),COL,null)}
 function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
-function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div data-k="${q[0]}">${U.mj[q[0]]?`<b class="jp">${q[2]}</b>`:`<b>${q[0]}</b>`}<span>${q[1]}</span></div>`).join('')}
+function met(){const L=metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */
 let docTop=0;
 function show(i){if(U.tab===4)docTop=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){docVals();fitMath($('s4'));$('s4').scrollTop=docTop}}
