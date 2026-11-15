@@ -164,12 +164,16 @@ run(T){const t1=this.s.t+T;while(this.s.t<t1)this.step()}
 /* ===== metrics display (validity rule) ===== */
 const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':x.toFixed(n)+u;
 /* ===== WOT sweep (REQ-26) ===== */
-const SWN=Array.from({length:13},(_,i)=>1000+500*i);
-class Sweep{constructor(P0,Ns){this.Ns=Ns||SWN;const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:PI/2});c.fixw=1;c.fixTw=1;c.s.y[5]=K.Twc;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
+const SWC={als:[90,50,10],al:90,Tw:K.Twc,N0:1000,N1:7000,step:250,steps:[100,250,500],last:3,tolR:.003,tolA:.02,tolS:.3,nmin:4,nmax:60};
+const swN=st=>Array.from({length:Math.round((SWC.N1-SWC.N0)/st)+1},(_,i)=>SWC.N0+st*i),SWN=swN(SWC.step),SWN13=swN(500);
+class Sweep{constructor(P0,Ns,al){this.Ns=Ns||SWN;this.al=al??SWC.al;const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:this.al*D});c.fixw=1;c.fixTw=1;c.s.y[5]=SWC.Tw;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
 begin(){const c=this.c,N=this.Ns[this.i];c.s.y[1]=N*PI/30;c.s.Nb=N;c.P.nt=N;if(!c.s.fuel)c.start();this.h=[];this.cy=c.s.cyc;this.nc=0}
 run(ms){const c=this.c,t0=performance.now();let n=0;while(!this.done){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}if((++n&3)===0&&performance.now()-t0>ms)break}return this.done}
-check(){const h=this.h;let ok=false;if(h.length>=4){const a=h.slice(-3),T=a.map(m=>m.tb),S=a.map(m=>m.spa);ok=Math.max(...T)-Math.min(...T)<=.003*Math.abs(T[2])+.02&&Math.max(...S)-Math.min(...S)<=.3}
-if(ok||h.length>=60||this.nc>=120){const M=h[h.length-1]||{};this.pts.push({N:this.Ns[this.i],Na:M.N,Nw:this.c.s.y[1]*30/PI,tb:M.tb,pb:M.pb,bmep:M.bmep,ev:M.ev,bsfc:M.bsfc,eb:M.eb,spa:M.spa,xr:M.xr,ok,cyc:h.length});this.i++;if(this.i>=this.Ns.length)this.done=true;else this.begin()}}}
+check(){const h=this.h;let ok=false;if(h.length>=SWC.nmin){const a=h.slice(-SWC.last),T=a.map(m=>m.tb),S=a.map(m=>m.spa),z=a.length-1;ok=Math.max(...T)-Math.min(...T)<=SWC.tolR*Math.abs(T[z])+SWC.tolA&&Math.max(...S)-Math.min(...S)<=SWC.tolS}
+if(ok||h.length>=SWC.nmax||this.nc>=2*SWC.nmax){const M=h[h.length-1]||{};this.pts.push({N:this.Ns[this.i],Na:M.N,Nw:this.c.s.y[1]*30/PI,tb:M.tb,pb:M.pb,bmep:M.bmep,ev:M.ev,bsfc:M.bsfc,eb:M.eb,spa:M.spa,xr:M.xr,ok,cyc:h.length});this.i++;if(this.i>=this.Ns.length)this.done=true;else this.begin()}}}
+class SweepSet{constructor(P0,Ns,als){this.P0=P0;this.Ns=Ns||SWN;this.als=als||SWC.als;this.sets=this.als.map(al=>({al,pts:[]}));this.k=0;this.S=new Sweep(P0,this.Ns,this.als[0]);this.sets[0].pts=this.S.pts;this.done=false}
+get pts(){return this.sets[0].pts}
+run(ms){const t0=performance.now();while(!this.done){const left=ms-(performance.now()-t0);if(left<=0)break;if(this.S.run(left)){this.k++;if(this.k>=this.als.length){this.done=true;break}this.S=new Sweep(this.P0,this.Ns,this.als[this.k]);this.sets[this.k].pts=this.S.pts}}return this.done}}
 const avgM=s=>{const h=s.Mx&&s.Mh&&s.Mh.length?s.Mh:null;if(!h)return{};const o={};for(const k in h[0]){const v=h[0][k];if(typeof v==='number')o[k]=h.reduce((a,q)=>a+q[k],0)/h.length}return o};
 function metricList0(c,pg){const s=c.s,m=avgM(s),P=c.P,y=s.y,e=[0,1.5];
 return pg?[['ṁ_f',fmtv(m.mfd*1e3,3,' g/s')],['T_b',fmtv(m.tb,1,' N·m')],['P_b',fmtv(m.pb/1e3,2,' kW')],['BMEP',fmtv(m.bmep/1e3,0,' kPa')],['FMEP',fmtv(m.fmep/1e3,0,' kPa')],['ηm',fmtv(m.em,3,'',...e)],['bsfc',fmtv(m.bsfc,0,' g/kWh',0,1e5)],['ηb',fmtv(m.eb,3,'',...e)],['T_dyno',fmtv(s.fe*kwf(P)*y[1]*y[1],1,' N·m')],['f_eff',fmtv(s.fe,2,'')],['Yb,in',fmtv(m.ybi,3,'',0,1)],['点火',fmtv(s.spa,1,'°')]]

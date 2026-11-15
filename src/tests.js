@@ -115,7 +115,7 @@ const tapEl=(el,w)=>{const[x,y]=ctr(el);pev(el,'pointerdown',x,y,w);pev(el,'poin
 function*allScreens(fn){for(const i of[0,1,2,3,5]){show(i);if(i===0)for(const m of[0,1]){U.mpg=m;met();drawEng();fn(`運転${m+1}`)}
 else if(i===1)for(let s=0;s<7;s++){setSub(s);drawCh();fn(`線図${s+1}`)}
 else if(i===2){for(let p=0;p<PAGES.length;p++){U.pg=p;rs();if(p)drawPv();fn(`設定:${PAGES[p]}`)}$('pl').className='on';fn('設定:一覧');$('pl').className=''}
-else if(i===5)for(let k=0;k<4;k++){swSub(k);drawSw();swText();fn(`特性${k+1}`)}
+else if(i===5){for(let k=0;k<5;k++){swSub(k);if(k<4)drawSw();swText();fn(`性能曲線${k+1}`)}swSub(0)}
 else{rchips();dtl();fn('検証')}yield}}
 const vis=el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(el).visibility!=='hidden'};
 function uiDefault(){Object.assign(LP,mkP());U.pend={};U.x10=0;U.undo=null;U.pg=0;U.log=0;U.mpg=0;U.cross=U.cross.map(()=>null);Sim.spd=.1;live.reset();Base.clear();axReset(AX);$('ts').textContent='';sp();rs()}
@@ -308,7 +308,7 @@ chkB(24,'全開 3000 rpm：火炎発達角（点火→x_b = 0.1）が 15〜35°C
 const s2=yield*scen('S2'),xi=avg(s2.rec,5,'xr');chkB(24,'アイドル（S2）：0.15 ≤ x_r ≤ 0.35',xi>=.15&&xi<=.35,fx(xi,3));
 const el=(performance.now()-t0)/1e3;chkB(24,'TEST-24 の所要 ≤ 25 s',el<=25,fx(el,1)+' s','≤ 25 s')};
 /* ---- TEST-25 intake runner ---- */
-const SWC={};function*swRun(key,P,Ns){if(SWC[key])return SWC[key];const S=new Sweep(P,Ns),t0=performance.now();while(!S.run(10))yield;S.el=(performance.now()-t0)/1e3;return SWC[key]=S}
+const SWK={};function*swRun(key,P,Ns,al){if(SWK[key])return SWK[key];const S=new Sweep(P,Ns,al),t0=performance.now();while(!S.run(10))yield;S.el=(performance.now()-t0)/1e3;return SWK[key]=S}
 TST[25]=function*(){const P0={...mkPT(),run:1,Lr:.45,dr:.04};
 {const c=new Core({...P0,Al:0});c.s.y[0]=2*PI;c.s.y[1]=0;c.s.al=0;c.s.fuel=0;const y=c.s.y.slice();y[6]=P0.pa;y[9]=P0.pa;y[8]=1e-4;const fr=K.fr,ze=K.ze;K.fr=0;K.ze=0;let Y=y,h=1e-6,zc=[];try{for(let i=0;i<20000;i++){const y2=rk4s(q=>c.f(q),Y,h);if(Y[8]<0&&y2[8]>=0)zc.push((i+Y[8]/(Y[8]-y2[8]))*h);Y=y2}}finally{K.fr=fr;K.ze=ze}
 const Ar=PI/4*P0.dr**2,Vp=.5*Ar*P0.Lr,wH=Math.sqrt(Ar/P0.Lr*(K.gp*R*TI/Vp+R*TI/P0.Vin)),Tm=(zc[zc.length-1]-zc[0])/(zc.length-1);chk(25,`弁閉の共鳴周期 = 2π/ω_H（${zc.length} 回のゼロ交差）`,2*PI/wH,Tm,.01)}yield;
@@ -317,28 +317,34 @@ const Ar=PI/4*P0.dr**2,Vp=.5*Ar*P0.Lr,wH=Math.sqrt(Ar/P0.Lr*(K.gp*R*TI/Vp+R*TI/P
 {const s3=yield*scen('S3'),a=avg(s3.rec,5,'mth'),b=avg(s3.rec,5,'mr'),d=avg(s3.rec,5,'min'),q=s3.c.clone();let y0=1,y1=0;const cy=q.s.cyc;while(q.s.cyc<cy+1){q.step();y0=Math.min(y0,q.X.Ybp);y1=Math.max(y1,q.X.Ybp)}
 chkB(25,'ON・S3：ṁ_th，ṁ_r，ṁ_in の5サイクル平均が相互に 1% 以内',Math.max(a,b,d)/Math.min(a,b,d)-1<=.01,[a,b,d].map(v=>(v*1e3).toFixed(4)).join('，')+' g/s');chkB(25,'ON：1 サイクルの全時刻で 0 ≤ Y_b,p ≤ 1',y0>=0&&y1<=1,y0.toFixed(4)+'〜'+y1.toFixed(4))}
 const So=yield*swRun('off',{...mkPT(),run:0}),S1=yield*swRun('on45',{...mkPT(),run:1,Lr:.45}),S9=yield*swRun('on90',{...mkPT(),run:1,Lr:.9});
-const dv=S=>S.pts.map((p,i)=>p.ev-So.pts[i].ev),am=a=>a.indexOf(Math.max(...a)),d1=dv(S1),d9=dv(S9),n1=SWN[am(d1)],n9=SWN[am(d9)];
+const dv=S=>S.pts.map((p,i)=>p.ev-So.pts[i].ev),am=a=>a.indexOf(Math.max(...a)),d1=dv(S1),d9=dv(S9),n1=S1.Ns[am(d1)],n9=S9.Ns[am(d9)];
 chkB(25,'慣性過給：L_r = 450 mm の Δη_v の最大 ≥ 0.02',Math.max(...d1)>=.02,Math.max(...d1).toFixed(3)+` @ ${n1} rpm`);chkB(25,'L_r = 900 mm で Δη_v 最大の回転数が下がる',n9<n1,`${n1} → ${n9} rpm（最大 ${Math.max(...d9).toFixed(3)}）`)};
 /* ---- TEST-26 WOT sweep tab ---- */
 TST[26]=function*(){const keep={cur:SW.cur,ref:SW.ref,sub:SW.sub,run:SW.run};uiDefault();show(5);yield 'frame';const nb=[...$('N').children];
 chkB(26,'6 タブ（運転・線図・性能曲線・設定・検証・解説），全タブ 44 px 以上，文字が切れない，画面に「掃引」が無い',JSON.stringify(nb.map(b=>b.textContent))==='["運転","線図","性能曲線","設定","検証","解説"]'&&nb.every(b=>{const r=b.getBoundingClientRect();return r.width>=44&&r.height>=44&&b.scrollWidth<=b.clientWidth})&&![...document.querySelectorAll('nav,section:not(#s4)')].some(e=>e.textContent.includes('掃引')),nb.map(b=>b.getBoundingClientRect().width.toFixed(0)).join('，')+' px');
-const S=yield*swRun('def',{...mkPT()});SW.cur={pts:S.pts,sig:JSON.stringify(LP),el:S.el};SW.ref=null;let bl=0;const sec=$('s5');for(let k=0;k<4;k++){swSub(k);drawSw();if(sec.scrollHeight>sec.clientHeight+1||document.body.scrollHeight>innerHeight+1)bl++;for(const L of SLAY){const sp=L.sp;if(!/\[.+\]/.test(sp.ya.name)||!/\[.+\]/.test(sp.xa.name)||L.yt.length<2||L.xt.length<2)bl++}}
+const S=yield*swRun('on45',{...mkPT(),run:1,Lr:.45});SW.cur={sets:[{al:90,pts:S.pts}],pts:S.pts,sig:swSig(),el:S.el,P:{...LP},step:SW.step};SW.ref=null;let bl=0;const sec=$('s5');for(let k=0;k<4;k++){swSub(k);drawSw();if(sec.scrollHeight>sec.clientHeight+1||document.body.scrollHeight>innerHeight+1)bl++;for(const L of SLAY){const sp=L.sp;if(!/\[.+\]/.test(sp.ya.name)||!/\[.+\]/.test(sp.xa.name)||L.yt.length<2||L.xt.length<2)bl++}}
 chkB(26,'性能曲線タブ 4 表示：スクロール無し，全グラフに単位付き軸名と目盛',bl===0,bl+' 件違反','0 件');yield;SW.ref=SW.cur;swText();const rw=[...$('swt').children],ov=rw.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(26,'完了表示の 3 行が切れない（基準あり）',ov===0&&rw.length===3,rw.map(r=>r.textContent).join(' / '));SW.ref=null;
 const p=S.pts,w=o=>2*PI*o.Na/60;chkB(26,'各点で角速度 ω が目標と一致（10⁻⁹），サイクル時間からの回転数は目標 ± N·0.5°/720°',p.every(o=>Math.abs(o.Nw-o.N)<=1e-9*o.N&&Math.abs(o.Na-o.N)<=o.N*.5/720),'最大差 '+Math.max(...p.map(o=>Math.abs(o.Na-o.N))).toFixed(2)+' rpm');
 chkB(26,'P_b = T_b ω，BMEP V_d = 4π T_b（10⁻⁹）',p.every(o=>Math.abs(o.pb-o.tb*w(o))<=1e-9*Math.abs(o.pb)&&Math.abs(o.bmep*geo(mkPT()).Vd-P4*o.tb)<=1e-9*Math.abs(P4*o.tb)));
+{swSub(4);const A=$('swa'),g=k=>{const e=A.querySelector(`[data-c="${k}"]`);return e?parseFloat(e.textContent):NaN},sec=$('s5');const okv=g('al')===SWC.al&&g('Tw')===SWC.Tw&&g('n')===swN(SW.step).length&&Math.abs(g('tolR')-SWC.tolR*100)<1e-9&&g('tolA')===SWC.tolA&&g('tolS')===SWC.tolS&&g('nmin')===SWC.nmin&&g('nmax')===SWC.nmax&&g('last')===SWC.last&&Math.abs(g('Ta')-LP.Ta)<1e-9;
+const ns=[];for(const v of SWC.steps){tapEl(A.querySelector(`button[data-st="${v}"]`));ns.push(g('n'))}swText();const stale=$('swt').textContent.includes('設定が変わりました');tapEl(A.querySelector(`button[data-st="${SWC.step}"]`));swText();const fresh=!$('swt').textContent.includes('設定が変わりました');const sb=[...$('sws').children].filter(b=>txtW(b)>.95*room(b)).map(b=>b.textContent);
+chkB(26,'条件表示：数値が定数表と設定に一致，刻み 100/250/500 で 61/25/13 点，既定 250 で 25 点，刻み変更で古さ表示，スクロール無し，表示ボタンの文字に余裕',okv&&JSON.stringify(ns)==='[61,25,13]'&&SW.step===250&&swN(SW.step).length===25&&stale&&fresh&&sec.scrollHeight<=sec.clientHeight+1&&A.querySelector('table').offsetHeight<=.95*A.clientHeight&&!sb.length,`表の高さ ${A.querySelector('table').offsetHeight}/${A.clientHeight} px，値 ${okv}，点数 ${ns.join('/')}，古さ ${stale}/${!fresh}，余裕不足 ${sb.join(' ')}`);swSub(0)}
 const S2=new Sweep({...mkPT()});while(!S2.run(10))yield;chkB(26,'同じ設定で2回の計測が完全一致',JSON.stringify(S2.pts)===JSON.stringify(p));
-const it=p.map(o=>o.tb),ip=p.map(o=>o.pb),kt=it.indexOf(Math.max(...it)),kp=ip.indexOf(Math.max(...ip));chkB(26,'T_b の最大が端点以外，P_b 最大の回転数 > T_b 最大の回転数，全点整定',kt>0&&kt<p.length-1&&SWN[kp]>SWN[kt]&&p.every(o=>o.ok),`T_b 最大 ${Math.max(...it).toFixed(1)} N·m @ ${SWN[kt]}，P_b 最大 ${(Math.max(...ip)/1e3).toFixed(2)} kW @ ${SWN[kp]} rpm`);
-chkB(26,'13 点の計測の所要 ≤ 15 s',S.el<=15,S.el.toFixed(2)+' s','≤ 15 s');yield;
-{let worst='',ok=true;for(const[nm,cfg,uk]of[['既定',{},'def'],['L_r 900',{run:1,Lr:.9},'on90'],['ランナ OFF',{run:0},'off']]){const P=()=>({...mkPT(),...cfg}),up=yield*swRun(uk,P()),dn=yield*swRun('dn'+nm,P(),SWN.slice().reverse());const by=S=>{const m={};S.pts.forEach(q=>m[q.N]=q);return m},U1=by(up),D1=by(dn),I1={},NI=SWN.filter((N,i)=>i%2===0);for(const N of NI){const S=new Sweep(P(),[N]);while(!S.run(10))yield;I1[N]=S.pts[0]}
-const tm=Math.max(...SWN.map(N=>U1[N].tb));let dt=0,de=0;for(const N of SWN)for(const X of[D1,I1])if(X[N]){dt=Math.max(dt,Math.abs(U1[N].tb-X[N].tb));de=Math.max(de,Math.abs(U1[N].ev-X[N].ev))}if(!(dt<=.005*tm&&de<=.005))ok=false;worst+=`${nm} ${(100*dt/tm).toFixed(2)}%/${de.toFixed(4)}　`}
+const it=p.map(o=>o.tb),ip=p.map(o=>o.pb),kt=it.indexOf(Math.max(...it)),kp=ip.indexOf(Math.max(...ip));chkB(26,'T_b の最大が端点以外，P_b 最大の回転数 > T_b 最大の回転数，全点整定',kt>0&&kt<p.length-1&&S.Ns[kp]>S.Ns[kt]&&p.every(o=>o.ok),`T_b 最大 ${Math.max(...it).toFixed(1)} N·m @ ${S.Ns[kt]}，P_b 最大 ${(Math.max(...ip)/1e3).toFixed(2)} kW @ ${S.Ns[kp]} rpm`);
+{const t0=performance.now(),A5=yield*swRun('a50',{...mkPT()},undefined,50),A1=yield*swRun('a10',{...mkPT()},undefined,10),A9=S,el=(performance.now()-t0)/1e3+S.el,Q={sets:[A9,A5,A1]},mx=Math.max(...A9.pts.map(o=>o.tb));
+chkB(26,`既定 ${Q.sets.length} 開度 × ${A9.pts.length} 点の計測の所要 ≤ 15 s`,Q.sets.length===3&&Q.sets.every(x=>x.pts.length===25)&&el<=15,el.toFixed(2)+' s','≤ 15 s');
+const ordT=A9.pts.every((o,i)=>A1.pts[i].tb<A5.pts[i].tb&&A5.pts[i].tb<=o.tb+.05*mx),ordV=A9.pts.every((o,i)=>A1.pts[i].ev<A5.pts[i].ev&&A5.pts[i].ev<=o.ev+.03),m1=Math.max(...A1.pts.map(o=>o.tb));
+chkB(26,'部分開度：開度 90°・50°・10° の 3 曲線，T_b と η_v が開度の順（50° は全開 +5%／+0.03 まで許す），10° のトルクは回転とともに単調に減る（空気量がスロットルで頭打ち）',[A9.al,A5.al,A1.al].join()==='90,50,10'&&ordT&&ordV&&A1.pts.every((o,i)=>!i||o.tb<A1.pts[i-1].tb),`最大 T_b ${mx.toFixed(1)}／${Math.max(...A5.pts.map(o=>o.tb)).toFixed(1)}／${m1.toFixed(1)} N·m，順序 T ${ordT} η ${ordV}`)}yield;
+{let worst='',ok=true;for(const[nm,cfg,uk]of[['既定',{run:1,Lr:.45},'on45'],['L_r 900',{run:1,Lr:.9},'on90'],['ランナ OFF',{run:0},'off']]){const P=()=>({...mkPT(),...cfg}),up=yield*swRun(uk,P()),dn=yield*swRun('dn'+nm,P(),SWN13.slice().reverse());const by=S=>{const m={};S.pts.forEach(q=>m[q.N]=q);return m},U1=by(up),D1=by(dn),I1={},NI=SWN13.filter((N,i)=>i%2===0);for(const N of NI){const S=new Sweep(P(),[N]);while(!S.run(10))yield;I1[N]=S.pts[0]}
+const tm=Math.max(...SWN13.map(N=>U1[N].tb));let dt=0,de=0;for(const N of SWN13)for(const X of[D1,I1])if(X[N]){dt=Math.max(dt,Math.abs(U1[N].tb-X[N].tb));de=Math.max(de,Math.abs(U1[N].ev-X[N].ev))}if(!(dt<=.005*tm&&de<=.005))ok=false;worst+=`${nm} ${(100*dt/tm).toFixed(2)}%/${de.toFixed(4)}　`}
 chkB(26,'上り・下り・単独の計測が一致（|ΔT_b| ≤ 0.5% max，|Δη_v| ≤ 0.005；既定，L_r 900，ランナ OFF）',ok,worst.trim())}yield;
-U.swTest=1;SW.cur=null;SW.ref=null;const lp0=JSON.stringify(LP),ls0=JSON.stringify(live.s);SW.maxMs=0;const ui=function*(){tapEl($('swg'));while(SW.run){swTick(8);yield}};
-yield*ui();const c1=SW.cur;yield*ui();swSub(0);drawSw();const lg1=(sweepSpec(SW.cur.pts,SW.ref&&SW.ref.pts,0)[0].lg||[]).map(q=>q.n);
+U.swTest=1;const st0=SW.step;SW.step=500;SW.als=[90];SW.cur=null;SW.ref=null;const lp0=JSON.stringify(LP),ls0=JSON.stringify(live.s);SW.maxMs=0;const ui=function*(){tapEl($('swg'));while(SW.run){swTick(8);yield}};
+yield*ui();const c1=SW.cur;yield*ui();swSub(0);drawSw();const lg1=(sweepSpec(SW.cur.sets,SW.ref&&SW.ref.sets,0)[0].lg||[]).map(q=>q.n);
 chkB(26,'計測の前後で運転中のエンジンの設定と状態が一致，1 回の計算 ≤ 30 ms',JSON.stringify(LP)===lp0&&JSON.stringify(live.s)===ls0&&SW.maxMs<=30,SW.maxMs.toFixed(1)+' ms');
 tapEl($('swc'));chkB(26,'2 回目の完了で基準（前回）が描かれ，[基準を消す] で消える',lg1.includes('基準')&&SW.ref===null&&c1&&SW.cur!==c1,lg1.join('，'));
 setParam('phin',5*D);swText();const st1=$('swt').textContent;yield*ui();swText();const st2=$('swt').textContent;
 tapEl($('swg'));swTick(8);tapEl($('swg'));const curC=SW.cur;chkB(26,'設定変更で古さの表示が出て再計測で消える，[中止] は結果を置き換えない',st1.includes('設定が変わりました')&&!st2.includes('設定が変わりました')&&!SW.run&&SW.cur===curC,`変更後「${st1.slice(-20)}」`);
-U.swTest=0;Object.assign(SW,keep);show(3)};
+U.swTest=0;SW.step=st0;delete SW.als;Object.assign(SW,keep);show(3)};
 /* ---- runner ---- */
 const axc=o=>{const r={cyc:o.cyc};for(const k in o)if(o[k]&&o[k].up)r[k]=Object.assign(Object.create(Object.getPrototypeOf(o[k])),o[k]);return r};
 function snapLive(){return{s:structuredClone(live.s),P:{...LP},tr:live.tr,H:live.H,last:live.last,lastM:live.lastM,X:live.X,U:{...U,pend:{...U.pend},cross:U.cross.slice()},ref:Base.ref,tl:Base.tl,spd:Sim.spd,debt:Sim.debt,ax:axc(AX),top:$('s4').scrollTop,note:$('ts').textContent}}

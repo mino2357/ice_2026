@@ -39,14 +39,19 @@ const dprc=()=>Math.min(devicePixelRatio||1,2.5);
 function fit(c){const q=dprc(),w=Math.max(1,Math.round(c.clientWidth*q)),h=Math.max(1,Math.round(c.clientHeight*q));if(c.width!==w||c.height!==h){c.width=w;c.height=h}}
 function prep(c){const W=c.clientWidth,H=c.clientHeight;if(!W||!H)return null;fit(c);const g=c.getContext('2d'),d=c.width/W;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,c.width,c.height);g.setTransform(d,0,0,d,0,0);return{g,W,H}}
 /* ===== WOT sweep tab (REQ-26) ===== */
-const SW={run:null,cur:null,ref:null,sub:0,t0:0,maxMs:0};
-function swStart(){if((U.busy&&!U.swTest)||SW.run)return;SW.run=new Sweep({...LP});SW.t0=NOW();$('swg').textContent='中止';swText()}
+const SW={run:null,cur:null,ref:null,sub:0,t0:0,maxMs:0,step:SWC.step};const swSig=()=>JSON.stringify(LP)+'|'+SW.step;
+function swStart(){if((U.busy&&!U.swTest)||SW.run)return;SW.run=new SweepSet({...LP},swN(SW.step),SW.als);SW.run.sig=swSig();SW.run.P={...LP};SW.run.step=SW.step;SW.t0=NOW();$('swg').textContent='中止';swText()}
 function swStop(){SW.run=null;$('swg').textContent='計測開始';swText()}
-function swTick(ms){if(!SW.run)return false;const t=performance.now(),d=SW.run.run(ms);SW.maxMs=Math.max(SW.maxMs,performance.now()-t);if(d){if(SW.cur)SW.ref=SW.cur;SW.cur={pts:SW.run.pts,sig:SW.run.sig,el:(NOW()-SW.t0)/1e3};swStop()}return d}
-function swSub(n){SW.sub=n;[...$('sws').children].forEach((b,j)=>b.className=j===n?'on':'')}
-function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){const n=R.pts.length;a=`計測中 ${n}/${SWN.length}（${SWN[Math.min(n,SWN.length-1)]} rpm）`}else if(SW.cur){const p=SW.cur.pts,mt=p.reduce((m,o)=>o.tb>m.tb?o:m,p[0]),mp=p.reduce((m,o)=>o.pb>m.pb?o:m,p[0]);a=`完了 ${SW.cur.el.toFixed(1)} s（全開・回転数固定・MBT）`;c=`最大 ${mt.tb.toFixed(1)} N·m @ ${mt.N}，${(mp.pb/1e3).toFixed(1)} kW @ ${mp.N} rpm`}else{a='計測開始で全開の性能曲線を求めます';c='回転数 1000〜7000 rpm を固定して順に計測（点火 MBT）'}
-if(!R&&SW.cur&&SW.cur.sig!==JSON.stringify(LP))b='設定が変わりました（再計測で更新）';else if(SW.ref)b='灰色：基準（前回の計測）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
-let SLAY=[];function drawSw(){const q=prep($('tc'));if(!q)return;const cur=SW.run?SW.run.pts:SW.cur&&SW.cur.pts;SLAY=drawScreen(q.g,q.W,q.H,sweepSpec(cur,SW.ref&&SW.ref.pts,SW.sub),COL,null)}
+function swTick(ms){if(!SW.run)return false;const t=performance.now(),d=SW.run.run(ms);SW.maxMs=Math.max(SW.maxMs,performance.now()-t);if(d){if(SW.cur)SW.ref=SW.cur;SW.cur={sets:SW.run.sets,pts:SW.run.pts,sig:SW.run.sig,el:(NOW()-SW.t0)/1e3,P:SW.run.P,step:SW.run.step};swStop()}return d}
+function swSub(n){SW.sub=n;[...$('sws').children].forEach((b,j)=>b.className=j===n?'on':'');const ca=n===4;$('tc').style.display=ca?'none':'';$('swa').style.display=ca?'':'none';$('swt').style.display=ca?'none':'';if(ca)swCond()}
+function swCond(){const P=SW.cur?SW.cur.P:LP,G=geo(P),V=valves(P,G),f=(v,d)=>(+v).toFixed(d),st=SW.step,n=swN(st).length,dg=r=>f(r/D,0)+'°',row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
+$('swa').innerHTML=`<table><tr><th colspan="2">固定する条件</th></tr>${row('スロットル開度',`<b data-c="al">${SWC.als.join('</b>°・<b>')}</b>°（90° = 全開）`)}${row('回転数の保持','速度一定の理想動力計（dω/dt = 0）')}${row('点火','MBT（CA50 = 10° ATDC に自動）')}${row('サイクル変動','OFF')}${row('壁温 T_w',`<b data-c="Tw">${SWC.Tw}</b> K 固定`)}
+<tr><th colspan="2">回転数の点</th></tr>${row('範囲',`${SWC.N0}〜${SWC.N1} rpm，低回転から順（前の点から継続）`)}<tr><td>刻み・点数</td><td><span class="stp">${SWC.steps.map(v=>`<button data-st="${v}" class="${v===st?'on':''}">${v}</button>`).join('')}</span> rpm，<b data-c="n">${n}</b> 点</td></tr>
+<tr><th colspan="2">整定の判定（直近 <b data-c="last">${SWC.last}</b> サイクル）</th></tr>${row('T_b の幅',`≤ <b data-c="tolR">${f(SWC.tolR*100,1)}</b>%·|T_b| + <b data-c="tolA">${SWC.tolA}</b> N·m`)}${row('MBT の幅',`≤ <b data-c="tolS">${SWC.tolS}</b>°`)}${row('サイクル数',`最少 <b data-c="nmin">${SWC.nmin}</b>，最多 <b data-c="nmax">${SWC.nmax}</b>（採る値は最後のサイクル）`)}
+<tr><th colspan="2">${SW.cur?'計測時の設定':'現在の設定'}</th></tr>${row('大気圧・当量比',`${f(P.pa/1e3,1)} kPa，φ ${f(P.phi,2)}`)}${row('ε・B×S',`${f(P.eps,1)}，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('吸気弁径',`${f(P.dv*1e3,0)} mm`)}${row('IVO・IVC',`${dg(V.i.o)}・${dg(V.i.c)}`)}${row('EVO・EVC',`${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('補機負荷トルク',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`}
+function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){const n=R.pts.length;const S=R.S,m=S.pts.length;a=`計測中 開度 ${S.al}°（${R.k+1}/${R.als.length}） ${m}/${S.Ns.length}（${S.Ns[Math.min(m,S.Ns.length-1)]} rpm）`}else if(SW.cur){const p=SW.cur.pts,mt=p.reduce((m,o)=>o.tb>m.tb?o:m,p[0]),mp=p.reduce((m,o)=>o.pb>m.pb?o:m,p[0]);a=`完了 ${SW.cur.el.toFixed(1)} s（${SWC.als.join('・')}°，回転数固定，MBT）`;c=`全開 最大 ${mt.tb.toFixed(1)} N·m @ ${mt.N}，${(mp.pb/1e3).toFixed(1)} kW @ ${mp.N} rpm`}else{a='計測開始で全開の性能曲線を求めます';c=`回転数 ${SWC.N0}〜${SWC.N1} rpm を ${SW.step} rpm 刻みで固定して計測`}
+if(!R&&SW.cur&&SW.cur.sig!==swSig())b='設定が変わりました（再計測で更新）';else if(SW.ref)b='灰色：基準（前回の計測）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
+let SLAY=[];function drawSw(){const q=prep($('tc'));if(!q)return;const cur=SW.run?SW.run.sets.filter(x=>x.pts.length):SW.cur&&SW.cur.sets;SLAY=drawScreen(q.g,q.W,q.H,sweepSpec(cur,SW.ref&&SW.ref.sets,SW.sub),COL,null)}
 function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-NTB,COL);ntRender()}
 /* ===== target-rpm slider (REQ-23) ===== */
 const NTD={on:0,off:0,v:NaN,u:NaN};
@@ -76,7 +81,7 @@ const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.class
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
-tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
+tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swa'),e=>{const b=e.target.closest('button[data-st]');if(b){SW.step=+b.dataset.st;swCond();swText()}});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
 document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
