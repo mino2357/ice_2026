@@ -268,7 +268,7 @@ r.push(off('fb')&&lab('fb').includes('（不使用）')&&on('fm')&&!lab('fm').in
 live.s.al=20.06*D;liveVals();r.push(val('alm')==='20.1');
 tapEl(row('mode')?row('mode').querySelector('button[data-c="1"]'):[...$('Pg').querySelectorAll('button[data-k="mode"]')][1]);live.s.mode=1;live.s.fc=.37;rs();
 r.push(LP.mode===1&&on('alm')&&on('fb')&&off('fm')&&lab('fm').includes('（自動）')&&val('fm')==='0.37'&&!lab('alm').includes('（自動）')&&!lab('fb').includes('（不使用）'));const f1=fit('alm')&&fit('fb')&&fit('fm');
-live.s.fc=.5;liveVals();r.push(val('fm')==='0.50');
+live.s.fc=.5;liveVals();r.push(val('fm')==='0.50');LP.alm=12.34*D;rs();const a1=val('alm');stepItem('alm',1);r.push(a1==='12.3'&&Math.abs(LP.alm/D-12.4)<1e-9&&val('alm')==='12.4');
 chkB(18,'回転数の制御で使わない項目：スロットル制御で固定開度（自動・現在の開度）と基準充水率（不使用）が無効，動力計制御で固定充水率（自動・現在の指令）が無効，表示が毎フレームの更新（liveVals）で追従，文字が欠けない',r.every(x=>x)&&f0&&f1,`${r.map(x=>x?1:0).join('')}，幅 ${f0?1:0}${f1?1:0}`);
 uiDefault();live.reset()}
 U.pg=0;rs();
