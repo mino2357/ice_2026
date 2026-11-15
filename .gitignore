@@ -73,3 +73,4 @@ node_modules/
 dist/*.wav
 *.log
 .DS_Store
+dist/flavor_tabs.json

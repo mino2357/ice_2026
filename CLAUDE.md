@@ -30,6 +30,7 @@
 | `src/build.py` | 上記を結合して `dist/engine.html` を生成 |
 | `tests/headless.js` | 開発時検証 [D]（Playwright） |
 | `tools/wav_demo.js` | 試聴用 WAV の生成 |
+| `tools/flavor/` | 演出音（REQ-21 D）の試聴サンプルの生成（`tabs.js` → `samples.js`，`samples_bass.js`，`live.js`．出力は `dist/`） |
 
 ## コマンド
 ```
