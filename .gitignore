@@ -74,3 +74,4 @@ dist/*.wav
 *.log
 .DS_Store
 dist/flavor_tabs.json
+dist/review_jac.json
