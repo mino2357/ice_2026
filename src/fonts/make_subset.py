@@ -18,4 +18,7 @@ for rec in nm.names:
     if rec.nameID in (1,4,16):rec.string='ICE-Sim Math Subset (from Latin Modern Math)'
     elif rec.nameID==3:rec.string='ICE-Sim-Math-Subset-1.0'
     elif rec.nameID==6:rec.string='ICESimMathSubset-Regular'
+# LPPL 1.3c 第 6 節 (b)：変更の内容を部品（フォント）自体に書く．原本の著作権表示（ID 0）は変えない
+DESC='Modified version: a subset of Latin Modern Math 1.959 (GUST e-foundry) containing only the characters used by the formulas of the single-cylinder SI engine simulator (ICE-Sim); the MATH table is kept. The font names were changed. Not supported by the original authors. Original: https://ctan.org/pkg/lm-math . License: GUST Font License (LaTeX Project Public License 1.3c).'
+nm.setName(DESC,10,3,1,0x409);nm.setName(DESC,10,1,0,0)
 f.save(__file__.replace('make_subset.py','lmmath-subset.otf'))
