@@ -14,7 +14,7 @@ function hold(el,ms,fn){let t;el.addEventListener('pointerdown',()=>{clearTimeou
 function advance(st,c,el,budget){st.debt+=Math.min(el,.05)*st.spd;const t0=performance.now();let n=0;while(st.debt>0){st.debt-=c.step();if(budget&&(++n&31)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}}}
 /* ===== settings logic ===== */
 const note=t=>{$('ts').textContent=t};
-function setParam(k,v,noUndo){const it=IT[k],old=LP[k];if(v===old)return;if(it.c==='r'){U.pend[k]=v;if(v===LP[k])delete U.pend[k];rs();return}
+function setParam(k,v,noUndo){const it=IT[k],old=LP[k];if(it.c==='r'){if(v===LP[k])delete U.pend[k];else U.pend[k]=v;rs();return}if(v===old)return;
 Base.change(live,NOW());if(k==='sauto'&&v===0&&old===1&&live.s.fired){const sv=LP.spb;LP.spb=gv(IT.spb,gi(IT.spb,live.s.spa));live.s.spa=LP.spb;if(!noUndo)U.undo=null;note(`点火の自動最適化：ON → OFF（自動値 ${LP.spb}° を手動値へ引継ぎ，前の手動値 ${sv}°）`);LP[k]=v;rs();return}LP[k]=v;if(!noUndo)U.undo={k,old};note(`${it.n}：${disp(it,old)} → ${disp(it,v)}${it.u?' '+it.u:''}`);rs()}
 const pval=k=>k in U.pend?U.pend[k]:LP[k];
 function stepItem(k,dir){const it=IT[k],n=gi(it,pval(k))+dir*(U.x10?10:1),m=Math.max(gmin(it),Math.min(gmax(it),n));setParam(k,gv(it,m))}
