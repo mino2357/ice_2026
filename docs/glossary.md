@@ -169,6 +169,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | :--- | :--- | :--- | :--- | :--- |
 | $N$，$\bar N$ | 瞬時の回転数，平均回転数 | rpm | $N = \dfrac{30}{\pi}\omega$，$\tau_N\dfrac{d\bar N}{dt} = N - \bar N$ | SPEC-12 |
 | $N_{\text{target}}$ | 目標回転数 | rpm | 設定 | SPEC-12 |
+| $\alpha_{\text{manual}}$，$f_{\text{manual}}$，$f_{\text{base}}$ | 固定開度（動力計制御で使う），固定充水率（スロットル制御で使う），基準充水率（動力計制御の PI の基準） | rad，–，– | 設定．使わない制御のときは設定画面で変更できない（SPEC-18 B.7） | SPEC-11，18 |
 | $e_N$，$e_d$ | 偏差 | rpm | $e_N = N_{\text{target}} - \bar N$，$e_d = \bar N - N_{\text{target}}$ | SPEC-11，12 |
 | $\alpha_{\text{ff}}$，$\alpha_{\min}$ | feedforward を加えた基準開度，開度の下限 | rad | $\alpha_{\text{ff}} = \alpha_{\text{base}} + k_T T_{\text{aux}}$，$\alpha_{\min} = \min(\alpha_{\max},\ \max(0,\ \alpha_{\text{ff}} - \delta_\alpha))$ | SPEC-12 |
 | $I_\alpha$，$I_f$ | スロットル制御・動力計制御の積分の状態 | rad，– | $\dfrac{dI_\alpha}{dt} = K_i e_N$，$\dfrac{dI_f}{dt} = K_{i,d}\,e_d$（張り付きを深める向きでは $0$） | SPEC-11，12 |

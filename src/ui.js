@@ -17,16 +17,21 @@ const note=t=>{$('ts').textContent=t};
 function setParam(k,v,noUndo){const it=IT[k],old=LP[k];if(it.c==='r'){if(v===LP[k])delete U.pend[k];else U.pend[k]=v;rs();return}if(v===old)return;
 Base.change(live,NOW());if(k==='sauto'&&v===0&&old===1&&live.s.fired){const sv=LP.spb;LP.spb=gv(IT.spb,gi(IT.spb,live.s.spa));live.s.spa=LP.spb;if(!noUndo)U.undo=null;note(`点火の自動最適化：ON → OFF（自動値 ${LP.spb}° を手動値へ引継ぎ，前の手動値 ${sv}°）`);LP[k]=v;rs();return}LP[k]=v;if(!noUndo)U.undo={k,old};note(`${it.n}：${disp(it,old)} → ${disp(it,v)}${it.u?' '+it.u:''}`);rs()}
 const pval=k=>k in U.pend?U.pend[k]:LP[k];
-function stepItem(k,dir){const it=IT[k],n=gi(it,pval(k))+dir*(U.x10?10:1),m=Math.max(gmin(it),Math.min(gmax(it),n));setParam(k,gv(it,m))}
+function stepItem(k,dir){if(ctlSt(k))return;const it=IT[k],n=gi(it,pval(k))+dir*(U.x10?10:1),m=Math.max(gmin(it),Math.min(gmax(it),n));setParam(k,gv(it,m))}
 const lamOK=()=>pval('S')/2/pval('lr')<=.5+1e-12;
 function applyPend(){if(!Object.keys(U.pend).length||!lamOK())return;const ks=Object.keys(U.pend);ks.forEach(k=>LP[k]=U.pend[k]);U.pend={};U.undo=null;live.reset();Base.clear();axReset(AX);Sim.debt=0;note('適用：'+ks.map(k=>IT[k].n).join('，')+'（コールドリセット）');rs()}
 function undo(){const u=U.undo;if(!u)return;U.undo=null;setParam(u.k,u.old,1);note(`元に戻しました：${IT[u.k].n} = ${disp(IT[u.k],u.old)}`)}
 function defaults(){ITEMS.filter(i=>i.pg===U.pg).forEach(i=>setParam(i.k,defv(i),1));U.undo=null;note('このページを既定値に戻しました');rs()}
 function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* ===== rendering: settings ===== */
+/* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
+const CTLU={alm:['a',''],fm:['','a'],fb:['n','']},ctlSt=k=>CTLU[k]?CTLU[k][LP.mode?1:0]:'';
+const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(1):live.s.fc.toFixed(2);
+/* 自動の値の行を毎フレーム書き換える（設定タブの表示中に loop から呼ぶ） */
+function liveVals(){for(const k of['spb','alm','fm']){if(!(k==='spb'?LP.sauto:ctlSt(k)==='a'))continue;const e=$('Pg').querySelector(`b[data-v="${k}"]`);if(e)e.textContent=ctlVal(k)}}
 function rs(){const its=ITEMS.filter(i=>i.pg===U.pg),eng=U.pg===0;$('pt').textContent=`${PAGES[U.pg]}  ${U.pg+1}/${PAGES.length}`;
 $('Pg').innerHTML=its.map(it=>{const v=pval(it.k),pd=it.k in U.pend;if(it.ch){const cur=it.vals?it.vals.indexOf(v):v;return`<div class="r c"><span>${it.n}</span><div>${it.ch.map((n,i)=>`<button data-k="${it.k}" data-c="${i}" class="${i===cur?'on':''}">${n}</button>`).join('')}</div></div>`}
-const n=gi(it,v),au=it.k==='spb'&&LP.sauto;return`<div class="r${pd?' p':''}"><span>${it.n}${au?'（自動）':''}${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?live.s.spa.toFixed(1):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${au||n<=gmin(it)?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${au||n>=gmax(it)?' disabled':''}>＋</button></div>`}).join('');
+const n=gi(it,v),cs=ctlSt(it.k),au=it.k==='spb'&&LP.sauto||cs==='a',na=cs==='n',lk=au||na;return`<div class="r${pd?' p':''}"><span>${it.n}${au?'（自動）':na?'（不使用）':''}${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?ctlVal(it.k):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${lk||n<=gmin(it)?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${lk||n>=gmax(it)?' disabled':''}>＋</button></div>`}).join('');
 $('x10').textContent=U.x10?'刻み×10':'刻み×1';$('x10').className=U.x10?'on':'';$('un').disabled=!U.undo;
 $('bs').style.display=eng?'none':'';$('ap').style.display=$('ds').style.display=eng?'':'none';$('act').style.gridTemplateColumns=`repeat(${eng?5:4},1fr)`;
 const hasP=Object.keys(U.pend).length>0;$('ap').disabled=!hasP||!lamOK();$('ds').disabled=!hasP;
@@ -107,5 +112,5 @@ let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
 if(!U.busy){advance(Sim,live,el,9);swTick(8)}axUpdate(live,AX,now);sndTick();
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
-if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();if(U.pg===4&&LP.sauto){const e=$('Pg').querySelector('b[data-v="spb"]');if(e)e.textContent=live.s.spa.toFixed(1)}}}
+if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}

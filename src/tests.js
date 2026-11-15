@@ -260,6 +260,17 @@ U.x10=1;rs();for(let k=0;k<12;k++)tapEl($('Pg').querySelector('button[data-k="sp
 {U.pg=4;rs();tapEl($('pt'));const open=$('pl').className==='on',nb=$('pl').querySelectorAll('button').length,tg=PAGES.indexOf('排気系');tapEl($('pl').querySelector(`button[data-p="${tg}"]`));chkB(18,'ページ名のタップで全ページの一覧が開き，選んだページへ移る',open&&nb===PAGES.length&&U.pg===tg&&$('pl').className===''&&$('pt').textContent.includes('排気系'),`一覧 ${nb} ページ，移動先 ${PAGES[U.pg]}`);U.pg=0;rs();const G=geo(LP),dt=$('drv').textContent;chkB(18,'「機関」のページに導出値（λ，V_d，V_c）を表示',dt.includes('λ = r/l = '+G.lam.toFixed(3))&&dt.includes('V_d = '+(G.Vd*1e6).toFixed(1))&&dt.includes('V_c = '+(G.Vc*1e6).toFixed(1)),dt.slice(0,60))}
 {const l0=live.last,b0=Base.ref;U.pg=4;rs();live.last=null;pvText();const noc=$('pvt').textContent.includes('START');live.last=s2.c.last;Base.clear();pvText();const t1=$('pvt').textContent;tapEl($('bs'));const r1=Base.ref;pvText();const t2=$('pvt').textContent;Base.clear();show(1);setSub(0);tapEl($('bs2'));const r2=Base.ref;live.last=l0;Base.clear();Base.ref=b0;show(2);
 chkB(18,'サイクルが無いとき「START してください」，[基準更新] と線図①の [基準を現在に] で現在のサイクルが基準になる',noc&&!t1.includes('基準比')&&!!r1&&r1.pm===s2.c.last.pm&&t2.includes('基準比')&&!!r2&&r2.pm===s2.c.last.pm,t2.slice(0,40))}
+{show(2);U.pg=PAGES.indexOf('運転');U.x10=0;LP.mode=0;live.s.mode=0;live.s.al=12.34*D;live.s.fc=.37;rs();yield 'frame';
+const row=k=>[...$('Pg').querySelectorAll('.r')].find(r=>r.querySelector(`b[data-v="${k}"]`)),off=k=>{const r=row(k);return!!r&&[...r.querySelectorAll('button')].every(b=>b.disabled)},on=k=>{const r=row(k);return!!r&&[...r.querySelectorAll('button')].some(b=>!b.disabled)},val=k=>row(k).querySelector('b').textContent,lab=k=>row(k).querySelector('span').textContent,
+fit=k=>{const r=row(k),s=r.querySelector('span'),b=r.querySelector('b');return s.scrollWidth<=s.clientWidth+1&&b.scrollWidth<=b.clientWidth+1},r=[];
+const a0=LP.alm,fb0=LP.fb;r.push(off('alm')&&lab('alm').includes('（自動）')&&val('alm')==='12.3');stepItem('alm',1);stepItem('fb',1);r.push(LP.alm===a0&&LP.fb===fb0);
+r.push(off('fb')&&lab('fb').includes('（不使用）')&&on('fm')&&!lab('fm').includes('（自動）'));const f0=fit('alm')&&fit('fb')&&fit('fm');
+live.s.al=20.06*D;liveVals();r.push(val('alm')==='20.1');
+tapEl(row('mode')?row('mode').querySelector('button[data-c="1"]'):[...$('Pg').querySelectorAll('button[data-k="mode"]')][1]);live.s.mode=1;live.s.fc=.37;rs();
+r.push(LP.mode===1&&on('alm')&&on('fb')&&off('fm')&&lab('fm').includes('（自動）')&&val('fm')==='0.37'&&!lab('alm').includes('（自動）')&&!lab('fb').includes('（不使用）'));const f1=fit('alm')&&fit('fb')&&fit('fm');
+live.s.fc=.5;liveVals();r.push(val('fm')==='0.50');
+chkB(18,'回転数の制御で使わない項目：スロットル制御で固定開度（自動・現在の開度）と基準充水率（不使用）が無効，動力計制御で固定充水率（自動・現在の指令）が無効，表示が毎フレームの更新（liveVals）で追従，文字が欠けない',r.every(x=>x)&&f0&&f1,`${r.map(x=>x?1:0).join('')}，幅 ${f0?1:0}${f1?1:0}`);
+uiDefault();live.reset()}
 U.pg=0;rs();
 show(3)};
 const hueOf=(r,g,b)=>{const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;if(d<8)return NaN;let h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h*=60;return h<0?h+360:h};
