@@ -27,7 +27,7 @@ sx=v=>pl.x+f(sp.xa,v)*pl.w,sy=v=>pl.y+pl.h-f(sp.ya,v)*pl.h,R=[];
 const ys=Math.max(1,Math.ceil(13/(pl.h/Math.max(1,yt.length-1))));yt.forEach((t,i)=>{t.px=sy(t.v);if((yt.length-1-i)%ys===0){const tw=mw(t.s);R.push({t:'yt',s:t.s,x:pl.x-5-tw,y:t.px-6,w:tw,h:12,ax:'y'})}});
 const xw=Math.max(...xt.map(t=>mw(t.s)))+8,xs=Math.max(1,Math.ceil(xw/(pl.w/Math.max(1,xt.length-1))));xt.forEach((t,i)=>{t.px=sx(t.v);if(i%xs===0){const tw=mw(t.s);R.push({t:'xt',s:t.s,x:Math.min(x+w-tw-1,Math.max(x+1,t.px-tw/2)),y:pl.y+pl.h+8,w:tw,h:12,ax:'x'})}});
 const yn=sp.ya.name,xn=sp.xa.name;R.push({t:'yn',s:yn,x:pl.x+2,y:y+1,w:mw(yn),h:12});R.push({t:'xn',s:xn,x:pl.x+pl.w/2-mw(xn)/2,y:pl.y+pl.h+21,w:mw(xn),h:12});
-let lx=pl.x+pl.w;(sp.lg||[]).slice().reverse().forEach(l=>{const tw=mw(l.n)+12;lx-=tw+6;R.push({t:'lg',s:l.n,c:l.c,x:lx,y:y+1,w:tw,h:12})});
+let lx=pl.x+pl.w,ly=y+1,lmin=pl.x+mw(yn)+10;(sp.lg||[]).slice().reverse().forEach(l=>{const tw=mw(l.n)+12;if(lx-tw-6<lmin){lx=pl.x+pl.w;ly+=14;lmin=pl.x+4}lx-=tw+6;R.push({t:'lg',s:l.n,c:l.c,x:lx,y:ly,w:tw,h:12})});
 return{pl,sx,sy,xt,yt,R,sp}}
 function drawPlot(g,L,ser,col,cross){const{pl,sx,sy,R,sp}=L;g.font='11px system-ui,sans-serif';g.textBaseline='top';g.textAlign='left';g.lineWidth=1;g.strokeStyle=col.ln;g.beginPath();L.yt.forEach(t=>{g.moveTo(pl.x,Math.round(t.px)+.5);g.lineTo(pl.x+pl.w,Math.round(t.px)+.5)});L.xt.forEach(t=>{g.moveTo(Math.round(t.px)+.5,pl.y);g.lineTo(Math.round(t.px)+.5,pl.y+pl.h)});g.stroke();
 g.strokeStyle=col.fg;g.beginPath();g.moveTo(pl.x+.5,pl.y);g.lineTo(pl.x+.5,pl.y+pl.h+.5);g.lineTo(pl.x+pl.w,pl.y+pl.h+.5);g.stroke();
@@ -55,8 +55,8 @@ case 4:return[{xa:xth,ya:st(AX.tq,'トルク [N·m]'),lg:[{n:'図示',c:CL.a},{n
 case 5:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:fx(0,90,'α [°]'),ser:[S(HX,H.al,CL.b)]},{xa:xt,ya:fx(0,120,'p_in [kPa]'),ser:[S(HX,H.pin,CL.a)]},{xa:xt,ya:{a:AX.Tw.a,b:AX.Tw.b,name:'T_w [K]',hot:hot(AX.Tw)},ser:[S(HX,H.Tw,CL.k)]}];
 default:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:st(AX.tb,'トルク [N·m]'),lg:[{n:'T_b',c:CL.a},{n:'T_dyno',c:CL.b}],ser:[S(HX,H.tb,CL.a),S(HX,H.td,CL.b)]},{xa:xt,ya:fx(0,1,'充水率 f [-]'),lg:[{n:'f_cmd',c:CL.a},{n:'f_eff',c:CL.b}],ser:[S(HX,H.fc,CL.a),S(HX,H.fe,CL.b)]}]}}
 const SWX={a:1000,b:7000,name:'N [rpm]',tv:[1000,2000,3000,4000,5000,6000,7000]};
-const SWCOL={90:CL.a,50:CL.b,10:CL.k};
-function sweepSpec(cur,ref,sub){const sets=[...(ref||[]).map(q=>({p:q.pts,c:CL.g,w:1,r:1})),...(cur||[]).map(q=>({p:q.pts,c:SWCOL[q.al]||CL.v,w:1.8,al:q.al}))],lg=[...(cur||[]).map(q=>({n:q.al+'°',c:SWCOL[q.al]||CL.v})),...(ref&&ref.length?[{n:'基準',c:CL.g}]:[])],
+const swCol=al=>`hsl(${Math.round(220-(al-10)/80*210)},75%,45%)`;
+function sweepSpec(cur,ref,sub){const sets=[...(ref||[]).map(q=>({p:q.pts,c:CL.g,w:1,r:1})),...(cur||[]).map(q=>({p:q.pts,c:swCol(q.al),w:1.8,al:q.al}))],lg=[...(cur||[]).map(q=>({n:q.al+'°',c:swCol(q.al)})),...(ref&&ref.length?[{n:'基準',c:CL.g}]:[])],
 G=(k,f,name,fix,d0)=>{let m=0,n=0;sets.forEach(q=>q.p.forEach(o=>{const v=f(o);if(v===v&&isFinite(v)){m=Math.max(m,v);n=Math.min(n,v)}}));return{xa:SWX,ya:fix||{a:n<0?-niceCeil(-n*1.08):0,b:m>0?niceCeil(m*1.08):d0,name},lg:lg.length?lg:null,ser:sets.map(q=>({X:q.p.map(o=>o.N),Y:q.p.map(f),c:q.c,w:q.w,mk:!q.r,ho:q.p.map(o=>!o.ok)}))}},pos=f=>o=>o.pb>0?f(o):NaN;
 return[[G('tb',o=>o.tb,'T_b [N·m]',null,50),G('pb',o=>o.pb/1e3,'P_b [kW]',null,20)],[G('ev',o=>o.ev,'η_v [-]',{a:0,b:1.2,name:'η_v [-]'})],[G('bsfc',pos(o=>o.bsfc),'bsfc [g/kWh]',null,500),G('eb',pos(o=>o.eb),'η_b [-]',{a:0,b:.5,name:'η_b [-]'})],[G('spa',o=>o.spa,'点火時期 [°BTDC]',null,40),G('xr',o=>o.xr,'x_r [-]',null,.2)]][sub]}
 function camSpec(P,G,ref,refCam){const v=valves(P,G),mk=(vv,cm,k)=>Float32Array.from({length:1440},(_,j)=>lift(k?vv.e:vv.i,((360+j/2)*D)%P4,cm)*1e3),
