@@ -29,6 +29,7 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | パス | 内容 |
 | :--- | :--- |
 | `docs/requirements.md`，`docs/specification.md`，`docs/glossary.md` | 上の 3 文書 |
+| `docs/verification.md` | 開発時検証（7 通り）と実機の確認の結果の記録（成果物には埋め込まない．検証の後に書く） |
 | `docs/history/requirements_v24.md` | 第24版までの文書（要件・仕様・テスト・改訂記録が 1 つだった）の全文 |
 | `docs/review_requirements.md`，`docs/report_dynamics.md` | 第24版に対するレビュー（第25版で反映済み），動特性の調査の記録 |
 | `src/core.js` | `EngineCore`：物理モデル・ECU・動力計・ソルバ・項目定義表 `ITEMS`（DOM 非依存） |
