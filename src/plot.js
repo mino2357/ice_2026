@@ -70,7 +70,10 @@ if(!s.fired&&!s.starter)return['停止中','START で始動','',''];const NT=`${
 if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} ${TH(s.al)}（始動開度）`,'',sp];
 if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
 const sat=s.fc>=1?' 上限':s.fc<=0?' 下限':'';return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
-function drawScreen(g,w,h,specs,col,cross){const n=specs.length,ph=h/n,Ls=[];specs.forEach((sp,i)=>{const L=layout(g,2,i*ph+2,w-4,ph-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
+/* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
+const plotCols=(n,W,H)=>W>1.25*H?Math.max(1,Math.min(n,Math.floor(W/320))):1;
+const plotCells=(n,W,H)=>{const nc=plotCols(n,W,H),nr=Math.ceil(n/nc),cw=W/nc,ch=H/nr;return Array.from({length:n},(_,i)=>({x:(i%nc)*cw,y:Math.floor(i/nc)*ch,w:cw,h:ch}))};
+function drawScreen(g,w,h,specs,col,cross){const cells=plotCells(specs.length,w,h),Ls=[];specs.forEach((sp,i)=>{const c=cells[i],L=layout(g,c.x+2,c.y+2,c.w-4,c.h-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
 /* ===== engine scene (pure geometry) ===== */
 const gasHue=T=>215+165*Math.min(1,Math.max(0,(T-300)/1700));
 const NTB=48,NTS={lo:500,hi:8000,st:50};
