@@ -1,6 +1,6 @@
 /* ===== sound: crank-angle wavetable + exhaust-pipe resonator (pure DSP, shared by AudioWorklet / fallback / tests) ===== */
 const AU={NT:1440,G:.04,tauN:.05,tauA:.03,Nmin:30,kd:.7,Tex:800};
-const cEx=()=>Math.sqrt(gmT(AU.Tex,0)*R*AU.Tex);                 /* speed of sound in exhaust [m/s] */
+const cEx=()=>Math.sqrt(gmB(AU.Tex,0)*R*AU.Tex);                 /* speed of sound in exhaust [m/s] */
 const pipeF=(L,n)=>(2*n-1)*cEx()/(4*L);                          /* quarter-wave resonances [Hz] */
 function mkEnv(me){return Float32Array.from(me,v=>v===v?Math.abs(v)*1e-3:0)}
 function mkTable(me){const n=AU.NT,t=new Float32Array(n),h=2*(P4/n);let m=0;for(let i=0;i<n;i++){const a=me[(i+n-1)%n],b=me[(i+1)%n];t[i]=((b===b?b:0)-(a===a?a:0))*1e-3/h;m+=t[i]}m/=n;for(let i=0;i<n;i++)t[i]-=m;return t}
@@ -53,7 +53,7 @@ const i=Math.floor(this.ph),f=this.ph-i,x=this.tab[i%n]*(1-f)+this.tab[(i+1)%n]*
 const j=(this.w-di+M)%M,k2=(j-1+M)%M,yd=bf[j]*(1-df)+bf[k2]*df;this.lp=(1-b)*yd+b*this.lp;const y=src-r*this.lp;bf[this.w]=y;this.w=(this.w+1)%M;
 const z=this.comp.proc(g0*y);const u=V*z,au=Math.abs(u);out[s]=this.amp<1e-9&&Math.abs(y)<1e-12?0:au<=.8?u:Math.sign(u)*(.8+.2*Math.tanh((au-.8)/.2));this.cnt++}
 if(this.periods.length>4096){this.periods=this.periods.slice(-2048);this.amps=this.amps.slice(-2048)}}}
-const WSRC=()=>`const FLV=${JSON.stringify(FLV)};${bqC.toString()}${bqP.toString()}const AN=${AN},gmT=${gmT.toString()},R=${R},PI=Math.PI,ACON=${JSON.stringify(ACON)};${loopMag.toString()}${onePoleB.toString()}${Comp.toString()}${Synth.toString()}
+const WSRC=()=>`const FLV=${JSON.stringify(FLV)};${bqC.toString()}${bqP.toString()}const AN=${AN},R=${R},PI=Math.PI,ACON=${JSON.stringify(ACON)};${loopMag.toString()}${onePoleB.toString()}${Comp.toString()}${Synth.toString()}
 registerProcessor('eng',class extends AudioWorkletProcessor{constructor(o){super();this.s=new Synth(sampleRate,o.processorOptions);this.port.onmessage=e=>this.s.set(e.data)}process(i,o){this.s.process(o[0][0]);return true}});`;
 let WURL=null;const wurl=()=>WURL||(WURL=URL.createObjectURL(new Blob([WSRC()],{type:'application/javascript'})));
 const durl=()=>'data:application/javascript;charset=utf-8,'+encodeURIComponent(WSRC());
