@@ -31,7 +31,7 @@ const ITEMS=[
 {k:'phi',n:'当量比 φ',u:'',f:1,lo:.6,hi:1.4,st:.01,d:1,c:'i',pg:4},
 {k:'cw',n:'Woschni係数',u:'',f:1,lo:0,hi:2,st:.05,d:1,c:'i',pg:4},
 {k:'gam',n:'比熱',u:'',ch:['γ(T)','γ一定'],d:0,c:'i',pg:4},
-{k:'mode',n:'回転数の制御',u:'',ch:['スロットル制御','動力計制御'],d:0,c:'i',pg:5},
+{k:'mode',n:'回転数の制御',u:'',ch:['スロットル','動力計'],d:0,c:'i',pg:5},
 {k:'nt',n:'目標回転数',u:'rpm',f:1,lo:500,hi:null,st:50,d:800,c:'i',pg:5},
 {k:'alm',n:'手動開度 (B)',u:'°',f:D,lo:0,hi:90,st:1,d:15,c:'i',pg:5},
 {k:'fm',n:'f_manual (A)',u:'',f:1,lo:0,hi:1,st:.05,d:0,c:'i',pg:5},

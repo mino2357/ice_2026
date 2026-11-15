@@ -11,11 +11,11 @@ body{margin:0;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-
 button{min-height:44px;min-width:44px;font:inherit;font-size:13px;color:var(--fg);background:var(--cd);border:1px solid var(--ln);border-radius:8px;padding:0 2px;white-space:nowrap;overflow:hidden}
 button.on{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.35}
 nav{flex:none;height:48px;display:grid;grid-template-columns:repeat(6,1fr);background:var(--cd);border-bottom:1px solid var(--ln)}
-nav button{border:0;border-radius:0;background:none;font-size:14px;min-height:48px}nav button.on{background:none;color:var(--ac);font-weight:700;box-shadow:inset 0 -3px 0 var(--ac)}
+nav button{border:0;border-radius:0;background:none;font-size:13px;min-height:48px}nav button.on{background:none;color:var(--ac);font-weight:700;box-shadow:inset 0 -3px 0 var(--ac)}
 section{display:none;flex:1;min-height:0;flex-direction:column;gap:4px;padding:6px 8px;max-width:900px;width:100%;margin:auto;position:relative;overflow:hidden}section.on{display:flex}
 canvas{flex:1 1 0;height:0;min-height:0;width:100%;background:var(--cd);border-radius:8px;display:block}#eng{min-height:140px}.ew{flex:1 1 0;height:0;min-height:140px;position:relative;display:flex;flex-direction:column}.ntb{position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;gap:4px;padding:2px 4px;touch-action:none;user-select:none;-webkit-user-select:none}.ntb button{flex:none;width:44px;height:44px;font-size:20px;line-height:1}.ntb button:disabled{opacity:.35}.ntv{flex:none;width:64px;font-size:11px;line-height:14px;text-align:center;font-variant-numeric:tabular-nums}.ntv b{font-size:14px;display:block}.ntr{flex:1 1 0;min-width:0;height:44px;position:relative}.ntr i{position:absolute;left:22px;right:22px;top:21px;height:3px;border-radius:2px;background:var(--ln)}.ntk{position:absolute;left:0;top:0;width:44px;height:44px;touch-action:none}.ntk b{position:absolute;left:11px;top:11px;width:22px;height:22px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 2px var(--cd)}.ntk.on b{transform:scale(1.2)}#pv{min-height:120px}#tc{min-height:200px}
 .gr{display:grid;gap:4px;flex:none}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g4 button{font-size:12px}.g5{grid-template-columns:repeat(5,1fr)}.g6{grid-template-columns:repeat(6,1fr)}.g7{grid-template-columns:repeat(7,1fr)}.g7 button{font-size:12px}
-.m{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;flex:none}.m div{height:32px;display:flex;justify-content:space-between;align-items:center;background:var(--cd);border-radius:6px;padding:0 8px;font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}.m b{color:var(--mu);font-weight:400;display:flex;flex-direction:column;line-height:13px;min-width:0}.m small{font-size:10px;line-height:11px;color:var(--fg);opacity:.75}
+.m{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;flex:none}.m div{height:32px;display:flex;justify-content:space-between;align-items:center;background:var(--cd);border-radius:6px;padding:0 8px;font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}.m b{color:var(--mu);font-weight:400;min-width:0}.m b.jp{white-space:normal;font-size:11px;line-height:13px;color:var(--fg);margin-right:4px}
 #Pg{display:flex;flex-direction:column;gap:2px;flex:none}
 .r{display:grid;grid-template-columns:1fr auto 44px 44px;gap:6px;align-items:center;height:46px;background:var(--cd);border-radius:8px;padding:0 6px;font-size:13px;white-space:nowrap}.r.p{outline:2px solid var(--ac);outline-offset:-2px}.r b{font-variant-numeric:tabular-nums;font-size:15px}.r span{overflow:hidden;text-overflow:ellipsis}
 .r.c{grid-template-columns:auto 1fr}.r.c div{display:flex;gap:4px;justify-content:flex-end}.r.c button{flex:0 1 96px}
@@ -67,7 +67,7 @@ const ITEMS=[
 {k:'phi',n:'当量比 φ',u:'',f:1,lo:.6,hi:1.4,st:.01,d:1,c:'i',pg:4},
 {k:'cw',n:'Woschni係数',u:'',f:1,lo:0,hi:2,st:.05,d:1,c:'i',pg:4},
 {k:'gam',n:'比熱',u:'',ch:['γ(T)','γ一定'],d:0,c:'i',pg:4},
-{k:'mode',n:'回転数の制御',u:'',ch:['スロットル制御','動力計制御'],d:0,c:'i',pg:5},
+{k:'mode',n:'回転数の制御',u:'',ch:['スロットル','動力計'],d:0,c:'i',pg:5},
 {k:'nt',n:'目標回転数',u:'rpm',f:1,lo:500,hi:null,st:50,d:800,c:'i',pg:5},
 {k:'alm',n:'手動開度 (B)',u:'°',f:D,lo:0,hi:90,st:1,d:15,c:'i',pg:5},
 {k:'fm',n:'f_manual (A)',u:'',f:1,lo:0,hi:1,st:.05,d:0,c:'i',pg:5},
@@ -550,13 +550,14 @@ else if(i===5)for(let k=0;k<4;k++){swSub(k);drawSw();swText();fn(`特性${k+1}`)
 else{rchips();dtl();fn('検証')}yield}}
 const vis=el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(el).visibility!=='hidden'};
 function uiDefault(){Object.assign(LP,mkP());U.pend={};U.x10=0;U.undo=null;U.pg=0;U.log=0;U.mpg=0;U.cross=U.cross.map(()=>null);Sim.spd=.1;live.reset();Base.clear();axReset(AX);$('ts').textContent='';sp();rs()}
-TST[15]=function*(){uiDefault();const bad=[],bb=[],cv=[];let nb=0;yield*allScreens(name=>{const sec=document.querySelector('section.on');for(const el of[document.documentElement,document.body,sec])if(el.scrollHeight>el.clientHeight+1||el.scrollWidth>el.clientWidth+1)bad.push(name);
+const txtW=el=>{const r=document.createRange();r.selectNodeContents(el);return r.getBoundingClientRect().width},room=el=>{const cs=getComputedStyle(el);return el.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)};
+TST[15]=function*(){uiDefault();const bad=[],bb=[],cv=[],mg=[];let nb=0;yield*allScreens(name=>{const sec=document.querySelector('section.on');for(const el of[document.documentElement,document.body,sec])if(el.scrollHeight>el.clientHeight+1||el.scrollWidth>el.clientWidth+1)bad.push(name);
 if(sec.clientHeight<sec.scrollHeight)bad.push(name+'*');
 const scope=$('pl').className==='on'?[...$('pl').querySelectorAll('button')]:[...document.querySelectorAll('nav button'),...[...sec.querySelectorAll('button')].filter(b=>!b.closest('#pl'))],bs=scope.filter(vis),rc=bs.map(b=>b.getBoundingClientRect());nb+=bs.length;
-rc.forEach((r,i)=>{const b=bs[i];if(r.width<43.5||r.height<43.5)bb.push(`${name}:${b.textContent}:小`);if(r.left<-.5||r.top<-.5||r.right>innerWidth+.5||r.bottom>innerHeight+.5)bb.push(`${name}:${b.textContent}:外`);if(b.scrollWidth>b.clientWidth+1||b.scrollHeight>b.clientHeight+1)bb.push(`${name}:${b.textContent}:折返`);
+rc.forEach((r,i)=>{const b=bs[i];if(r.width<43.5||r.height<43.5)bb.push(`${name}:${b.textContent}:小`);if(r.left<-.5||r.top<-.5||r.right>innerWidth+.5||r.bottom>innerHeight+.5)bb.push(`${name}:${b.textContent}:外`);if(b.scrollWidth>b.clientWidth+1||b.scrollHeight>b.clientHeight+1)bb.push(`${name}:${b.textContent}:折返`);if(b.textContent.trim()&&txtW(b)>.95*room(b))mg.push(`${name}:${b.textContent}:${(100*txtW(b)/room(b)).toFixed(0)}%`);
 for(let j=i+1;j<rc.length;j++){const q=rc[j],ox=Math.min(r.right,q.right)-Math.max(r.left,q.left),oy=Math.min(r.bottom,q.bottom)-Math.max(r.top,q.top);if(ox>1&&oy>1)bb.push(`${name}:${b.textContent}×${bs[j].textContent}`)}});
 for(const c of sec.querySelectorAll('canvas'))if(vis(c)){const q=dprc();if(c.width!==Math.max(1,Math.round(c.clientWidth*q))||c.height!==Math.max(1,Math.round(c.clientHeight*q)))cv.push(name+':'+c.id);if(c.clientHeight<(c.id==='eng'?140:120))cv.push(name+':'+c.id+':低')}});
-chkB(15,'全画面でスクロールが発生しない',bad.length===0,bad.length?bad.join(' '):'0 画面','0 画面');chkB(15,`全ボタン（延べ ${nb} 個）が 44px 以上・重なりなし・画面内・折返しなし`,bb.length===0,bb.length?bb.slice(0,4).join(' / '):'違反 0','違反 0');chkB(15,'Canvas のビットマップ寸法 = CSS寸法×dpr，高さ下限',cv.length===0,cv.length?cv.join(' '):'違反 0','違反 0');
+chkB(15,'全画面でスクロールが発生しない',bad.length===0,bad.length?bad.join(' '):'0 画面','0 画面');chkB(15,`全ボタン（延べ ${nb} 個）が 44px 以上・重なりなし・画面内・折返しなし`,bb.length===0,bb.length?bb.slice(0,4).join(' / '):'違反 0','違反 0');chkB(15,'全ボタンの文字幅が利用可能幅の 95% 以下（端末フォントの差の余裕）',mg.length===0,mg.length?[...new Set(mg.map(x=>x.replace(/^[^:]*:/,'')))].slice(0,8).join(' / '):'違反 0','違反 0');chkB(15,'Canvas のビットマップ寸法 = CSS寸法×dpr，高さ下限',cv.length===0,cv.length?cv.join(' '):'違反 0','違反 0');
 for(let i=0;i<10;i++){show(i%2);(i%2?drawCh:drawEng)()}show(0);drawEng();const e=$('eng'),q=dprc();chkB(15,'タブ切替10回後も Canvas 寸法が一致',e.width===Math.round(e.clientWidth*q)&&e.height===Math.round(e.clientHeight*q),`${e.width}×${e.height}`);
 chkB(15,'input[type=range] が存在しない',!document.querySelector('input[type=range]'));const tx=[...document.querySelectorAll('nav,section')].map(e=>e.textContent).join(' ');chkB(15,'表示テキストに bar を含まない（MPa は可）',!/(^|[^A-Za-z])bar([^A-Za-z]|$)/.test(tx));
 show(0);yield;const b=$('sp').querySelector('button[data-v="1"]'),[x,y]=ctr(b),s0=Sim.spd,now0=NOW;let ft=1e6;NOW=()=>ft;Sim.spd=.1;sp();
@@ -693,8 +694,9 @@ s.al=P.amax;x=txt();chkB(22,'モードA：α = α_max で「飽和」',x.include
 P.mode=1;s.mode=1;s.fc=.734;P.alm=15*D;P.sauto=0;s.spa=P.spb;x=txt();chkB(22,'モードB：目標・制御量・操作量 f・固定 α・固定 点火',has(x,['動力計制御','目標 800','制御量','操作量','動力計の充水率 f 0.73','固定','スロットル開度 α 15.0°','固定 点火時期 18.0° BTDC'])&&!x.includes('飽和')&&!x.includes('自動'),x);
 s.fc=1;x=txt();chkB(22,'用語：スロットル開度 α，動力計の充水率 f，点火時期，BTDC',has(x,['スロットル開度 α','動力計の充水率 f','点火時期','BTDC']),x);chkB(22,'モードB：f = 1 で「飽和」',x.includes('飽和'),x);
 s.Nb=12345.6;P.nt=20000;s.fc=1;P.alm=90*D;s.spa=-20;x=txt();const rows=[...$('ctl').children],ov=rows.filter(r=>r.scrollWidth>r.clientWidth+1).length;chkB(22,'最長の表示内容でも 4 行が折り返さない（はみ出し無し）',ov===0&&rows.length===4&&rows.every(r=>r.getBoundingClientRect().height<=20),ov+' 行はみ出し');
-{const look=jp=>{let bad=[],n=0;for(const pg of[0,1]){U.mpg=pg;met();for(const d of $('M').children){n++;const sm=d.querySelector('small'),sp=d.querySelector('span'),b=d.querySelector('b');if(jp?(!sm||!/[\u3040-\u30ff\u4e00-\u9fff]/.test(sm.textContent)):!!sm)bad.push(b.textContent);if([d,b,sp,sm].some(e=>e&&e.scrollWidth>e.clientWidth+1))bad.push('切れ:'+b.textContent)}}U.mpg=0;met();return{n,bad}};
-const a=look(0);tapEl($('M'));const b=look(1);tapEl($('M'));const c=look(0);chkB(22,`メトリクス：既定は記号，タップで日本語名（${b.n} 項目），再タップで記号．名称・値が切れない`,a.n===24&&b.n===24&&!a.bad.length&&!b.bad.length&&!c.bad.length&&U.mjp===0,[...a.bad,...b.bad,...c.bad].join(' ')||'0 件','0 件')}
+{const mj0=U.mj;U.mj={};let n=0,bad=[];const ok=(d,jp)=>{const b=d.querySelector('b');if(jp!==b.classList.contains('jp'))return false;if(jp&&!/[\u3040-\u30ff\u4e00-\u9fff]/.test(b.textContent))return false;return[d,b,d.querySelector('span')].every(e=>e.scrollWidth<=e.clientWidth+1&&e.scrollHeight<=e.clientHeight+1)};
+for(const pg of[0,1]){U.mpg=pg;met();for(let i=0;i<12;i++){n++;let d=$('M').children[i];const k=d.dataset.k;if(!ok(d,false))bad.push(k+':記号');tapEl(d);d=$('M').children[i];const others=[...$('M').children].filter((x,j)=>j!==i).every(x=>!x.querySelector('b.jp'));if(!ok(d,true)||!others)bad.push(k+':日本語');tapEl(d);d=$('M').children[i];if(!ok(d,false))bad.push(k+':戻り');tapEl($('M').children[i]);tapEl($('M').children[i]);if(!ok($('M').children[i],false))bad.push(k+':再')}}
+U.mpg=0;U.mj=mj0;met();chkB(22,`メトリクス ${n} 項目：既定は記号，その項目のタップで日本語名，再タップで記号（何度でも），他の項目は変わらない，切れない`,n===24&&bad.length===0,bad.join(' ')||'0 件','0 件')}
 const sec=$('s0');chkB(22,'運転タブがスクロールしない',sec.scrollHeight<=sec.clientHeight+1&&document.body.scrollHeight<=innerHeight+1);show(3)};
 /* ---- TEST-23 target-rpm slider ---- */
 TST[23]=function*(){uiDefault();show(0);yield 'frame';drawEng();const ew=$('ew'),bd=$('ntb'),k=$('ntk'),r=$('ntr'),bm=$('ntm'),bp=$('ntp'),cv=$('eng'),sec=$('s0');
@@ -789,7 +791,7 @@ const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={mjp:0,swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mj:{},swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 const Sim={debt:0,spd:.1};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
 cam:null,camC:0,change(c,now){if(now-this.tl>=3000){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.cam=null;this.tl=-1e9}};
@@ -853,7 +855,7 @@ const cr=U.cross[U.sub];if(cr!=null&&U.sub>0){const g=q.g,th=U.sub<5;g.font='11p
 const camPg=()=>U.pg===1||U.pg===2;
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref}),COL,null)}
 function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
-function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div><b>${U.mjp?`<small>${q[2]}</small>${q[0]==='点火'?'':q[0]}`:q[0]}</b><span>${q[1]}</span></div>`).join('')}
+function met(){$('M').innerHTML=metricList(live,U.mpg).map(q=>`<div data-k="${q[0]}">${U.mj[q[0]]?`<b class="jp">${q[2]}</b>`:`<b>${q[0]}</b>`}<span>${q[1]}</span></div>`).join('')}
 /* ===== tabs ===== */
 let docTop=0;
 function show(i){if(U.tab===4)docTop=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){docVals();fitMath($('s4'));$('s4').scrollTop=docTop}}
@@ -862,7 +864,7 @@ const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();
-tap($('M'),()=>{U.mjp^=1;met()});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
+tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
