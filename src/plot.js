@@ -68,7 +68,7 @@ const camText=(P,G)=>{const v=valves(P,G),dg=a=>(a/D).toFixed(0),ov=(v.e.c-(v.i.
 function ctlText(c){const s=c.s,P=c.P,R=(k,t)=>`<span class="r${k}">${t}</span>`,Nb=Math.round(s.Nb),sp=(P.sauto?R('a','自動'):R('f','固定'))+` 点火時期 ${s.spa.toFixed(1)}° BTDC`,TH=a=>`スロットル開度 α ${(a/D).toFixed(1)}°`,FF=f=>`動力計の充水率 f ${f.toFixed(2)}`;
 if(!s.fired&&!s.starter)return['停止中','START で始動','',''];const NT=`${R('c','制御量')} N̄ ${Nb} rpm`;
 if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} ${TH(s.al)}（始動開度）`,'',sp];
-if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
+if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':s.al<=almin(P)+1e-12?' 下限':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
 const sat=s.fc>=1?' 上限':s.fc<=0?' 下限':'';return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 /* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
 const plotCols=(n,W,H)=>W>1.25*H?Math.max(1,Math.min(n,Math.floor(W/320))):1;

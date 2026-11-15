@@ -1,7 +1,7 @@
 'use strict';
 /* ===== constants (single source) ===== */
 const R=287,TA=298.15,TI=298.15,TX=800,PI=Math.PI,D=PI/180,P4=4*PI;
-const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,pexo:4e3,g0:1.35};
+const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,pexo:4e3,g0:1.35,kT:.26,dal:1};
 /* ===== item definition table (single source for settings, doc, tests) ===== */
 const PAGES=['機関','VVT・カム','弁タイミング','吸気','燃焼','運転','ECU','動力計','解法','音響','燃焼速度','吸気ランナ','排気系'];
 const ITEMS=[
@@ -91,6 +91,8 @@ function psiF(rp,g){const c=psc(g);if(rp<=c.rc)return c.ch;if(rp<=1-1e-3)return 
 function mdot(p1,p2,T0,A,cst){const pu=Math.max(p1,p2),pd=Math.min(p1,p2);if(pu===pd||A<=0)return 0;return Math.sign(p1-p2)*A*pu/Math.sqrt(R*T0)*psiF(pd/pu,gmT(T0,cst))}
 const Ath=(P,a)=>K.Cdt*PI/4*P.Dt*P.Dt*(1-Math.cos(a));
 const kwf=P=>P.Tr/((PI*P.Nr/30)**2);
+/* REQ-12 2′：補機負荷の feedforward と開度の下限 */
+const alff=P=>P.alb+K.kT*D*P.Ta,almin=P=>Math.min(P.amax,Math.max(0,alff(P)-K.dal*D));
 const fmepCF=(G,pmx,om)=>K.cfA+K.cfB*pmx+K.cfC*G.S*om/PI;                 /* Chen-Flynn [Pa] */
 const SLf=(T,p,xr,ph)=>{const S0=Math.max(.05,.305-.549*(ph-1.1)**2),al=2.18-.8*(ph-1),be=-.16+.22*(ph-1);return S0*(T/298)**al*(p/101325)**be*Math.max(.15,1-2.06*xr**.77)};
 function burn(G,T,p,xr,ph,om,spb,cd=1,cb=1){const SL=SLf(T,p,xr,ph),u=.5*G.S*om/PI,ST=SL+6*u,fr=1+.025*Math.max(0,-spb);return{SL,th0:2*PI-spb*D+cd*K.lk*G.B*om/(SL+K.Ck*u),db:fr*.65*G.B*om/ST/cb}}
@@ -179,10 +181,10 @@ s.ab=[s.y[11],s.y[12]];s.Mx=s.cf&&s.fired?M:null;s.Mh=s.Mx?(s.Mh||[]).concat([M]
 ecu(dt,om){const s=this.s,P=this.P;s.Nb+=(om*30/PI-s.Nb)*Math.min(1,dt/P.tN);
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
 if(s.fired&&s.Nb<150){s.fired=0;s.fuel=0;s.Mx=null}
-if(P.mode!==s.mode){if(s.fired){if(P.mode===1){P.alm=s.al;s.If=s.fc-P.fb-P.Kpd*(s.Nb-P.nt)}else{P.fm=s.fc;s.Ip=s.al-P.alb-P.Kp*(P.nt-s.Nb)}}s.mode=P.mode}
+if(P.mode!==s.mode){if(s.fired){if(P.mode===1){P.alm=s.al;s.If=s.fc-P.fb-P.Kpd*(s.Nb-P.nt)}else{P.fm=s.fc;s.Ip=s.al-alff(P)-P.Kp*(P.nt-s.Nb)}}s.mode=P.mode}
 const e=P.nt-s.Nb;
 if(!s.fired){s.al=P.alc;s.fc=0}
-else if(s.mode===0){const u=P.alb+P.Kp*e+s.Ip;if(!((u>=P.amax&&e>0)||(u<=0&&e<0)))s.Ip+=P.Ki*e*dt;s.al=Math.min(P.amax,Math.max(0,P.alb+P.Kp*e+s.Ip));s.fc=P.fm}
+else if(s.mode===0){const ab=alff(P),am=almin(P),u=ab+P.Kp*e+s.Ip;if(!((u>=P.amax&&e>0)||(u<=am&&e<0)))s.Ip+=P.Ki*e*dt;s.al=Math.min(P.amax,Math.max(am,ab+P.Kp*e+s.Ip));s.fc=P.fm}
 else{const ed=-e,u=P.fb+P.Kpd*ed+s.If;if(!((u>=1&&ed>0)||(u<=0&&ed<0)))s.If+=P.Kid*ed*dt;s.al=P.alm;s.fc=Math.min(1,Math.max(0,P.fb+P.Kpd*ed+s.If))}
 s.fe=s.fc+(s.fe-s.fc)*Math.exp(-dt/P.td);
 if(s.fired&&s.mode===1){s.ov=(s.fc>=1&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(s.fc<=0&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}}
