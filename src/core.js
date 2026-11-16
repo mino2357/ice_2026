@@ -120,6 +120,76 @@ function woschni(G,p,T,cm,gx,I0,V,cwc){const pm=I0.p*(I0.V/V)**1.33,w=gx?K.C1g*c
 const CCV={s0:3,sb:.12};
 const CA50T=10,KS=.6,z50=(m=K.wm)=>Math.pow(Math.log(2)/K.wa,1/(m+1)),ca50=C=>(C.th0+C.db*z50(C.m??K.wm))/D-360;
 const wiebe=(z,m=K.wm)=>z>0&&z<=1?K.wa*(m+1)*z**m*Math.exp(-K.wa*z**(m+1)):0;
+/* ===== SPEC-29：化学種の熱物性と化学平衡（NASA 7 係数多項式．係数は tools/richburn/thermo.json = NASA TM-4513） ===== */
+const RU=8.314462618,PSTD=1e5,AW={C:12.011e-3,H:1.008e-3,O:15.999e-3,N:14.007e-3};
+const NASA={
+ CO2:{c:{C: 1, O: 2},lo:[2.35677352,0.00898459677,-7.12356269e-06,2.45919022e-09,-1.43699548e-13,-48371.9697,9.90105222],hi:[4.63659493,0.00274131991,-9.95828531e-07,1.60373011e-10,-9.16103468e-15,-49024.9341,-1.93534855]},
+ CO:{c:{C: 1, O: 1},lo:[3.57953347,-0.00061035368,1.01681433e-06,9.07005884e-10,-9.04424499e-13,-14344.086,3.50840928],hi:[3.04848583,0.00135172818,-4.85794075e-07,7.88536486e-11,-4.69807489e-15,-14266.1171,6.0170979]},
+ H2O:{c:{H: 2, O: 1},lo:[4.19864056,-0.0020364341,6.52040211e-06,-5.48797062e-09,1.77197817e-12,-30293.7267,-0.849032208],hi:[2.67703787,0.00297318329,-7.7376969e-07,9.44336689e-11,-4.26900959e-15,-29885.8938,6.88255571]},
+ H2:{c:{H: 2},lo:[2.34433112,0.00798052075,-1.9478151e-05,2.01572094e-08,-7.37611761e-12,-917.935173,0.683010238],hi:[2.93286579,0.000826607967,-1.46402335e-07,1.54100359e-11,-6.88804432e-16,-813.065597,-1.02432887]},
+ O2:{c:{O: 2},lo:[3.78245636,-0.00299673415,9.847302e-06,-9.68129508e-09,3.24372836e-12,-1063.94356,3.65767573],hi:[3.66096083,0.000656365523,-1.41149485e-07,2.05797658e-11,-1.29913248e-15,-1215.97725,3.41536184]},
+ N2:{c:{N: 2},lo:[3.53100528,-0.000123660987,-5.02999437e-07,2.43530612e-09,-1.40881235e-12,-1046.97628,2.96747468],hi:[2.95257626,0.00139690057,-4.92631691e-07,7.86010367e-11,-4.60755321e-15,-923.948645,5.87189252]},
+ OH:{c:{O: 1, H: 1},lo:[3.99201543,-0.00240131752,4.61793841e-06,-3.88113333e-09,1.3641147e-12,3615.08056,-0.103925458],hi:[2.83864607,0.00110725586,-2.93914978e-07,4.20524247e-11,-2.42169092e-15,3943.95852,5.84452662]},
+ O:{c:{O: 1},lo:[3.1682671,-0.00327931884,6.64306396e-06,-6.12806624e-09,2.11265971e-12,29122.2592,2.05193346],hi:[2.54363697,-2.73162486e-05,-4.1902952e-09,4.95481845e-12,-4.79553694e-16,29226.012,4.92229457]},
+ H:{c:{H: 1},lo:[2.5,0.0,0.0,0.0,0.0,25473.6599,-0.446682853],hi:[2.50000286,-5.65334214e-09,3.63251723e-12,-9.1994972e-16,7.95260746e-20,25473.6589,-0.446698494]},
+ NO:{c:{N: 1, O: 1},lo:[4.21859896,-0.00463988124,1.10443049e-05,-9.34055507e-09,2.80554874e-12,9845.09964,2.28061001],hi:[3.26071234,0.00119101135,-4.29122646e-07,6.94481463e-11,-4.03295681e-15,9921.43132,6.36900518]},
+ ISO:{c:{C: 8, H: 18},lo:[0.815737338,0.0732643959,1.78300688e-05,-6.9358962e-08,3.21629382e-11,-30477.2862,24.1509994],hi:[15.9899273,0.055318479,-1.95267072e-05,3.11779172e-09,-1.85312577e-13,-35875.7973,-60.1161414]}};
+const GAS=(()=>{
+ const M=c=>Object.keys(c).reduce((s,e)=>s+AW[e]*c[e],0),S={};for(const k in NASA)S[k]={...NASA[k],M:M(NASA[k].c)};
+ const co=(s,T)=>T<1000?s.lo:s.hi;
+ const cp=(s,T)=>{const a=co(s,T);return RU*(a[0]+T*(a[1]+T*(a[2]+T*(a[3]+T*a[4]))))};               /* J/(mol K) */
+ const h=(s,T)=>{const a=co(s,T);return RU*T*(a[0]+T*(a[1]/2+T*(a[2]/3+T*(a[3]/4+T*a[4]/5)))+a[5]/T)}; /* J/mol（生成エンタルピーを含む） */
+ const s0=(s,T)=>{const a=co(s,T);return RU*(a[0]*Math.log(T)+T*(a[1]+T*(a[2]/2+T*(a[3]/3+T*a[4]/4)))+a[6])};
+ const u=(s,T)=>h(s,T)-RU*T,T0=298.15,y=1.87,Mf=.110,nC=Mf/(AW.C+y*AW.H),hfg=350e3,Tl=300,Tfr=1700;
+ /* 燃料蒸気：擬似種 C_n H_{yn}．比熱はイソオクタンの質量あたりの値，生成エンタルピーは蒸気の低位発熱量 Hu + hfg から */
+ const kf=Mf/S.ISO.M,F={c:{C:nC,H:y*nC},lo:S.ISO.lo.map(x=>x*kf),hi:S.ISO.hi.map(x=>x*kf),M:Mf};
+ {const d=((K.Hu+hfg)*Mf+nC*h(S.CO2,T0)+y*nC/2*h(S.H2O,T0)-h(F,T0))/RU;F.lo[5]+=d;F.hi[5]+=d}
+ const Ma=(S.O2.M+3.76*S.N2.M)/4.76,Ra=RU/Ma,Rf=RU/Mf,AF=(1+y/4)*(S.O2.M+3.76*S.N2.M)/(AW.C+y*AW.H),xo=1/(4.76*Ma),xn=3.76/(4.76*Ma);
+ const ea=T=>xo*u(S.O2,T)+xn*u(S.N2,T),cva=T=>xo*(cp(S.O2,T)-RU)+xn*(cp(S.N2,T)-RU),ha=T=>ea(T)+Ra*T;
+ const ef=T=>u(F,T)/Mf,cvf=T=>(cp(F,T)-RU)/Mf,hf=T=>h(F,T)/Mf;
+ /* 既燃ガス：10 種の化学平衡（Gibbs エネルギー最小．Gordon–McBride の反復） */
+ const SP=['CO2','CO','H2O','H2','O2','N2','OH','O','H','NO'].map(k=>S[k]),EL=['C','H','O','N'],NS=10,A=EL.map(e=>SP.map(s=>s.c[e]||0));
+ const elem=(z,ec)=>[ec*z*nC/Mf,ec*z*y*nC/Mf,2*(1-z)*xo,2*(1-z)*xn];
+ function solve(M,r,n){for(let i=0;i<n;i++){let p=i;for(let k=i+1;k<n;k++)if(Math.abs(M[k][i])>Math.abs(M[p][i]))p=k;if(p!==i){const t=M[i];M[i]=M[p];M[p]=t;const q=r[i];r[i]=r[p];r[p]=q}const d=M[i][i];for(let k=i+1;k<n;k++){const f=M[k][i]/d;if(f){for(let j=i;j<n;j++)M[k][j]-=f*M[i][j];r[k]-=f*r[i]}}}for(let i=n-1;i>=0;i--){let s=r[i];for(let j=i+1;j<n;j++)s-=M[i][j]*r[j];r[i]=s/M[i][i]}return r}
+ function eq(T,p,z,ec,n0){const b=elem(z,ec),g=SP.map(s=>(h(s,T)-T*s0(s,T))/(RU*T)),lp=Math.log(p/PSTD),n=new Float64Array(NS);
+  if(n0)for(let j=0;j<NS;j++)n[j]=Math.max(n0[j],1e-12);else n.fill((b[0]+b[1]+b[2]+b[3])/NS*.1);
+  let N=0;for(let j=0;j<NS;j++)N+=n[j];const mu=new Float64Array(NS),dn=new Float64Array(NS);let it=0,ok=false;
+  for(;it<400;it++){let sn=0,smu=0;for(let j=0;j<NS;j++){mu[j]=g[j]+Math.log(n[j]/N)+lp;sn+=n[j];smu+=n[j]*mu[j]}
+   const Mx=[],r=[];for(let k=0;k<4;k++){const row=[0,0,0,0,0];let an=0,am=0;for(let j=0;j<NS;j++){const w=A[k][j]*n[j];if(!w)continue;an+=w;am+=w*mu[j];for(let i=0;i<4;i++)row[i]+=w*A[i][j]}row[4]=an;Mx.push(row);r.push(b[k]-an+am)}
+   Mx.push([Mx[0][4],Mx[1][4],Mx[2][4],Mx[3][4],sn-N]);r.push(N-sn+smu);solve(Mx,r,5);const dN=r[4];let mx=5*Math.abs(dN);
+   for(let j=0;j<NS;j++){let s=dN-mu[j];for(let i=0;i<4;i++)s+=A[i][j]*r[i];dn[j]=s;if((n[j]/N>1e-8||s>0)&&Math.abs(s)>mx)mx=Math.abs(s)}
+   const lam=Math.min(1,2/Math.max(mx,1e-30));let cv=0;for(let j=0;j<NS;j++){cv=Math.max(cv,n[j]*Math.abs(dn[j])/N);n[j]=Math.max(n[j]*Math.exp(lam*dn[j]),1e-40)}N*=Math.exp(lam*dN);
+   if(lam===1&&cv<1e-11&&Math.abs(dN)<1e-11){ok=true;break}}
+  return{n,N,it,ok,b}}
+ /* 組成 n（mol/kg）が決まったときの既燃ガスの物性．未反応の燃料 (1 − ηc) ζ を含む */
+ const bE=(n,T,z,ec)=>{let e=0;for(let j=0;j<NS;j++)e+=n[j]*u(SP[j],T);return e+(1-ec)*z*ef(T)},bR=(n,z,ec)=>{let N=0;for(let j=0;j<NS;j++)N+=n[j];return RU*N+(1-ec)*z*Rf},
+  bCv=(n,T,z,ec)=>{let c=0;for(let j=0;j<NS;j++)c+=n[j]*(cp(SP[j],T)-RU);return c+(1-ec)*z*cvf(T)};
+ const z2phi=z=>AF*z/(1-z),phi2z=ph=>ph/(AF+ph);
+ /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0.50〜1.50（0.0125 刻み．量論の折れ目 φ_r = 1 を節点に置く），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
+ const G={f0:.5,df:.0125,nf:81,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},tab=new Array(G.nf).fill(null),iF=Math.round((Tfr-G.T0)/G.dT);
+ function node(i){if(tab[i])return tab[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT);
+  for(let ip=0;ip<G.np;ip++){const p=Math.exp(G.lp0+G.dlp*ip);let w=null,nf=null;
+   for(let it=iF;it<G.nT;it++){const T=G.T0+G.dT*it,q=eq(T,p,z,ec,w),k=ip*G.nT+it;w=q.n;if(it===iF)nf=q.n.slice();e[k]=bE(q.n,T,z,ec);R[k]=bR(q.n,z,ec)}
+   /* 平衡の側の傾き c_v = ∂e/∂T は，節点の値の差分で求める（内側は 4 次の中心差分，端は 2 次の片側差分） */
+   for(let it=iF;it<G.nT;it++){const k=ip*G.nT+it,h=G.dT,L=G.nT-1;c[k]=it-2>=iF&&it+2<=L?(-e[k+2]+8*e[k+1]-8*e[k-1]+e[k-2])/(12*h):it===iF?(-3*e[k]+4*e[k+1]-e[k+2])/(2*h):it===L?(3*e[k]-4*e[k-1]+e[k-2])/(2*h):(e[k+1]-e[k-1])/(2*h)}
+   for(let it=0;it<iF;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(nf,T,z,ec);R[k]=bR(nf,z,ec);c[k]=bCv(nf,T,z,ec)}}
+  return tab[i]={e,c,R}}
+ /* 補間：T は 3 次 Hermite（e と傾き c_v），R は T に線形．ln p と φ は線形．偏微分は補間した関数の微分 */
+ const cl=(x,a,b)=>x<a?a:x>b?b:x,q4=[{},{},{},{}];
+ function col(t,ip,jt,s,o){const k=ip*G.nT+jt,e0=t.e[k],e1=t.e[k+1],c0=t.c[k]*G.dT,c1=t.c[k+1]*G.dT,s2=s*s,s3=s2*s;
+  o.e=(2*s3-3*s2+1)*e0+(s3-2*s2+s)*c0+(-2*s3+3*s2)*e1+(s3-s2)*c1;o.eT=((6*s2-6*s)*e0+(3*s2-4*s+1)*c0+(-6*s2+6*s)*e1+(3*s2-2*s)*c1)/G.dT;o.R=t.R[k]+(t.R[k+1]-t.R[k])*s;o.RT=(t.R[k+1]-t.R[k])/G.dT}
+ function burned(T,p,z,o){const ph=cl(K.etac*z2phi(z),G.f0,G.f0+G.df*(G.nf-1)),xf=(ph-G.f0)/G.df,jf=Math.min(G.nf-2,Math.floor(xf)),wf=xf-jf,
+   Tc=cl(T,G.T0,G.T0+G.dT*(G.nT-1)),xT=(Tc-G.T0)/G.dT,jt=Math.min(G.nT-2,Math.floor(xT)),s=xT-jt,
+   xp=cl((Math.log(p)-G.lp0)/G.dlp,0,G.np-1),jp=Math.min(G.np-2,Math.floor(xp)),wp=xp-jp,t0=node(jf),t1=node(jf+1);
+  col(t0,jp,jt,s,q4[0]);col(t0,jp+1,jt,s,q4[1]);col(t1,jp,jt,s,q4[2]);col(t1,jp+1,jt,s,q4[3]);
+  const L=k=>{const a=q4[0][k]+(q4[1][k]-q4[0][k])*wp,b=q4[2][k]+(q4[3][k]-q4[2][k])*wp;return[a,b]},mix=k=>{const[a,b]=L(k);return a+(b-a)*wf};
+  const inP=xp>0&&xp<G.np-1,inF=ph>G.f0&&ph<G.f0+G.df*(G.nf-1),dzf=K.etac*AF/((1-z)*(1-z))/G.df;
+  o.e=mix('e');o.R=mix('R');o.eT=T===Tc?mix('eT'):0;o.RT=T===Tc?mix('RT'):0;
+  const dP=k=>inP?((q4[1][k]-q4[0][k])*(1-wf)+(q4[3][k]-q4[2][k])*wf)/(G.dlp*p):0,dZ=k=>{if(!inF)return 0;const[a,b]=L(k);return(b-a)*dzf};
+  o.ep=dP('e');o.Rp=dP('R');o.ez=dZ('e');o.Rz=dZ('R');return o}
+ /* 平衡を直接解いた既燃ガスの物性（表を使わない．検証用） */
+ function direct(T,p,z,ec=K.etac,frz=true){if(frz&&T<Tfr){const q=eq(Tfr,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N}}const q=eq(T,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N,q}}
+ return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab}})();
 /* ===== generic integrators ===== */
 const axpy=(a,b,s)=>a.map((v,i)=>v+s*b[i]);
 function rk4s(f,y,h){const k1=f(y),k2=f(axpy(y,k1,h/2)),k3=f(axpy(y,k2,h/2)),k4=f(axpy(y,k3,h));return y.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]))}

@@ -1,5 +1,5 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=28,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=29,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{const e=Math.abs(val-ref)/(Math.abs(ref)||1);(TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})};
 const chkB=(id,n,ok,val,ref)=>{(TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})};
@@ -497,6 +497,30 @@ const p3=S.pts.find(o=>o.N===3000);chkB(27,'脈動：全開 3000 rpm で排気�
 {uiDefault();show(2);U.pg=PAGES.indexOf('排気系');rs();yield;const sec=$('s2'),ks=ITEMS.filter(i=>i.pg===U.pg).map(i=>i.k),v0=LP.Vm,a0=LP.At,b=k=>$('Pg').querySelector(`button[data-k="${k}"][data-s="1"]`);tapEl(b('Vm'));tapEl(b('At'));const ch=LP.Vm>v0&&LP.At>a0;const off=$('Pg').querySelector('button[data-k="exs"][data-c="0"]');tapEl(off);
 chkB(27,'設定ページ「排気系」：4 項目，操作で値が変わる，スクロール無し',U.pg>=0&&ks.join()==='exs,Vm,At,dpx'&&ch&&LP.exs===0&&sec.scrollHeight<=sec.clientHeight+1,ks.join()+`，V_m ${v0*1e3}→${LP.Vm*1e3} L`);show(3)}};
 /* ---- TEST-28 idle plausibility ---- */
+TST[29]=function*(){const T=GAS,S=T.S,br=(f,a,b)=>{let fa=f(a);for(let i=0;i<200&&b-a>1e-7;i++){const m=(a+b)/2,fm=f(m);if(fa*fm<=0)b=m;else{a=m;fa=fm}}return(a+b)/2};
+/* 1 物性の値 */
+chk(29,'空気の気体定数 R_a [J/(kg·K)]',288.19,T.Ra,1e-4);chk(29,'燃料蒸気の気体定数 R_f [J/(kg·K)]',75.586,T.Rf,1e-4);chk(29,'量論空燃比 AF_st',14.503,T.AF,1e-4);
+chk(29,'燃料蒸気の低位発熱量（298.15 K）[MJ/kg] = H_u + h_fg',44.35,(T.h(T.F,T.T0)-T.nC*T.h(S.CO2,T.T0)-T.y*T.nC/2*T.h(S.H2O,T.T0))/T.Mf/1e6,1e-4);
+{let e1=0,e2=0;for(const k of['O2','N2','CO2','H2O','CO','H2','OH','O','H','NO']){const s=S[k];for(const x of[400,900,1500,2600])e1=Math.max(e1,Math.abs((T.h(s,x+.01)-T.h(s,x-.01))/.02/T.cp(s,x)-1));e2=Math.max(e2,Math.abs(T.h(s,1000-1e-9)/T.h(s,1000)-1),Math.abs(T.s0(s,1000-1e-9)/T.s0(s,1000)-1))}
+chkB(29,'各化学種：dh/dT = c_p（相対 1e-6），1000 K で h と s° が連続（相対 1e-5）',e1<1e-6&&e2<1e-5,`${e1.toExponential(1)}，${e2.toExponential(1)}`)}yield;
+/* 2 平衡定数 */
+{const r=[[2000,-2.879],[2500,-1.433],[3000,-.479]].map(([x,ref])=>{const G=k=>T.h(S[k],x)-x*T.s0(S[k],x);return[-(G('CO')+.5*G('O2')-G('CO2'))/(RU*x)/Math.LN10,ref]});chkB(29,'CO2 ⇌ CO + ½O2 の log10 Kp（2000，2500，3000 K．±0.005）',r.every(q=>Math.abs(q[0]-q[1])<=.005),r.map(q=>q[0].toFixed(4)).join('，'),'−2.879，−1.433，−0.479')}
+/* 3 平衡の解（燃焼効率 1） */
+{let eb=0,es=0,nok=0,cnt=0;for(const ph of[.7,1,1.3])for(const x of[1700,2500,3200])for(const p of[1e5,5e6]){const z=T.phi2z(ph),q=T.eq(x,p,z,1),b=q.b;cnt++;if(q.ok)nok++;for(let i=0;i<4;i++){let s=0;for(let j=0;j<10;j++)s+=T.A[i][j]*q.n[j];eb=Math.max(eb,Math.abs(s/b[i]-1))}
+ /* 停留の条件：μ_j/RT = Σ λ_i a_ij．主要な 4 種から λ を解き，残りの化学種で残差を見る */
+ const mu=T.SP.map((s,j)=>(T.h(s,x)-x*T.s0(s,x))/(RU*x)+Math.log(q.n[j]/q.N)+Math.log(p/PSTD)),lN=mu[5]/2,lO=mu[4]/2,lC=mu[0]-2*lO,lH=(mu[2]-lO)/2,lam=[lC,lH,lO,lN];for(let j=0;j<10;j++){let s=0;for(let i=0;i<4;i++)s+=lam[i]*T.A[i][j];if(q.n[j]/q.N>1e-12)es=Math.max(es,Math.abs(mu[j]-s))}}
+chkB(29,'化学平衡：18 条件すべて収束，元素の保存（相対 1e-9），停留の条件の残差 ≤ 1e-8',nok===cnt&&eb<1e-9&&es<1e-8,`収束 ${nok}/${cnt}，元素 ${eb.toExponential(1)}，停留 ${es.toExponential(1)}`);
+const d=T.direct(2500,5e6,T.phi2z(1),1,false);chkB(29,'φ = 1，2500 K，5 MPa：CO のモル分率 0.01029（±1e-5），R_b = 289.58 J/(kg·K)（±0.01）',Math.abs(d.n[1]/d.N-.010293)<1e-5&&Math.abs(d.R-289.58)<.01,`${(d.n[1]/d.N).toFixed(6)}，${d.R.toFixed(3)}`);yield;
+const tad=ph=>{const z=T.phi2z(ph),h0=(1-z)*T.ha(298.15)+z*T.hf(298.15);return br(x=>{const q=T.direct(x,101325,z,1,false);return q.e+q.R*x-h0},1500,3000)},t1=tad(1);yield;const t2=tad(1.1);
+chkB(29,'定圧断熱火炎温度（298.15 K，101.325 kPa）：φ = 1.0 で 2313.7 K，1.1 で 2325.2 K（±2 K）',Math.abs(t1-2313.7)<=2&&Math.abs(t2-2325.2)<=2,`${t1.toFixed(1)}，${t2.toFixed(1)} K`)}yield;
+/* 4 定容・断熱の燃焼（燃焼効率 1，凍結なし，平衡を直接解く） */
+{const r=[];for(const[ph,T2,v,Tr,pr]of[[1,690.30,.09058,2952,9.565e6],[1.1,682.90,.09016,2983,9.817e6]]){const z=T.phi2z(ph),u2=(1-z)*T.ea(T2)+z*T.ef(T2),st=x=>{let p=290*x/v,q;for(let i=0;i<30;i++){q=T.direct(x,p,z,1,false);const pn=q.R*x/v;if(Math.abs(pn/p-1)<1e-11)break;p=pn}return[q.e-u2,p]},T3=br(x=>st(x)[0],1500,4000),p3=st(T3)[1];r.push([T3,p3,Math.abs(T3-Tr)<=5&&Math.abs(p3/pr-1)<=.003]);yield}
+chkB(29,'定容・断熱の燃焼の終わり：φ = 1.0 で 2952 K，9.565 MPa，1.1 で 2983 K，9.817 MPa（±5 K，±0.3%）',r.every(q=>q[2]),r.map(q=>`${q[0].toFixed(1)} K，${(q[1]/1e6).toFixed(3)} MPa`).join('／'))}
+/* 5 表の補間 */
+{const o={},G=T.G;let me=0,mr=0,n=0;for(const pr of[.73125,1.00625,1.26875]){const z=T.phi2z(pr/K.etac);for(let it=0;it<G.nT-1;it++){for(let ip=0;ip<G.np-1;ip++){const x=G.T0+G.dT*(it+.5),p=Math.exp(G.lp0+G.dlp*(ip+.5));T.burned(x,p,z,o);const d=T.direct(x,p,z);me=Math.max(me,Math.abs(o.e-d.e));mr=Math.max(mr,Math.abs(o.R/d.R-1));n++}if(RUN.over())yield}}
+chkB(29,`既燃ガスの表の補間（格子の中点 ${n} 点）：平衡を直接解いた値との差が e_b で 5 kJ/kg 以下，R_b で相対 1e-3 以下`,me<=5e3&&mr<=1e-3,`${(me/1e3).toFixed(2)} kJ/kg，${mr.toExponential(1)}`,'≤ 5，≤ 1e-3');
+const z=T.phi2z(1.03),x=2333,p=3.3e6,f=(a,b,c)=>({...T.burned(a,b,c,{})}),a=f(x,p,z),dT=(f(x+.01,p,z).e-f(x-.01,p,z).e)/.02,dp=(f(x,p*1.0001,z).e-f(x,p*.9999,z).e)/(p*.0002),dz=(f(x,p,z+1e-6).e-f(x,p,z-1e-6).e)/2e-6,dRz=(f(x,p,z+1e-6).R-f(x,p,z-1e-6).R)/2e-6,er=Math.max(Math.abs(a.eT/dT-1),Math.abs(a.ep/dp-1),Math.abs(a.ez/dz-1),Math.abs(a.Rz/dRz-1));
+chkB(29,'補間した e_b，R_b の偏微分が，補間した関数の中心差分に一致（相対 1e-6）',er<1e-6,er.toExponential(1))}};
 TST[28]=function*(){const s2=yield*scen('S2'),c2=s2.c,am=avgM(c2.s),at=d=>Math.round(d*2)%1440,nx=tr=>Math.log(tr.p[at(400)]/tr.p[at(480)])/Math.log(tr.V[at(480)]/tr.V[at(400)]);
 chkB(28,'アイドル（S2）：燃料流量 0.030〜0.050 g/s（10 サイクル平均）',am.mfd>=3e-5&&am.mfd<=5e-5,(am.mfd*1e3).toFixed(4)+' g/s');
 const fa=am.fmep+am.amep;chkB(28,'アイドル（S2）：FMEP + AMEP が 90〜130 kPa',fa>=9e4&&fa<=13e4,`${(am.fmep/1e3).toFixed(0)} + ${(am.amep/1e3).toFixed(0)} = ${(fa/1e3).toFixed(0)} kPa`);
@@ -510,10 +534,10 @@ function restLive(q){Object.assign(LP,q.P);live.s=structuredClone(q.s);live.G=ge
 const nextFrame=()=>new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};requestAnimationFrame(f);setTimeout(f,60)});
 const ST={};
 async function runAll(only){if(U.busy)return;U.busy=1;U.cancel=0;U.uiDraw=0;TR={};SC={};for(let i=1;i<=NT;i++)ST[i]='';const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();RUN.maxF=0;$('rt').textContent='中止';let lastF=performance.now();
-for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
+for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
 while(!done&&!U.cancel){await nextFrame();const n0=performance.now();if(n0-lastF>RUN.maxF){RUN.maxF=n0-lastF;RUN.maxId=id}lastF=n0;RUN.t0=n0;try{for(;;){const r=it.next(send);send=undefined;if(r.done){done=true;break}if(r.value&&typeof r.value.then==='function'){try{send=await r.value}catch(e){send={err:String(e)}}lastF=performance.now();break}if(r.value==='frame'||RUN.over())break}}catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}}
 if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27))restLive(snap);
-if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21〜28 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'27 / 27');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 180 s',RUN.total<=180,RUN.total.toFixed(1)+' s','≤ 180 s')}
+if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21〜29 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'27 / 27');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 180 s',RUN.total<=180,RUN.total.toFixed(1)+' s','≤ 180 s')}
 ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'}else ST[id]=''}
 restLive(snap);U.busy=0;U.uiDraw=0;$('rt').textContent='全テスト実行';show(3);rchips();window.__done=1}
 function rchips(cur){const ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng'),np=ids.filter(k=>ST[k]==='ok').length,ni=ids.reduce((s,k)=>s+TR[k].length,0),nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0);
