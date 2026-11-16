@@ -64,13 +64,14 @@ const MJX={st:'idle',q:[],url:'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.
 const TXM={ok:'数式：MathJax 3.2.2 で表示',fail:'数式：MathJax を読み込めないため TeX のソースを表示',load:'数式：MathJax を読み込み中（TeX のソースを表示）'};
 function txStat(){const e=$('txs');if(e)e.textContent=TXM[MJX.st]||TXM.load}
 function txRaw(el){el.textContent=el.dataset.tex;el.classList.add('raw');el.classList.remove('mj')}
-function txMJ(el){const n=MathJax.tex2svg(el.dataset.tex,{display:el.dataset.d==='1'});el.replaceChildren(n);el.classList.add('mj');el.classList.remove('raw')}
+function txMJ(el){const n=MathJax.tex2svg(el.dataset.tex,{display:el.dataset.d==='1'});el.replaceChildren(n);el.classList.add('mj');el.classList.remove('raw');if(!MJX.gc){const g=MathJax.startup.output.fontCache.getCache();if(g){g.style.position='absolute';g.style.width=g.style.height='0';document.body.appendChild(g);MJX.gc=1}}} /* 字形の定義は 1 か所（global cache）に置き，各式は参照だけにする */
 function txFail(){if(MJX.st!=='load')return;MJX.st='fail';MJX.q.length=0;txStat()}
 function txLoad(){if(MJX.st!=='idle')return;MJX.st='load';txStat();
- window.MathJax={tex:{inlineMath:[],displayMath:[]},svg:{fontCache:'local'},options:{enableMenu:false},startup:{typeset:false,ready(){MathJax.startup.defaultReady();MathJax.startup.promise.then(()=>{if(MJX.st!=='load')return;MJX.st='ok';document.head.appendChild(MathJax.svgStylesheet());txStat();txAll()})}}};
+ window.MathJax={tex:{inlineMath:[],displayMath:[]},svg:{fontCache:'global'},options:{enableMenu:false,enableAssistiveMml:false},startup:{typeset:false,ready(){MathJax.startup.defaultReady();MathJax.startup.promise.then(()=>{if(MJX.st!=='load')return;MJX.st='ok';document.head.appendChild(MathJax.svgStylesheet());txStat();txAll()})}}};
  const sc=document.createElement('script');sc.src=MJX.url;sc.async=true;sc.dataset.mj='1';sc.onerror=txFail;document.head.appendChild(sc);setTimeout(txFail,MJX.wait)}
-/* 未組版の数式を順に組む．表示中の文書を先に．1 フレーム 8 ms 以内 */
-function txAll(){if(MJX.st!=='ok')return;const els=[];for(const k of[DV.cur,0,1,2,3])if(DV.built[k]===1)for(const e of $('dv'+k).querySelectorAll('.tx:not(.mj)'))if(!els.includes(e))els.push(e);MJX.q=els;if(!MJX.run&&els.length){MJX.run=1;requestAnimationFrame(txPump)}}
+/* 画面に入る数式（表示範囲と上下 1 画面分）だけを組む．組んだ式は戻さない（全式を組むと要素が多すぎてタブの切替が重くなる） */
+function txAll(){if(MJX.st!=='ok')return;if(!MJX.io)MJX.io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){MJX.io.unobserve(e.target);if(!e.target.classList.contains('mj'))MJX.q.push(e.target)}if(MJX.q.length&&!MJX.run){MJX.run=1;requestAnimationFrame(txPump)}},{root:$('s4'),rootMargin:'100% 0px'});
+ for(const k of[0,1,2,3])if(DV.built[k]===1)for(const e of $('dv'+k).querySelectorAll('.tx:not(.mj):not([data-io])')){e.dataset.io='1';MJX.io.observe(e)}}
 function txPump(){if(MJX.st!=='ok'){MJX.run=0;return}const t0=performance.now();while(MJX.q.length&&performance.now()-t0<8){const e=MJX.q.shift();if(e.isConnected&&!e.classList.contains('mj'))txMJ(e)}if(MJX.q.length)requestAnimationFrame(txPump);else{MJX.run=0;docFit(DV.cur)}}
 /* 式の解説は，初めて開いたときに章を数フレームに分けて表示する（初回の組版を 1 フレームに集めない） */
 function docReveal(){if(DV.rev||!DV.pend.length)return;DV.rev=1;const go=()=>{if(U.tab!==4||DV.cur!==0){DV.rev=0;return}const E=$('dv0'),t0=performance.now();do{DV.pend.shift().style.display='';void E.offsetHeight}while(DV.pend.length&&performance.now()-t0<8);if(DV.pend.length)requestAnimationFrame(go);else DV.rev=0};go()}
