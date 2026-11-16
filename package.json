@@ -5,7 +5,6 @@
   "scripts": {
     "build": "python3 src/build.py",
     "test": "npm run build && node tests/headless.js",
-    "font": "python3 src/fonts/make_subset.py",
     "wav": "node tools/wav_demo.js"
   },
   "devDependencies": {

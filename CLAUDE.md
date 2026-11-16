@@ -23,7 +23,7 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 - 圧力は Pa 系（Pa，kPa，MPa）．bar は使わない．画面の既定は kPa．内部計算は SI．
 - 定着していない術語は英語のまま．
 - 数式は導出を省略せず，記号はすべて定義する（解説タブ §0 の記号表と TEST-16，用語の定義集）．
-- 3 文書の Markdown は，ビルド時に pandoc で HTML と MathML に変換して成果物に埋め込む（解説タブから読める）．表の中の数式に `|` を書かない（`\lvert`，`\rvert` を使う）．数式に新しい文字を使ってビルドが止まったら，`src/fonts/make_subset.py` に足して `npm run font`．
+- 3 文書の Markdown は，ビルド時に pandoc で HTML に変換し，数式は TeX のまま成果物に埋め込む（解説タブから読める）．数式は，ネットワークがあれば実行時に MathJax 3.2.2（cdnjs）で組み，無ければ TeX のソースを表示する．フォントやライブラリを成果物に埋め込まない（C-1，C-8）．表の中の数式に `|` を書かない（`\lvert`，`\rvert` を使う）．
 
 ## 構成
 | パス | 内容 |
@@ -35,12 +35,12 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | `src/core.js` | `EngineCore`：物理モデル・ECU・動力計・ソルバ・項目定義表 `ITEMS`（DOM 非依存） |
 | `src/audio.js` | エンジン音の合成器 `Synth`（AudioWorklet と共用，DOM 非依存） |
 | `src/plot.js` | グラフの軸・自動レンジ・レイアウト，機関断面図の場面記述と描画，制御状態の文言 |
-| `src/doc.js` | 解説タブ（MathML 生成器 `mp`，記号表 `SYM`），埋め込んだ 3 文書の表示 |
+| `src/doc.js` | 解説タブ（TeX 生成器 `mp`，記号表 `SYM`），埋め込んだ 3 文書の表示，MathJax の読み込みと TeX の表示 |
 | `src/tests.js` | アプリ内テスト TEST-01〜28 とシナリオ |
 | `src/ui.js` | 画面・入力・ループ |
 | `src/style.css`，`src/index.tpl.html` | 見た目とひな形 |
-| `src/fonts/` | 数式フォント（Latin Modern Math のサブセット，GUST Font License）と生成スクリプト |
-| `src/build.py` | 上記を結合し，3 文書を変換して埋め込み，`dist/engine.html` を生成（pandoc と fontTools が必要） |
+| `vendor/mathjax-3.2.2/` | 開発時検証で CDN の MathJax の代わりに読ませる `tex-svg.js`（Apache License 2.0．成果物には含めない） |
+| `src/build.py` | 上記を結合し，3 文書を変換して埋め込み，`dist/engine.html` を生成（pandoc が必要） |
 | `tests/headless.js` | 開発時検証 [D]（Playwright） |
 | `tools/wav_demo.js`，`tools/bench.js` | 試聴用 WAV の生成，計算時間の計測 |
 | `tools/flavor/` | 演出音（SPEC-21 C）の試聴サンプルの生成（`tabs.js` → `samples.js`，`samples_bass.js`，`live.js`．出力は `dist/`） |
@@ -50,9 +50,8 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 ```
 npm install && npx playwright install chromium   # 初回のみ
 npm run build      # dist/engine.html を生成（pandoc が必要）
-npm test           # ビルドして全テスト（7 通り，約 12 分）
+npm test           # ビルドして全テスト（7 通り，約 12 分．MathJax は vendor/ のものを使い，1 通りは遮断）
 npm run wav        # 試聴用 WAV を dist/ に生成
-npm run font       # 数式フォントのサブセットを作り直す（Latin Modern Math が必要）
 ```
 
 ## 設計上の注意
