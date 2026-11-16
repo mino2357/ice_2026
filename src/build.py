@@ -37,6 +37,9 @@ _dj=json.dumps(DOCS,ensure_ascii=False,separators=(',',':')).replace('</','<\\/'
 print('docs',{k:(len(v['chunks']),len(v['toc']),v['nmath'],v['nchar']) for k,v in DOCS.items()})
 h=r('index.tpl.html').replace('/*CSS*/',r('style.css')).replace('/*JS*/','\n'.join(r(f) for f in['core.js','audio.js','plot.js','doc.js','tests.js','ui.js']))
 assert h.count('/*DOCS*/')==1;h=h.replace('/*DOCS*/',_dj)
+# SPEC-15 の 2：dvh は @supports (height:100dvh) の中でだけ使う（dvh を使えないブラウザでは外の vh の指定が残る）
+_css=re.sub(r'@supports \(height:100dvh\)\{(?:[^{}]*\{[^{}]*\})*\}','',r('style.css'))
+assert not re.search(r'\d+dvh',_css),'dvh が @supports (height:100dvh) の外にあります（SPEC-15 の 2）'
 # C-8：フォントやバイナリを埋め込まない
 assert '@font-face' not in r('style.css') and not re.search(r'data:[^"\'\s)]*;base64,',h),'成果物に @font-face か base64 のデータがあります（C-8）'
 open(os.path.join(d,'..','dist','engine.html'),'w',encoding='utf-8').write(h);print(len(h))
