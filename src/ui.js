@@ -25,19 +25,20 @@ function defaults(){ITEMS.filter(i=>i.pg===U.pg).forEach(i=>setParam(i.k,defv(i)
 function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
-const CTLU={alm:['a',''],fm:['','a'],fb:['n','']},ctlSt=k=>CTLU[k]?CTLU[k][LP.mode?1:0]:'';
+/* SPEC-30 の 9：熱物性が「化学種」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
+const CTLU={alm:['a',''],fm:['','a'],fb:['n','']},INJK={inj:1,soi:2,qinj:2,tev:2},ctlSt=k=>CTLU[k]?CTLU[k][LP.mode?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):'';
 const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(1):live.s.fc.toFixed(2);
 /* 自動の値の行を毎フレーム書き換える（設定タブの表示中に loop から呼ぶ） */
 function liveVals(){for(const k of['spb','alm','fm']){if(!(k==='spb'?LP.sauto:ctlSt(k)==='a'))continue;const e=$('Pg').querySelector(`b[data-v="${k}"]`);if(e)e.textContent=ctlVal(k)}}
 function rs(){const its=ITEMS.filter(i=>i.pg===U.pg),eng=U.pg===0;$('pt').textContent=`${PAGES[U.pg]}  ${U.pg+1}/${PAGES.length}`;
-$('Pg').innerHTML=its.map(it=>{const v=pval(it.k),pd=it.k in U.pend;if(it.ch){const cur=it.vals?it.vals.indexOf(v):v;return`<div class="r c"><span>${it.n}</span><div>${it.ch.map((n,i)=>`<button data-k="${it.k}" data-c="${i}" class="${i===cur?'on':''}">${n}</button>`).join('')}</div></div>`}
+$('Pg').innerHTML=its.map(it=>{const v=pval(it.k),pd=it.k in U.pend;if(it.ch){const na=ctlSt(it.k)==='n',cur=na?0:it.vals?it.vals.indexOf(v):v;return`<div class="r c"><span>${it.n}${na?'（不使用）':''}</span><div>${it.ch.map((n,i)=>`<button data-k="${it.k}" data-c="${i}" class="${i===cur?'on':''}"${na?' disabled':''}>${n}</button>`).join('')}</div></div>`}
 const n=gi(it,v),cs=ctlSt(it.k),au=it.k==='spb'&&LP.sauto||cs==='a',na=cs==='n',lk=au||na;return`<div class="r${pd?' p':''}"><span>${it.n}${au?'（自動）':na?'（不使用）':''}${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?ctlVal(it.k):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${lk||n<=gmin(it)?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${lk||n>=gmax(it)?' disabled':''}>＋</button></div>`}).join('');
 $('x10').textContent=U.x10?'刻み×10':'刻み×1';$('x10').className=U.x10?'on':'';$('un').disabled=!U.undo;
 $('bs').style.display=eng?'none':'';$('ap').style.display=$('ds').style.display=eng?'':'none';$('act').style.gridTemplateColumns=`repeat(${eng?5:4},1fr)`;
 const hasP=Object.keys(U.pend).length>0;$('ap').disabled=!hasP||!lamOK();$('ds').disabled=!hasP;
 $('pv').style.display=$('pvt').style.display=eng?'none':'';$('drv').style.display=eng?'':'none';
 if(eng){const Pq={...LP,...U.pend},G=geo(Pq),ok=lamOK();$('drv').innerHTML=`<b>導出値${hasP?'（保留中の値で計算）':''}</b><br>連桿比 λ = r/l = ${G.lam.toFixed(3)} ${ok?'':'<b class="ng">（λ ≤ 0.5 を満たさないため適用不可）</b>'}<br>行程容積 V_d = ${(G.Vd*1e6).toFixed(1)} cm³<br>隙間容積 V_c = ${(G.Vc*1e6).toFixed(1)} cm³<br>クリアランス高さ h_c = ${(G.hc*1e3).toFixed(2)} mm<br>弁干渉：${valveHit(Pq,G)?'<b class="ng">VALVE HIT</b>':'なし'}<br><span style="color:var(--mu)">この4項目は「適用」で確定し，コールドリセットします．</span>`}swFresh()}
-function pvText(){if(camPg()){$('pvt').textContent=camText(LP,live.G);return}const l=live.last,r=Base.ref;if(!l){$('pvt').textContent='運転タブで START してください';return}const sg=x=>(x>=0?'+':'')+x.toFixed(0);
+function pvText(){if(camPg()){$('pvt').textContent=camText(LP,live.G);return}if(U.pg===PAGES.indexOf('噴射')&&live.last){$('pvt').textContent=injText(live);return}const l=live.last,r=Base.ref;if(!l){$('pvt').textContent='運転タブで START してください';return}const sg=x=>(x>=0?'+':'')+x.toFixed(0);
 $('pvt').textContent=`IMEP ${(l.imep/1e3).toFixed(0)} kPa${r?'（基準比 '+sg((l.imep-r.imep)/1e3)+'）':''}  p_max ${(l.pm/1e3).toFixed(0)} kPa${r?'（'+sg((l.pm-r.pm)/1e3)+'）':''}  N̄ ${live.s.Nb.toFixed(0)} rpm`}
 /* ===== canvases ===== */
 const dprc=()=>Math.min(devicePixelRatio||1,2.5);
@@ -86,7 +87,7 @@ function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */
-function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();$('s4').scrollTop=DV.top[DV.cur]}}
+function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
 function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';pvo()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
@@ -103,7 +104,7 @@ tap($('lin'),()=>{U.log=0;pvo()});tap($('lg'),()=>{U.log=1;pvo()});tap($('bs2'),
 tap($('ch'),e=>{if(!LAY.length)return;const r=$('ch').getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,L=LAY.find(q=>x>=q.pl.x&&x<=q.pl.x+q.pl.w&&y>=q.pl.y-16&&y<=q.pl.y+q.pl.h+34)||LAY.find(q=>x>=q.pl.x&&x<=q.pl.x+q.pl.w),f=L?(x-L.pl.x)/L.pl.w:-1;U.cross[U.sub]=U.cross[U.sub]!=null||f<0||f>1?null:f});
 tap($('pp'),()=>{U.pg=(U.pg+PAGES.length-1)%PAGES.length;rs()});tap($('pn'),()=>{U.pg=(U.pg+1)%PAGES.length;rs()});tap($('pt'),()=>{$('pl').className='on'});
 $('pl').innerHTML=PAGES.map((n,i)=>`<button data-p="${i}">${n}</button>`).join('');tap($('pl'),e=>{const b=e.target.closest('button');if(b){U.pg=+b.dataset.p;$('pl').className='';rs()}});
-tap($('Pg'),e=>{const b=e.target.closest('button[data-k]');if(!b||b.disabled)return;const it=IT[b.dataset.k];if(b.dataset.c!=null)setParam(it.k,it.vals?it.vals[+b.dataset.c]:+b.dataset.c);else stepItem(it.k,+b.dataset.s)});
+tap($('Pg'),e=>{const b=e.target.closest('button[data-k]');if(!b||b.disabled)return;const it=IT[b.dataset.k];if(b.dataset.c!=null){if(!ctlSt(it.k))setParam(it.k,it.vals?it.vals[+b.dataset.c]:+b.dataset.c)}else stepItem(it.k,+b.dataset.s)});
 tap($('x10'),()=>{U.x10^=1;rs()});tap($('un'),undo);tap($('df'),defaults);tap($('bs'),()=>{Base.set(live);note('現在のサイクルを基準にしました')});tap($('ap'),applyPend);tap($('ds'),()=>{U.pend={};note('保留を破棄しました');rs()});
 tap($('rt'),()=>{U.busy?(U.cancel=1):runAll()});tap($('cp'),e=>{const b=e.target.closest('button');if(b){U.sel=+b.dataset.i;const r=TR[U.sel];U.ix=r?Math.max(0,r.findIndex(q=>!q.ok)):0;dtl()}});tap($('pvb'),()=>{const r=TR[U.sel];if(r&&r.length){U.ix=(U.ix+r.length-1)%r.length;dtl()}});tap($('nxb'),()=>{const r=TR[U.sel];if(r&&r.length){U.ix=(U.ix+1)%r.length;dtl()}});
 buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(a)docGo(+a.dataset.go)});tap($('dtop'),()=>{$('s4').scrollTop=0});tap($('dsw'),e=>{const b=e.target.closest('button[data-d]');if(b)docShow(+b.dataset.d)});for(const k of[1,2,3])tap($('dv'+k),docTap);docShow(0);addEventListener('resize',()=>{if(DV.cur)docFit(DV.cur)});setSub(0);sp();rs();rchips();show(0);

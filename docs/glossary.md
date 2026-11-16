@@ -22,7 +22,7 @@
 | $t$ | 時間 | s | 独立変数 | 2.1 |
 | $\theta$ | クランク角 | rad | 1 サイクル内の角度 $\theta \in [0, 4\pi)$．$\theta = 0$：吸気上死点，$\pi$：吸気下死点，$2\pi$：圧縮上死点，$3\pi$：膨張下死点．サイクルの終端で $4\pi$ を引く | 2.1 |
 
-### 2.2 状態ベクトル $\mathbf{y} \in \mathbb{R}^{16}$
+### 2.2 状態ベクトル $\mathbf{y} \in \mathbb{R}^{21}$
 
 $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分する．$\mathbf{u}$ は入力（$\alpha$，$f_{\text{eff}}$，点火時期 $s$ など）で，積分の 1 ステップの間は一定．
 
@@ -44,8 +44,13 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 14 | $p_m$ | 消音器の圧力 | Pa | $\dfrac{dp_m}{dt} = \dfrac{RT_X}{V_m}(\dot m_e - \dot m_t)$ | SPEC-27 |
 | 15 | $E_{\text{in}}$ | マニホールドの余剰エンタルピー | J | $\dfrac{dE_{\text{in}}}{dt} = -\dot m_r\varepsilon_r + \min(0, \dot m_{\text{th}})\,\varepsilon_{\text{in}}$（ランナ ON） | SPEC-05，25 |
 | 16 | $E_p$ | 吸気ポートの余剰エンタルピー | J | $\dfrac{dE_p}{dt} = \dot m_r\varepsilon_r - \dot m_{\text{in}}^+\varepsilon_p + \dot X_o$ | SPEC-25 |
+| 17 | $m_f$ | 筒内の未燃の燃料蒸気の質量（化学種のモデル） | kg | $\dfrac{dm_f}{dt} = \sum_j\dot m_j Y_{f,j} + \dot m_{\text{ev}} - r\,\psi$ | SPEC-29 |
+| 18 | $m_{bf}$ | 筒内の既燃ガスのうち燃料に由来する質量（同） | kg | $\dfrac{dm_{bf}}{dt} = \sum_j\dot m_j Y_{b,j}\zeta_j + r\,\psi$ | SPEC-29 |
+| 19 | $m_l$ | 筒内の液体の燃料の質量（同） | kg | $\dfrac{dm_l}{dt} = \dot m_{\text{inj}} - \dot m_{\text{ev}}$ | SPEC-30 |
+| 20 | $m_{f,\text{in}}$ | 吸気マニホールド内の燃料蒸気の質量（同） | kg | 既燃ガスの追跡と同じ形 | SPEC-30 |
+| 21 | $m_{f,p}$ | 吸気ポート内の燃料蒸気の質量（同） | kg | 同上 | SPEC-30 |
 
-### 2.3 補助積分 $\mathbf{z} \in \mathbb{R}^{22}$
+### 2.3 補助積分 $\mathbf{z} \in \mathbb{R}^{28}$
 
 状態と同じ Runge–Kutta の重みで同時に積分する量．$\mathbf{f}$ には現れない．サイクルの集計と保存則の検査に使う．
 
@@ -59,6 +64,8 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $Q_c$，$Q_w$ | 発熱，壁への熱 | J | $\displaystyle\int\dot Q_{\text{comb}}\,dt$，$\displaystyle\int\dot Q_{\text{wall}}\,dt$ |
 | $H_i$，$H_o$ | 筒内へ入った／筒内から出た顕熱エンタルピー | J | $\displaystyle\int\dot H^s_{\text{in}}\,dt$，$\displaystyle\int\dot H^s_{\text{out}}\,dt$ |
 | $P_m$，$\Upsilon$ | 背圧と吸気管既燃率の時間積分 | Pa·s，s | $\displaystyle\int p_m\,dt$，$\displaystyle\int Y_{b,\text{in}}\,dt$ |
+| $H_e$ | 気化した燃料が持ち込んだエネルギー | J | $\displaystyle\int\dot m_{\text{ev}}\left[h_f(T_l) - h_{fg}\right]dt$ |
+| $F_{\text{inj}}$，$F_{\text{ev}}$，$F_{\text{iv}}$，$F_{\text{ex}}$，$F_b$ | 噴いた燃料，気化した燃料，吸気弁を通った燃料蒸気（流入が正），排気弁から出た燃料蒸気，燃えた燃料 | kg | $\displaystyle\int\dot m_{\text{inj}}\,dt$，$\displaystyle\int\dot m_{\text{ev}}\,dt$，…，$\displaystyle\int r\psi\,dt$ |
 
 ### 2.4 幾何（スライダ・クランク機構と弁）
 
@@ -98,7 +105,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $q_u$ | 未燃ガスが燃えるときに出す単位質量あたりの熱 | J/kg | $q_u = Q_{\text{in}}/m_{u,\text{trapped}}$ | SPEC-09 |
 | $\gamma_0$ | 定数として使う比熱比 | – | 定比熱比モデル $1.35$，ポートの剛性 $1.4$，オリフィスの式では上流のガスの $\gamma$ | SPEC-02，04，25，27 |
 
-### 2.5a 化学種の熱物性と噴射（第26版，未実装．SPEC-29，SPEC-30）
+### 2.5a 化学種の熱物性と噴射（第26版．SPEC-29，SPEC-30）
 
 | 記号 | 名称 | 単位 | 定義 | 仕様 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -117,10 +124,9 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $\mathcal{R}$，$C$，$S_E$，$S_R$ | 筒内ガスの $\sum m_k R_k$，熱容量，エネルギーの式と状態方程式の右辺 | J/K，J/K，W，W | SPEC-29 B の 5 | SPEC-29 |
 | $m_l$，$m_{f,\text{in}}$，$m_{f,p}$ | 筒内の液体の燃料，吸気マニホールドとポートの燃料蒸気の質量 | kg | 状態 | SPEC-30 |
 | $\dot m_{\text{inj}}$，$\dot m_{\text{ev}}$ | 噴射率，気化の速さ | kg/s | $\frac{m_{f,\text{cmd}}}{\Delta\theta_{\text{inj}}}\omega$，$\frac{m_l}{\tau_{\text{ev}}}$ | SPEC-30 |
-| $m_{f,\text{cmd}}$，$\hat m_a$ | 噴射量の指令，前のサイクルで閉じ込めた空気の質量 | kg | $\phi\,\hat m_a/\text{AF}_{st}$，IVC の $m_a$ | SPEC-30 |
+| $m_{f,\text{cmd}}$，$\hat m_a$，$m_{a,\text{IVC}}$ | 噴射量の指令，今回のサイクルの空気量の推定，IVC の時点の筒内の未燃の空気の質量 | kg | $\phi\,\hat m_a/\text{AF}_{st}$，$m_{a,\text{IVC}} + m_{\text{IVC}}(\pi_S - 1)$（前のサイクルの値．$m_{\text{IVC}}$ は IVC の筒内の全質量，$\pi_S$ は噴射の開始の時点の $p_{\text{in}}$ の比（今回／前回）） | SPEC-30 |
 | $\theta_{\text{SOI}}$，$\Delta\theta_{\text{inj}}$，$q_{\text{inj}}$，$\tau_{\text{ev}}$ | 噴射の開始角，角度の幅，インジェクタの流量，気化の時定数 | rad，rad，kg/s，s | 設定（既定 $80^\circ$，–，$15\ \text{g/s}$，$1.5\ \text{ms}$） | SPEC-30 |
 | $\phi_c$，$f_\phi$ | 点火の時点の筒内の当量比，予混合気の燃料の質量分率 | – | $\text{AF}_{st}\,m_f/m_a$，$\phi/(\text{AF}_{st} + \phi)$ | SPEC-30 |
-| $H_e$ | 気化した燃料が持ち込んだエネルギー（補助積分） | J | $\int\dot m_{\text{ev}}\left[h_f(T_l) - h_{fg}\right]dt$ | SPEC-29 |
 
 ### 2.6 流れと吸排気系
 
@@ -217,7 +223,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | BMEP | 正味平均有効圧 | Pa | $\text{BMEP} = \text{IMEP} - \text{FMEP} - \text{AMEP}$ | SPEC-14 |
 | $T_b$，$P_b$，$P_i$ | 軸トルク，軸出力，図示出力 | N·m，W，W | $T_b = \dfrac{\text{BMEP}\cdot V_d}{4\pi}$，$P_b = \dfrac{\text{BMEP}\cdot V_d}{t_c}$，$P_i = \dfrac{W_{i,\text{net}}}{t_c}$ | SPEC-14 |
 | $\eta_m$，$\eta_i$，$\eta_b$ | 機械効率，図示熱効率，正味熱効率 | – | $\eta_m = \dfrac{\text{BMEP}}{\text{IMEP}}$，$\eta_i = \dfrac{W_{i,\text{net}}}{m_f H_u}$，$\eta_b = \dfrac{P_b}{\dot m_f H_u}$ | SPEC-14 |
-| $\eta_v$ | 体積効率 | – | $\eta_v = \dfrac{m_{\text{air}}}{\rho_{\text{atm}}V_d}$，$\rho_{\text{atm}} = \dfrac{p_{\text{atm}}}{RT_{\text{amb}}}$ | SPEC-14 |
+| $\eta_v$ | 体積効率 | – | $\eta_v = \dfrac{m_{\text{air}}}{\rho_{\text{atm}}V_d}$，$\rho_{\text{atm}} = \dfrac{p_{\text{atm}}}{RT_{\text{amb}}}$（化学種のモデルでは $m_{\text{air}} = m_{a,\text{IVC}}$，気体定数は $R_a$） | SPEC-14 |
 | bsfc | 正味燃料消費率 | g/kWh | $\text{bsfc} = \dfrac{\dot m_f}{P_b}$，$\dot m_f = \dfrac{m_f}{t_c}$ | SPEC-14 |
 | $p_{\max}$，$T_{\max}$ | 1 サイクルの最高筒内圧，最高ガス温度 | Pa，K | $p_{\max}$ は 3 点の放物線の頂点，$T_{\max}$ はステップ点の最大 | SPEC-13，14 |
 | $\eta_{\text{Otto}}$ | 理論サイクルの熱効率（上限の目安） | – | $\eta_{\text{Otto}} = 1 - \varepsilon^{1 - 1.40}$ | TEST-14 |
@@ -231,7 +237,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $c$，$f_n$ | 排気中の音速，排気管の共鳴周波数 | m/s，Hz | $c = \sqrt{\gamma_b(T_X)\,R\,T_X}$，$f_n = \dfrac{(2n - 1)\,c}{4L}$ | SPEC-21 |
 | $\rho_m$ | 消音器の反射率 | – | 設定（既定 $0.6$） | SPEC-21 |
 | $\ell$ | 負荷の目安（演出の音） | – | $\ell = \text{clamp}\left(\dfrac{p_{\text{in}}/p_{\text{atm}} - 0.3}{0.6},\ 0,\ 1\right)$ | SPEC-21 |
-| $q_{\text{ref}}$ | 演出の音の音量の基準 | kg/s² | 全開・$3500\ \text{rpm}$ の単気筒の音源の実効値 $14.59$ | SPEC-21 |
+| $q_{\text{ref}}$ | 演出の音の音量の基準 | kg/s² | 全開・$3500\ \text{rpm}$ の単気筒の音源の実効値 $16.01$（第26版の既定のモデルで測り直した．第25版は $14.59$） | SPEC-21 |
 
 ---
 
