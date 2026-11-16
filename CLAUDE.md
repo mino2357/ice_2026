@@ -44,6 +44,7 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | `tests/headless.js` | 開発時検証 [D]（Playwright） |
 | `tools/wav_demo.js`，`tools/bench.js` | 試聴用 WAV の生成，計算時間の計測 |
 | `tools/flavor/` | 演出音（SPEC-21 C）の試聴サンプルの生成（`tabs.js` → `samples.js`，`samples_bass.js`，`live.js`．出力は `dist/`） |
+| `tools/richburn/` | 直噴の潜熱とリッチでの出力増の試算（燃料空気サイクル，化学平衡．`README.md`） |
 | `tools/review/`，`tools/dynamics/` | レビューと調査に使った試作スクリプト（第24版のコア向け．`tools/review/README.md`） |
 
 ## コマンド
