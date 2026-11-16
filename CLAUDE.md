@@ -4,7 +4,7 @@
 
 | 文書 | 役割 |
 | :--- | :--- |
-| `docs/requirements.md`（要件定義書） | 何ができることを求めるか（REQ-01〜28）と，数式・数値で書いた受入基準．制約，納品条件，改訂の記録 |
+| `docs/requirements.md`（要件定義書） | 何ができることを求めるか（REQ-01〜28．REQ-29，30 は第26版として策定中で未実装）と，数式・数値で書いた受入基準．制約，納品条件，改訂の記録 |
 | `docs/specification.md`（仕様書） | 要件を満たすための具体的な定め（SPEC-01〜28）：状態変数，支配方程式と導出，定数，数値解法，制御則，画面，音．テスト項目（TEST-01〜28） |
 | `docs/glossary.md`（用語の定義集） | 記号（単位と定義式）と用語の定義 |
 
@@ -32,6 +32,7 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | `docs/verification.md` | 開発時検証（7 通り）と実機の確認の結果の記録（成果物には埋め込まない．検証の後に書く） |
 | `docs/history/requirements_v24.md` | 第24版までの文書（要件・仕様・テスト・改訂記録が 1 つだった）の全文 |
 | `docs/review_requirements.md`，`docs/report_dynamics.md` | 第24版に対するレビュー（第25版で反映済み），動特性の調査の記録 |
+| `docs/report_richburn.md` | 直噴の気化潜熱とリッチでの出力増の検討の記録（第26版の REQ-29，30 のもとになった考察と試算．成果物には埋め込まない） |
 | `src/core.js` | `EngineCore`：物理モデル・ECU・動力計・ソルバ・項目定義表 `ITEMS`（DOM 非依存） |
 | `src/audio.js` | エンジン音の合成器 `Synth`（AudioWorklet と共用，DOM 非依存） |
 | `src/plot.js` | グラフの軸・自動レンジ・レイアウト，機関断面図の場面記述と描画，制御状態の文言 |

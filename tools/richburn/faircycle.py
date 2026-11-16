@@ -21,7 +21,7 @@ import numpy as np
 from scipy.optimize import brentq
 
 RU = 8.314462618          # J/(mol K)
-P0 = 1.0e5                # 標準圧 [Pa]（NASA TM-4513 は 1 bar = 100 kPa 基準）
+P0 = 1.0e5                # 標準圧 [Pa]（NASA TM-4513 の標準状態は 100 kPa）
 HERE = os.path.dirname(os.path.abspath(__file__))
 TH = json.load(open(os.path.join(HERE, 'thermo.json')))['species']
 MW = dict(C=12.011e-3, H=1.008e-3, O=15.999e-3, N=14.007e-3)
