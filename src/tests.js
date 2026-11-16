@@ -1,5 +1,5 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0});let TR={};const TST={},NT=29,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+const mkPT=()=>({...mkP(),cvar:0}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;let TR={};const TST={},NT=30,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{const e=Math.abs(val-ref)/(Math.abs(ref)||1);(TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})};
 const chkB=(id,n,ok,val,ref)=>{(TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})};
@@ -33,6 +33,9 @@ case'S5':yield*fresh({mode:1,nt:800,alm:90*D},10);break;
 case'S6':yield*fresh({mode:1,nt:3000,alm:7*D},10);o.If5=r.k.find(q=>q.t>=5).If;o.If10=c.s.If;o.up=c.s.up;o.fc10=c.s.fc;o.n1=r.k.length;c.P.nt=1400;yield*runC(c,8,r);break;
 case'W3000':yield*fresh({mode:1,nt:3000,alm:90*D,Tr:200},12);break;
 case'S4V':yield*from('S4',{cvar:1},10);break;
+case'S2G':{c=new Core({...mkPT(),gam:0,inj:0});c.start();yield*runC(c,5,{});c=c.clone();yield*runC(c,15,r);break}
+case'GS2':yield*fresh({...SPD},12);break;
+case'G3000D':case'G3000P':case'G3000D09':case'G3000D12':case'G1000D':case'G7000D':{const N=+name.slice(1,5),ph=name.slice(6);c=new Core(Object.assign(mkPT(),{sauto:1,mode:1,alm:90*D,nt:N,phi:ph==='09'?.9:ph==='12'?1.2:1},name[5]==='D'?SPD:SPP));c.fixw=1;c.fixTw=1;c.s.y[5]=SWC.Tw;c.s.y[1]=N*PI/30;c.s.Nb=N;c.start();let n=0;const nc=N===3000?45:12;while(c.s.cyc<nc){const k=c.s.cyc;c.step();if(c.s.cyc!==k)r.cyc(c);if((++n&63)===0&&RUN.over())yield}break}
 case'CRANK':c=new Core(mkPT());c.s.starter=1;yield*runC(c,5,r);break}
 o.c=c;return SC[name]=o}
 /* ---- tests ---- */
@@ -520,7 +523,28 @@ chkB(29,'定容・断熱の燃焼の終わり：φ = 1.0 で 2952 K，9.565 MPa�
 {const o={},G=T.G;let me=0,mr=0,n=0;for(const pr of[.73125,1.00625,1.26875]){const z=T.phi2z(pr/K.etac);for(let it=0;it<G.nT-1;it++){for(let ip=0;ip<G.np-1;ip++){const x=G.T0+G.dT*(it+.5),p=Math.exp(G.lp0+G.dlp*(ip+.5));T.burned(x,p,z,o);const d=T.direct(x,p,z);me=Math.max(me,Math.abs(o.e-d.e));mr=Math.max(mr,Math.abs(o.R/d.R-1));n++}if(RUN.over())yield}}
 chkB(29,`既燃ガスの表の補間（格子の中点 ${n} 点）：平衡を直接解いた値との差が e_b で 5 kJ/kg 以下，R_b で相対 1e-3 以下`,me<=5e3&&mr<=1e-3,`${(me/1e3).toFixed(2)} kJ/kg，${mr.toExponential(1)}`,'≤ 5，≤ 1e-3');
 const z=T.phi2z(1.03),x=2333,p=3.3e6,f=(a,b,c)=>({...T.burned(a,b,c,{})}),a=f(x,p,z),dT=(f(x+.01,p,z).e-f(x-.01,p,z).e)/.02,dp=(f(x,p*1.0001,z).e-f(x,p*.9999,z).e)/(p*.0002),dz=(f(x,p,z+1e-6).e-f(x,p,z-1e-6).e)/2e-6,dRz=(f(x,p,z+1e-6).R-f(x,p,z-1e-6).R)/2e-6,er=Math.max(Math.abs(a.eT/dT-1),Math.abs(a.ep/dp-1),Math.abs(a.ez/dz-1),Math.abs(a.Rz/dRz-1));
-chkB(29,'補間した e_b，R_b の偏微分が，補間した関数の中心差分に一致（相対 1e-6）',er<1e-6,er.toExponential(1))}};
+chkB(29,'補間した e_b，R_b の偏微分が，補間した関数の中心差分に一致（相対 1e-6）',er<1e-6,er.toExponential(1))}
+/* 6：閉じた断熱の系（弁が閉じている IVC〜EVO，熱損失なし，回転数固定）．既定の許容誤差と，許容誤差を絞った場合 */
+for(const[nm,ph,as,rt,lim]of[['φ = 1.0，既定の許容誤差',1,1,1e-5,1e-4],['φ = 1.0，rtol 1e-10・atol 1e-6 倍',1,1e-6,1e-10,1e-6],['φ = 1.2，rtol 1e-10・atol 1e-6 倍',1.2,1e-6,1e-10,1e-6]]){const c=new Core({...mkPT(),...SPP,cw:0,phi:ph,rtol:rt,sauto:0});c.fixw=1;c.fixTw=1;c.atS=as;c.start();const y=c.s.y,th=c.V.gA+2*D,V=kinV(c.G,th),f=ph/(T.AF+ph),m=1e5*V/(((1-f)*T.Ra+f*T.Rf)*350);y[0]=th;y[1]=3000*PI/30;y[2]=1e5;y[3]=m;y[4]=m;y[38]=f*m;c.s.ig=0;const a=c.cyl(y),W0=y[18];let n=0,Tm=0;while(c.s.y[0]<c.V.gB-2*D&&c.s.y[0]>=th){c.step();Tm=Math.max(Tm,c.X.T);if((++n&63)===0&&RUN.over())yield}const b=c.cyl(c.s.y),dW=c.s.y[18]-W0,rr=Math.abs(b.U-a.U+dW)/Math.abs(dW);chkB(29,`閉じた断熱の系（${nm}，IVC→燃焼→EVO）：U + ∫p dV の変化が仕事の ${lim.toExponential(0)} 以下`,rr<=lim&&Tm>2400&&b.mb>.9*m&&c.s.clp===0,`相対 ${rr.toExponential(1)}（${n} ステップ，T_max ${Tm.toFixed(0)} K，既燃 ${(b.mb/m*100).toFixed(1)} %）`,`≤ ${lim.toExponential(0)}，燃焼あり`)}
+/* 7：周期定常の第一法則（SPEC-29 B の 8） */
+for(const nm of['GS2','G3000D']){const sc=yield*scen(nm),q=sc.c.clone(),r=yield*runCyc(q,5),dU=q.cyl(r.y1).U-q.cyl(r.y0).U,res=dU+r.d(18)+r.d(32)-r.d(33)+r.d(34)-r.d(43),mfH=r.d(44)*K.Hu;chkB(29,`第一法則の収支（化学種，${nm}，5 サイクル）：|ΔU + ΔW + ΔQ_w − ΔH_i + ΔH_o − ΔH_e| ≤ 10⁻⁴ m_f H_u`,Math.abs(res)<=1e-4*mfH&&mfH>0&&q.s.clp===0,`残差 ${res.toExponential(2)} J（m_f H_u ${mfH.toFixed(1)} J，比 ${(res/mfH).toExponential(1)}）`)}
+/* 8：γ(T)・ポート噴射で第25版と一致 */
+{const sc=yield*scen('S2G');chk(29,'γ(T)，ポート噴射：S2 の IMEP が第25版の値（Chromium で 108073.557 Pa，Node.js で 108074.077 Pa）に一致（相対 1e-4）[Pa]',IMEP25,sc.c.lastM.imep,1e-4)}};
+TST[30]=function*(){const A=GAS;
+/* 1：噴射量と収支 */
+{const sc=yield*scen('G3000D'),q=sc.c.clone(),r=yield*runCyc(q,1),mc=q.s.mfc,e1=Math.abs(r.d(44)/mc-1),e2=Math.abs(r.d(44)-r.d(45)-r.d(40))/mc,e3=Math.abs(r.d(45)+r.d(46)-r.d(47)-r.d(48)-r.d(38))/mc;chkB(30,'直噴，全開，3000 rpm の 1 サイクル：∫ṁ_inj dt = m_f,cmd（相対 1e-9）',e1<=1e-9&&mc>1e-5,`${e1.toExponential(1)}（m_f,cmd ${(mc*1e6).toFixed(3)} mg）`);chkB(30,'∫ṁ_inj dt − ∫ṁ_ev dt = Δm_l（m_f,cmd に対して相対 1e-9）',e2<=1e-9,e2.toExponential(1));chkB(30,'筒内の燃料蒸気の収支：気化 ＋ 吸気弁の正味の流入 − 排気弁からの流出 − 燃焼 = Δm_f（相対 1e-9）',e3<=1e-9&&q.s.clp===0,`${e3.toExponential(1)}（噴射に対して：燃焼 ${(r.d(48)/mc*100).toFixed(2)} %，排気弁から ${(r.d(47)/mc*100).toFixed(2)} %，吸気弁の正味 ${(r.d(46)/mc*100).toFixed(2)} %）`)}
+/* 2：イベントの角度と噴射の幅 */
+{const sc=yield*scen('G3000D'),q=sc.c.clone();let on=q.s.inj.on,e0=1,e1=1,n0=0,n1=0,k=0;const c0=q.s.cyc;while(q.s.cyc<c0+2){q.step();const J=q.s.inj,th=md4(q.s.y[0]);if(J.on&&!on){n0++;e0=Math.abs(th-md4(q.P.soi))}if(!J.on&&on){n1++;e1=Math.abs(th-md4(J.th0+J.dth))}on=J.on;if((++k&63)===0&&RUN.over())yield}chkB(30,'噴射の開始と終了で，ステップの終端の角度が θ_SOI，θ_SOI + Δθ_inj に一致（1e-8 rad）',n0===2&&n1===2&&e0<=1e-8&&e1<=1e-8,`開始 ${n0} 回 ${e0.toExponential(1)}，終了 ${n1} 回 ${e1.toExponential(1)} rad`);
+for(const nm of['G1000D','G7000D']){const s2=yield*scen(nm),J=s2.c.s.inj,w=s2.c.s.y[1],ref=w*J.m/s2.c.P.qinj;chkB(30,`${nm.slice(1,5)} rpm：Δθ_inj = ω_SOI m_f,cmd / q_inj（相対 1e-9，上下限に掛からない）`,Math.abs(J.dth/ref-1)<=1e-9&&J.dth>D&&J.dth<300*D&&J.m>0,`${(J.dth/D).toFixed(2)}°`)}}
+/* 3：潜熱（容積固定，断熱．液体の燃料を置いて全量を気化させる．右辺を時間について RK4 で積分） */
+{const c=new Core({...mkPT(),...SPD,cw:0});c.fixTw=1;const th=c.V.gA+40*D,V=kinV(c.G,th),ma=1e5*V/(A.Ra*320),ml=.0645*ma,y=c.s.y.slice();y[0]=th;y[1]=0;y[2]=1e5;y[3]=ma;y[4]=ma;y[40]=ml;for(const i of[7,10,16,17,38,39,41,42])y[i]=0;c.fixw=1;const h=c.P.tev/400,N=16000,k1=new Array(NY),k2=new Array(NY),k3=new Array(NY),k4=new Array(NY),w=new Array(NY);for(let n=0;n<N;n++){c.f(y,k1);for(let i=0;i<NY;i++)w[i]=y[i]+h/2*k1[i];c.f(w,k2);for(let i=0;i<NY;i++)w[i]=y[i]+h/2*k2[i];c.f(w,k3);for(let i=0;i<NY;i++)w[i]=y[i]+h*k3[i];c.f(w,k4);for(let i=0;i<NY;i++)y[i]+=h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]);if((n&1023)===0&&RUN.over())yield}
+const T1=c.cyl(y).T,U0=ma*A.ea(320)+ml*(A.hf(A.Tl)-A.hfg);let Tr=320;for(let i=0;i<60;i++)Tr-=(ma*A.ea(Tr)+ml*A.ef(Tr)-U0)/(ma*A.cva(Tr)+ml*A.cvf(Tr));chkB(30,'潜熱：320 K，100 kPa の空気に質量の 6.45 % の液体の燃料が全量気化．温度が m_a e_a(T) + m_f e_f(T) = m_a e_a(320) + m_f [h_f(T_l) − h_fg] の解に一致（1e-6 K）',Math.abs(T1-Tr)<=1e-6&&y[40]<1e-15*ml+1e-20&&Math.abs(y[38]/ml-1)<1e-12,`${T1.toFixed(7)} K（解 ${Tr.toFixed(7)} K，低下 ${(320-T1).toFixed(2)} K）`)}
+/* 4：時定数 0 */
+{const c=new Core(Object.assign(mkPT(),{sauto:1,mode:1,alm:90*D,nt:3000,tev:0},SPD));c.fixw=1;c.fixTw=1;c.s.y[1]=3000*PI/30;c.s.Nb=3000;c.start();let mx=0,ni=0,bad=0,k=0;while(c.s.cyc<3){c.step();mx=Math.max(mx,Math.abs(c.s.y[40]));if(c.X.minj>0){ni++;if(c.X.mev!==c.X.minj)bad++}if((++k&63)===0&&RUN.over())yield}chkB(30,'τ_ev = 0：噴射の間も m_l = 0，ṁ_ev = ṁ_inj',mx===0&&ni>10&&bad===0,`m_l の最大 ${mx} kg，噴射中のステップ ${ni}，不一致 ${bad}`)}
+/* 5：点火の時点の当量比 */
+{const o=[];for(const[nm,ph]of[['G3000D09',.9],['G3000D',1],['G3000D12',1.2]]){const sc=yield*scen(nm);o.push([ph,sc.c.lastM.phc])}chkB(30,'直噴，全開，3000 rpm の定常：φ_c が設定 φ（0.9，1.0，1.2）の ±3 % 以内',o.every(q=>Math.abs(q[1]/q[0]-1)<=.03),o.map(q=>`${q[0]}→${q[1].toFixed(4)}`).join('，'))}
+/* 6：直噴の冷却 */
+{const d=(yield*scen('G3000D')).c.lastM,pf=(yield*scen('G3000P')).c.lastM,dT=pf.Tivc-d.Tivc,dm=d.ma/pf.ma-1;chkB(30,'全開，3000 rpm，φ = 1：直噴はポート噴射より IVC の筒内温度が 10 K 以上低く，空気量が 3 % 以上多い',dT>=10&&dm>=.03,`ΔT ${dT.toFixed(1)} K（${pf.Tivc.toFixed(1)} → ${d.Tivc.toFixed(1)} K），空気 ${(dm*100).toFixed(2)} % 増`,'≥ 10 K，≥ 3 %')}};
 TST[28]=function*(){const s2=yield*scen('S2'),c2=s2.c,am=avgM(c2.s),at=d=>Math.round(d*2)%1440,nx=tr=>Math.log(tr.p[at(400)]/tr.p[at(480)])/Math.log(tr.V[at(480)]/tr.V[at(400)]);
 chkB(28,'アイドル（S2）：燃料流量 0.030〜0.050 g/s（10 サイクル平均）',am.mfd>=3e-5&&am.mfd<=5e-5,(am.mfd*1e3).toFixed(4)+' g/s');
 const fa=am.fmep+am.amep;chkB(28,'アイドル（S2）：FMEP + AMEP が 90〜130 kPa',fa>=9e4&&fa<=13e4,`${(am.fmep/1e3).toFixed(0)} + ${(am.amep/1e3).toFixed(0)} = ${(fa/1e3).toFixed(0)} kPa`);
@@ -534,7 +558,7 @@ function restLive(q){Object.assign(LP,q.P);live.s=structuredClone(q.s);live.G=ge
 const nextFrame=()=>new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};requestAnimationFrame(f);setTimeout(f,60)});
 const ST={};
 async function runAll(only){if(U.busy)return;U.busy=1;U.cancel=0;U.uiDraw=0;TR={};SC={};for(let i=1;i<=NT;i++)ST[i]='';const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();RUN.maxF=0;$('rt').textContent='中止';let lastF=performance.now();
-for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
+for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
 while(!done&&!U.cancel){await nextFrame();const n0=performance.now();if(n0-lastF>RUN.maxF){RUN.maxF=n0-lastF;RUN.maxId=id}lastF=n0;RUN.t0=n0;try{for(;;){const r=it.next(send);send=undefined;if(r.done){done=true;break}if(r.value&&typeof r.value.then==='function'){try{send=await r.value}catch(e){send={err:String(e)}}lastF=performance.now();break}if(r.value==='frame'||RUN.over())break}}catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}}
 if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27))restLive(snap);
 if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19, 21〜29 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):'27 / 27');chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 180 s',RUN.total<=180,RUN.total.toFixed(1)+' s','≤ 180 s')}
@@ -546,4 +570,4 @@ $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="
 function dtl(){const r=TR[U.sel],n=pad(U.sel),st=ST[U.sel];[...$('cp').children].forEach((b,j)=>b.classList.toggle('sl',j+1===U.sel));
 if(!r||!r.length){$('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}<br>${st==='run'?'実行中':'未実行'}`;return}U.ix=Math.min(U.ix,r.length-1);const x=r[U.ix],nf=r.filter(q=>!q.ok).length;
 $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok?'ok':'ng'}">${x.ok?'PASS':'FAIL'}</b>`}
-const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性'];
+const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性','化学種の熱物性と化学平衡','燃料の噴射と気化'];

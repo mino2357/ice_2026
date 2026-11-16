@@ -72,7 +72,7 @@ const gmax=it=>it.hi==null?Infinity:Math.round((it.hi-it.lo)/it.st);
 const gv=(it,n)=>(+(lo0(it)+n*it.st).toFixed(8))*it.f;  /* internal value at grid index */
 const disp=(it,v)=>it.ch?it.ch[it.vals?it.vals.indexOf(v):v]:(v/it.f).toFixed(dec(it));
 const defv=it=>it.ch?(it.vals?it.vals[it.d]:it.d):gv(it,Math.round((it.d-lo0(it))/it.st));
-const mkP=()=>{const P={};ITEMS.forEach(i=>P[i.k]=defv(i));return P};
+const mkP=()=>{const P={};ITEMS.forEach(i=>P[i.k]=defv(i));P.inj??=0;P.soi??=80*D;P.qinj??=.015;P.tev??=.0015;return P};
 /* ===== geometry & thermo ===== */
 function geo(P){const G={B:P.B,S:P.S,l:P.lr,eps:P.eps};G.r=G.S/2;G.lam=G.r/G.l;G.Ap=PI*G.B*G.B/4;G.Vd=G.Ap*G.S;G.Vc=G.Vd/(G.eps-1);G.hc=G.Vc/G.Ap;G.Bm=G.B**-.2;return G}
 const kinV=(G,th)=>{const s=Math.sin(th),c=Math.cos(th),q=Math.sqrt(1-G.lam*G.lam*s*s);return G.Vc+G.Ap*(G.r*(1-c+(1-q)/G.lam))};
@@ -86,7 +86,8 @@ const eB=(T,cst)=>cst?R/(K.g0-1)*(T-THM.T0):T<=THM.Tb?THC.b.k*(THC.b.l0-Math.log
 const cvMix=(T,Y,cst)=>Y*R/(gmU(T,cst)-1)+(1-Y)*R/(gmB(T,cst)-1),gmMix=(T,Y,cst)=>1+R/cvMix(T,Y,cst),eMix=(T,Y,cst)=>Y*eU(T,cst)+(1-Y)*eB(T,cst),hMix=(T,Y,cst)=>eMix(T,Y,cst)+R*T;
 const cpMix=(T,Y,cst)=>cvMix(T,Y,cst)+R;
 /* 状態 16（0〜10，13〜17）と補助積分 22（11，12，18〜37）．NS より前だけが右辺に現れる */
-const NY=38,NS=18;
+/* 第26版：化学種のモデル（SPEC-29，30）の状態を 38〜42（m_f，m_bf，m_l，m_f,in，m_f,p），補助積分を 43〜45（H_e，∫ṁ_inj，∫ṁ_ev）に置く */
+const NY=49,NS=18,MIX=[7,10,38,39,40,41,42],MEPS=1e-12;
 const thConst=cst=>({cst,cpu:R/(gmU(TI,cst)-1)+R,cpb:R/(gmB(TI,cst)-1)+R,cvu:R/(gmU(TI,cst)-1),cvb:R/(gmB(TI,cst)-1),hui:eU(TI,cst)+R*TI,hbi:eB(TI,cst)+R*TI,hbx:eB(TX,cst)+R*TX,gbx:gmB(TX,cst),gua:gmU(TA,cst),kbx:psiK(gmB(TX,cst)),kua:psiK(gmU(TA,cst))});
 /* 3 点を通る放物線の頂点の値（上に凸でなければ 3 点の最大） */
 const parab=(x0,y0,x1,y1,x2,y2)=>{const d0=(y1-y0)/(x1-x0),d1=(y2-y1)/(x2-x1),c=(d1-d0)/(x2-x0);if(!(c<0))return Math.max(y0,y1,y2);const xv=(x0+x1)/2-d0/(2*c);return Math.max(y1,y0+d0*(xv-x0)+c*(xv-x0)*(xv-x1))};
@@ -167,36 +168,41 @@ const GAS=(()=>{
  const z2phi=z=>AF*z/(1-z),phi2z=ph=>ph/(AF+ph);
  /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0.50〜1.50（0.0125 刻み．量論の折れ目 φ_r = 1 を節点に置く），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
  const G={f0:.5,df:.0125,nf:81,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},tab=new Array(G.nf).fill(null),iF=Math.round((Tfr-G.T0)/G.dT);
- function node(i){if(tab[i])return tab[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT);
+ function node(i){if(tab[i])return tab[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT),Q=new Float64Array(G.np*G.nT),df=(a,k,it,L,h)=>it-2>=iF&&it+2<=L?(-a[k+2]+8*a[k+1]-8*a[k-1]+a[k-2])/(12*h):it===iF?(-3*a[k]+4*a[k+1]-a[k+2])/(2*h):it===L?(3*a[k]-4*a[k-1]+a[k-2])/(2*h):(a[k+1]-a[k-1])/(2*h);
   for(let ip=0;ip<G.np;ip++){const p=Math.exp(G.lp0+G.dlp*ip);let w=null,nf=null;
    for(let it=iF;it<G.nT;it++){const T=G.T0+G.dT*it,q=eq(T,p,z,ec,w),k=ip*G.nT+it;w=q.n;if(it===iF)nf=q.n.slice();e[k]=bE(q.n,T,z,ec);R[k]=bR(q.n,z,ec)}
-   /* 平衡の側の傾き c_v = ∂e/∂T は，節点の値の差分で求める（内側は 4 次の中心差分，端は 2 次の片側差分） */
-   for(let it=iF;it<G.nT;it++){const k=ip*G.nT+it,h=G.dT,L=G.nT-1;c[k]=it-2>=iF&&it+2<=L?(-e[k+2]+8*e[k+1]-8*e[k-1]+e[k-2])/(12*h):it===iF?(-3*e[k]+4*e[k+1]-e[k+2])/(2*h):it===L?(3*e[k]-4*e[k-1]+e[k-2])/(2*h):(e[k+1]-e[k-1])/(2*h)}
+   /* 平衡の側の傾き c_v = ∂e/∂T と ∂R/∂T は，節点の値の差分で求める（内側は 4 次の中心差分，端は 2 次の片側差分）．凍結の側は c_v が凍結組成の値，∂R/∂T = 0 */
+   for(let it=iF;it<G.nT;it++){const k=ip*G.nT+it,h=G.dT,L=G.nT-1;c[k]=df(e,k,it,L,h);Q[k]=df(R,k,it,L,h)}
    for(let it=0;it<iF;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(nf,T,z,ec);R[k]=bR(nf,z,ec);c[k]=bCv(nf,T,z,ec)}}
-  return tab[i]={e,c,R}}
- /* 補間：T は 3 次 Hermite（e と傾き c_v），R は T に線形．ln p と φ は線形．偏微分は補間した関数の微分 */
- const cl=(x,a,b)=>x<a?a:x>b?b:x,q4=[{},{},{},{}];
- function col(t,ip,jt,s,o){const k=ip*G.nT+jt,e0=t.e[k],e1=t.e[k+1],c0=t.c[k]*G.dT,c1=t.c[k+1]*G.dT,s2=s*s,s3=s2*s;
-  o.e=(2*s3-3*s2+1)*e0+(s3-2*s2+s)*c0+(-2*s3+3*s2)*e1+(s3-s2)*c1;o.eT=((6*s2-6*s)*e0+(3*s2-4*s+1)*c0+(-6*s2+6*s)*e1+(3*s2-2*s)*c1)/G.dT;o.R=t.R[k]+(t.R[k+1]-t.R[k])*s;o.RT=(t.R[k+1]-t.R[k])/G.dT}
- function burned(T,p,z,o){const ph=cl(K.etac*z2phi(z),G.f0,G.f0+G.df*(G.nf-1)),xf=(ph-G.f0)/G.df,jf=Math.min(G.nf-2,Math.floor(xf)),wf=xf-jf,
-   Tc=cl(T,G.T0,G.T0+G.dT*(G.nT-1)),xT=(Tc-G.T0)/G.dT,jt=Math.min(G.nT-2,Math.floor(xT)),s=xT-jt,
-   xp=cl((Math.log(p)-G.lp0)/G.dlp,0,G.np-1),jp=Math.min(G.np-2,Math.floor(xp)),wp=xp-jp,t0=node(jf),t1=node(jf+1);
-  col(t0,jp,jt,s,q4[0]);col(t0,jp+1,jt,s,q4[1]);col(t1,jp,jt,s,q4[2]);col(t1,jp+1,jt,s,q4[3]);
-  const L=k=>{const a=q4[0][k]+(q4[1][k]-q4[0][k])*wp,b=q4[2][k]+(q4[3][k]-q4[2][k])*wp;return[a,b]},mix=k=>{const[a,b]=L(k);return a+(b-a)*wf};
-  const inP=xp>0&&xp<G.np-1,inF=ph>G.f0&&ph<G.f0+G.df*(G.nf-1),dzf=K.etac*AF/((1-z)*(1-z))/G.df;
-  o.e=mix('e');o.R=mix('R');o.eT=T===Tc?mix('eT'):0;o.RT=T===Tc?mix('RT'):0;
-  const dP=k=>inP?((q4[1][k]-q4[0][k])*(1-wf)+(q4[3][k]-q4[2][k])*wf)/(G.dlp*p):0,dZ=k=>{if(!inF)return 0;const[a,b]=L(k);return(b-a)*dzf};
-  o.ep=dP('e');o.Rp=dP('R');o.ez=dZ('e');o.Rz=dZ('R');return o}
+  return tab[i]={e,c,R,Q}}
+ /* 補間：T は 3 次 Hermite（e と傾き c_v，R と傾き ∂R/∂T．T について C¹ で，右辺が節点で跳ばない）．ln p と φ は線形．偏微分は補間した関数の微分 */
+ const cl=(x,a,b)=>x<a?a:x>b?b:x,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
+ /* ホットパス：オブジェクトと配列を作らない．o に e, R と偏微分 eT, ep, ez, RT, Rp, Rz を書く */
+ function burned(T,p,z,o){const ph=cl(K.etac*AF*z/(1-z),G.f0,FMX),xf=(ph-G.f0)/G.df,jf=Math.min(G.nf-2,Math.floor(xf)),wf=xf-jf,Tc=cl(T,G.T0,TMX),xT=(Tc-G.T0)/G.dT,jt=Math.min(G.nT-2,Math.floor(xT)),s=xT-jt,
+   xp=cl((Math.log(p)-G.lp0)/G.dlp,0,G.np-1),jp=Math.min(G.np-2,Math.floor(xp)),wp=xp-jp,t0=tab[jf]||node(jf),t1=tab[jf+1]||node(jf+1),k=jp*G.nT+jt,k2=k+G.nT,h=G.dT,s2=s*s,s3=s2*s,
+   a0=2*s3-3*s2+1,a1=(s3-2*s2+s)*h,a2=-2*s3+3*s2,a3=(s3-s2)*h,b0=(6*s2-6*s)/h,b1=3*s2-4*s+1,b3=3*s2-2*s,
+   E0=t0.e,C0=t0.c,R0=t0.R,Q0=t0.Q,E1=t1.e,C1=t1.c,R1=t1.R,Q1=t1.Q,
+   e00=a0*E0[k]+a1*C0[k]+a2*E0[k+1]+a3*C0[k+1],e01=a0*E0[k2]+a1*C0[k2]+a2*E0[k2+1]+a3*C0[k2+1],e10=a0*E1[k]+a1*C1[k]+a2*E1[k+1]+a3*C1[k+1],e11=a0*E1[k2]+a1*C1[k2]+a2*E1[k2+1]+a3*C1[k2+1],
+   d00=b0*(E0[k]-E0[k+1])+b1*C0[k]+b3*C0[k+1],d01=b0*(E0[k2]-E0[k2+1])+b1*C0[k2]+b3*C0[k2+1],d10=b0*(E1[k]-E1[k+1])+b1*C1[k]+b3*C1[k+1],d11=b0*(E1[k2]-E1[k2+1])+b1*C1[k2]+b3*C1[k2+1],
+   r00=a0*R0[k]+a1*Q0[k]+a2*R0[k+1]+a3*Q0[k+1],r01=a0*R0[k2]+a1*Q0[k2]+a2*R0[k2+1]+a3*Q0[k2+1],r10=a0*R1[k]+a1*Q1[k]+a2*R1[k+1]+a3*Q1[k+1],r11=a0*R1[k2]+a1*Q1[k2]+a2*R1[k2+1]+a3*Q1[k2+1],
+   q00=b0*(R0[k]-R0[k+1])+b1*Q0[k]+b3*Q0[k+1],q01=b0*(R0[k2]-R0[k2+1])+b1*Q0[k2]+b3*Q0[k2+1],q10=b0*(R1[k]-R1[k+1])+b1*Q1[k]+b3*Q1[k+1],q11=b0*(R1[k2]-R1[k2+1])+b1*Q1[k2]+b3*Q1[k2+1],
+   eA=e00+(e01-e00)*wp,eB=e10+(e11-e10)*wp,rA=r00+(r01-r00)*wp,rB=r10+(r11-r10)*wp,inT=T===Tc,inP=xp>0&&xp<G.np-1,inF=ph>G.f0&&ph<FMX,dzf=K.etac*AF/((1-z)*(1-z))/G.df,ip=1/(G.dlp*p);
+  o.e=eA+(eB-eA)*wf;o.R=rA+(rB-rA)*wf;
+  o.eT=inT?(d00+(d01-d00)*wp)*(1-wf)+(d10+(d11-d10)*wp)*wf:0;o.RT=inT?(q00+(q01-q00)*wp)*(1-wf)+(q10+(q11-q10)*wp)*wf:0;
+  o.ep=inP?((e01-e00)*(1-wf)+(e11-e10)*wf)*ip:0;o.Rp=inP?((r01-r00)*(1-wf)+(r11-r10)*wf)*ip:0;o.ez=inF?(eB-eA)*dzf:0;o.Rz=inF?(rB-rA)*dzf:0;return o}
  /* 平衡を直接解いた既燃ガスの物性（表を使わない．検証用） */
  function direct(T,p,z,ec=K.etac,frz=true){if(frz&&T<Tfr){const q=eq(Tfr,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N}}const q=eq(T,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N,q}}
  return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab}})();
+/* SPEC-29：温度が固定の場所（吸気 TI，外気 TA，液体の燃料）の物性の定数と，気体定数を引数に取るオリフィスの式 */
+const GC={cvaI:GAS.cva(TI),cpaI:GAS.cva(TI)+GAS.Ra,haI:GAS.ha(TI),cvfI:GAS.cvf(TI),cpfI:GAS.cvf(TI)+GAS.Rf,hfI:GAS.hf(TI),cvaA:GAS.cva(TA),cvfA:GAS.cvf(TA),gA:1+GAS.Ra/GAS.cva(TA),hl:GAS.hf(GAS.Tl)-GAS.hfg};
+function mdR(p1,p2,T0,A,g,Rg){const pu=Math.max(p1,p2),pd=Math.min(p1,p2);if(pu===pd||A<=0)return 0;return Math.sign(p1-p2)*A*pu/Math.sqrt(Rg*T0)*psiF(pd/pu,g)}
 /* ===== generic integrators ===== */
 const axpy=(a,b,s)=>a.map((v,i)=>v+s*b[i]);
 function rk4s(f,y,h){const k1=f(y),k2=f(axpy(y,k1,h/2)),k3=f(axpy(y,k2,h/2)),k4=f(axpy(y,k3,h));return y.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]))}
 const DPa=[[1/5],[3/40,9/40],[44/45,-56/15,32/9],[19372/6561,-25360/2187,64448/6561,-212/729],[9017/3168,-355/33,46732/5247,49/176,-5103/18656],[35/384,0,500/1113,125/192,-2187/6784,11/84]],
 DPb5=[35/384,0,500/1113,125/192,-2187/6784,11/84,0],DPb4=[5179/57600,0,7571/16695,393/640,-92097/339200,187/2100,1/40];
 /* Core 専用の DOPRI5(4)．dp45 と同じ演算順序で，作業配列を使い回す．結果は o.r5（新しい配列）と o.r4（作業配列）に置く． */
-function dp45c(o,y,h,k0){const N=y.length,n=Math.min(N,NS),B=o.kb||(o.kb=[1,2,3,4,5,6].map(()=>new Array(N).fill(0))),yy=o.yy||(o.yy=new Array(N).fill(0)),y4=o.r4||(o.r4=new Array(N).fill(0)),y5=new Array(N),A=DPa;
+function dp45c(o,y,h,k0){const N=y.length,n=N,B=o.kb||(o.kb=[1,2,3,4,5,6].map(()=>new Array(N).fill(0))),yy=o.yy||(o.yy=new Array(N).fill(0)),y4=o.r4||(o.r4=new Array(N).fill(0)),y5=new Array(N),A=DPa;
 {const a0=h*A[0][0];for(let i=0;i<n;i++)yy[i]=y[i]+a0*k0[i]}const k1=o.f(yy,B[0]);
 {const a0=h*A[1][0],a1=h*A[1][1];for(let i=0;i<n;i++)yy[i]=y[i]+a0*k0[i]+a1*k1[i]}const k2=o.f(yy,B[1]);
 {const a0=h*A[2][0],a1=h*A[2][1],a2=h*A[2][2];for(let i=0;i<n;i++)yy[i]=y[i]+a0*k0[i]+a1*k1[i]+a2*k2[i]}const k3=o.f(yy,B[2]);
@@ -206,19 +212,19 @@ function dp45c(o,y,h,k0){const N=y.length,n=Math.min(N,NS),B=o.kb||(o.kb=[1,2,3,
 const b0=h*DPb5[0],c0=h*DPb4[0],b1=h*DPb5[1],c1=h*DPb4[1],b2=h*DPb5[2],c2=h*DPb4[2],b3=h*DPb5[3],c3=h*DPb4[3],b4=h*DPb5[4],c4=h*DPb4[4],b5=h*DPb5[5],c5=h*DPb4[5],b6=h*DPb5[6],c6=h*DPb4[6];for(let i=0;i<n;i++){y5[i]=y[i]+b0*k0[i]+b1*k1[i]+b2*k2[i]+b3*k3[i]+b4*k4[i]+b5*k5[i]+b6*k6[i];y4[i]=y[i]+c0*k0[i]+c1*k1[i]+c2*k2[i]+c3*k3[i]+c4*k4[i]+c5*k5[i]+c6*k6[i]}for(let i=n;i<N;i++)y5[i]=y[i]+b0*k0[i]+b1*k1[i]+b2*k2[i]+b3*k3[i]+b4*k4[i]+b5*k5[i]+b6*k6[i];o.r5=y5}
 function dp45(f,y,h,k1){const k=[k1||f(y)];for(let s=0;s<6;s++){const yy=y.slice();for(let j=0;j<=s;j++){const a=DPa[s][j];if(a)for(let i=0;i<y.length;i++)yy[i]+=h*a*k[j][i]}k.push(f(yy))}
 const y5=y.slice(),y4=y.slice();for(let j=0;j<7;j++)for(let i=0;i<y.length;i++){y5[i]+=h*DPb5[j]*k[j][i];y4[i]+=h*DPb4[j]*k[j][i]}return{y5,y4}}
-const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6],EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17];
+const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6];for(let i=18;i<38;i++)ATOL[i]=1;ATOL.push(1e-10,1e-10,1e-10,1e-9,1e-9);const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42];
 /* ===== EngineCore ===== */
 const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m','mu','dq','vp'];
 class Core{
 constructor(P){this.P=P;this.reset()}
-reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),m=P.pa*k.V/(R*K.Ti0);
-this.s={y:[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0)),exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null};
+reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
+this.s={y:[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0)),exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null,spc:SPC,zs:GAS.phi2z(P.phi),inj:{on:0,th0:0,dth:1,m:0},mah:NaN,mfI:0,mfc:0,phc:NaN};
 this.s.a0=this.s.y.slice();this.rc();this.tr={};TRK.forEach(n=>this.tr[n]=new Float32Array(1440).fill(NaN));this.H={t:[],N:[],Nt:[],pin:[],al:[],Tw:[],tb:[],td:[],fc:[],fe:[]};this.last=null;this.X=null;this.sig=NaN;this.vhit=0;this.updV()}
 rc(){this.s.cw={ppn:1e12,ppx:-1e12};this.s.cx={pmax:0,pmS:0,Tmax:0,xr:this.s.cx?this.s.cx.xr:0}}
 updV(){const P=this.P,sg=P.ivo+P.phin*1.7+P.ivc*2.3+P.evo*3.1+P.evc*4.3+P.phex*5.9+P.Lv*71+P.dv*13+P.cam;if(sg!==this.sig){this.sig=sg;this.V=valves(P,this.G);this.vhit=valveHit(P,this.G)}}
 /* 右辺 f(y)．ホットパス：オブジェクトと配列の生成を避ける．out の 0〜17 が状態と旧補助積分，18〜37 が補助積分の被積分関数．
    this.wx が 0 のときは，表示・集計用の this.X を作らない（RK の第 2 段以降）． */
-f(y,out){const P=this.P,G=this.G,s=this.s,C=s.C,Vv=this.V,th=y[0],om=y[1],p=y[2],m=Math.max(y[3],1e-7),mu=y[4],Tw=y[5],pin=y[6],mbi=Math.max(0,y[7]),mr=y[8],pp=y[9],mbp=Math.max(0,y[10]),Ein=Math.max(0,y[16]),Ep=Math.max(0,y[17]),RO=!!P.run,Ar=PI/4*P.dr*P.dr,Vp=.5*Ar*P.Lr,pv=RO?pp:pin,cst=P.gam,tt=md4(th);
+f(y,out){if(this.P.gam===2)return this.fS(y,out);const P=this.P,G=this.G,s=this.s,C=s.C,Vv=this.V,th=y[0],om=y[1],p=y[2],m=Math.max(y[3],1e-7),mu=y[4],Tw=y[5],pin=y[6],mbi=Math.max(0,y[7]),mr=y[8],pp=y[9],mbp=Math.max(0,y[10]),Ein=Math.max(0,y[16]),Ep=Math.max(0,y[17]),RO=!!P.run,Ar=PI/4*P.dr*P.dr,Vp=.5*Ar*P.Lr,pv=RO?pp:pin,cst=P.gam,tt=md4(th);
 /* クランク運動学（kin と同じ式） */
 const sn=Math.sin(th),cs=Math.cos(th),qq=Math.sqrt(1-G.lam*G.lam*sn*sn),xp=G.r*(1-cs+(1-qq)/G.lam),kV=G.Vc+G.Ap*xp,kdV=G.Ap*G.r*sn*(1+G.lam*cs/qq),kA=PI*G.B*G.B/2+PI*G.B*(xp+G.hc);
 /* 筒内の物性（REQ-02）：未燃分率 Yu で比熱を補間 */
@@ -250,30 +256,90 @@ const d5=this.fixTw?0:(Qw-K.Gw*(Tw-K.Twc))/K.Cw,d11=mi<0?-mi*(1-Yu):0,d12=mi>=0?
 const pdv=p*kdV*om,His=(mi>0?mi*hji:0)+(me<0?-me*TCc.hbx:0),Hos=(mi<0?-mi*hc0:0)+(me>0?me*hc0:0);
 if(!out)out=new Array(NY);
 out[0]=dth;out[1]=dom;out[2]=dp;out[3]=mi-me;out[4]=mui-mue-dmc;out[5]=d5;out[6]=d6;out[7]=d7;out[8]=d8;out[9]=d9;out[10]=d10;out[11]=d11;out[12]=d12;out[13]=e0;out[14]=e1;out[15]=e2;out[16]=d16;out[17]=d17;
-out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?pm:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;return out}
+out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?pm:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;out[38]=0;out[39]=0;out[40]=0;out[41]=0;out[42]=0;out[43]=0;out[44]=0;out[45]=0;out[46]=0;out[47]=0;out[48]=0;return out}
+/* ===== 化学種のモデルの右辺（SPEC-29 B，C，SPEC-30）．成分は空気 a，燃料蒸気 f，既燃ガス b．内部エネルギーは絶対値で，発熱の項は無い ===== */
+/* 筒外の既燃ガス（組成 ζ*）の，温度が固定の場所での物性 */
+zc(){const s=this.s;let Z=this.Zc;if(!Z||Z.z!==s.zs){const o={};GAS.burned(TI,1e5,s.zs,o);Z={z:s.zs,RbI:o.R,cvbI:o.eT,cpbI:o.eT+o.R,hbI:o.e+o.R*TI};GAS.burned(TX,1e5,s.zs,o);Z.RbX=o.R;Z.hbX=o.e+o.R*TX;Z.gbX=1+o.R/o.eT;this.Zc=Z}return Z}
+/* 筒内の温度：p V = (m_a R_a + m_f R_f + m_b R_b(T, p, ζ)) T を反復 6 回で解く．o に既燃ガスの物性を書く */
+cylT(p,V,ma,mf,mb,z,o){const A=GAS,r0=ma*A.Ra+mf*A.Rf;if(!(mb>1e-12)){const T=p*V/r0;A.burned(T,p,z,o);return T}let T=p*V/(r0+mb*A.burned(A.Tfr,p,z,o).R);for(let i=0;i<6;i++)T=p*V/(r0+mb*A.burned(T,p,z,o).R);A.burned(T,p,z,o);return T}
+/* 状態 y から筒内の成分と温度を求める（イベントの処理と検査用） */
+cyl(y){const G=this.G,m=Math.max(y[3],1e-7),mu=Math.min(m,Math.max(0,y[4])),mf=Math.min(mu,Math.max(0,y[38])),mb=m-mu,ma=mu-mf,z=mb>1e-12?Math.min(.3,Math.max(0,y[39])/mb):this.s.zs,o={},V=kinV(G,y[0]),T=this.cylT(y[2],V,ma,mf,mb,z,o);return{T,V,m,mu,ma,mf,mb,z,B:o,U:ma*GAS.ea(T)+mf*GAS.ef(T)+mb*o.e}}
+fS(y,out){const P=this.P,G=this.G,s=this.s,C=s.C,Vv=this.V,A=GAS,Z=this.zc(),th=y[0],om=y[1],p=y[2],m=Math.max(y[3],1e-7),mu=Math.min(m,Math.max(0,y[4])),Tw=y[5],pin=y[6],mbi=Math.max(0,y[7]),mr=y[8],pp=y[9],mbp=Math.max(0,y[10]),Ein=y[16],Ep=y[17],
+ mf=Math.min(mu,Math.max(0,y[38])),mb=m-mu,ma=mu-mf,mbf=Math.max(0,y[39]),ml=Math.max(0,y[40]),mfi=Math.max(0,y[41]),mfp=Math.max(0,y[42]),RO=!!P.run,Ar=PI/4*P.dr*P.dr,Vp=.5*Ar*P.Lr,pv=RO?pp:pin,tt=md4(th),DI=P.inj===1,hasB=mb>1e-12,zt=hasB?Math.min(.3,mbf/mb):Z.z,B=this.bo||(this.bo={});
+const sn=Math.sin(th),cs=Math.cos(th),qq=Math.sqrt(1-G.lam*G.lam*sn*sn),xp=G.r*(1-cs+(1-qq)/G.lam),kV=G.Vc+G.Ap*xp,kdV=G.Ap*G.r*sn*(1+G.lam*cs/qq),kA=PI*G.B*G.B/2+PI*G.B*(xp+G.hc);
+/* 筒内の物性 */
+const T=this.cylT(p,kV,ma,mf,mb,zt,B),ea=A.ea(T),ef=A.ef(T),Rt=ma*A.Ra+mf*A.Rf+mb*B.R,Cc=ma*A.cva(T)+mf*A.cvf(T)+mb*B.eT,g=1+Rt/Cc,Rm=Rt/m,Ya=ma/m,Yf=mf/m,Yb=mb/m,Yu=mu/m,hc0=(ma*(ea+A.Ra*T)+mf*(ef+A.Rf*T)+mb*(B.e+B.R*T))/m;
+const EX=!!P.exs,mep=y[13],ppe=y[14],pm=y[15],pex=EX?ppe:P.pa+P.dpx;
+/* 吸気側の組成（成分ごとの気体定数．SPEC-29 C）と余剰エンタルピー */
+const mai=Math.max(0,(pin*P.Vin/TI-mbi*Z.RbI-mfi*A.Rf)/A.Ra),min_=mai+mbi+mfi,Ybi=mbi/min_,Yfi=mfi/min_;let mp_=min_,Ybp=Ybi,Yfp=Yfi;if(RO){const map=Math.max(0,(pp*Vp/TI-mbp*Z.RbI-mfp*A.Rf)/A.Ra);mp_=map+mbp+mfp;Ybp=mbp/mp_;Yfp=mfp/mp_}
+const epi=Ein/min_,epp=RO?Ep/mp_:epi,Yap=1-Ybp-Yfp,Yai=1-Ybi-Yfi,Tup=TI+epp/(Yap*GC.cpaI+Yfp*GC.cpfI+Ybp*Z.cpbI),Rup=Yap*A.Ra+Yfp*A.Rf+Ybp*Z.RbI,gup=1+Rup/(Yap*A.cva(Tup)+Yfp*A.cvf(Tup)+Ybp*Z.cvbI);
+/* 弁・スロットルの流量 */
+const Ai=Aeff(Vv.i,tt,P.cam),Ae=Aeff(Vv.e,tt,P.cam),mi=pv>p?mdR(pv,p,Tup,Ai,gup,Rup):mdR(pv,p,T,Ai,g,Rm),me=p>pex?mdR(p,pex,T,Ae,g,Rm):mdR(p,pex,TX,Ae,Z.gbX,Z.RbX),fph=DI?0:P.phi/(A.AF+P.phi);
+let mt;if(P.pa>pin){const Rth=(1-fph)*A.Ra+fph*A.Rf;mt=mdR(P.pa,pin,TA,Ath(P,s.al),1+Rth/((1-fph)*GC.cvaA+fph*GC.cvfA),Rth)}else{const Tt=TI+epi/(Yai*GC.cpaI+Yfi*GC.cpfI+Ybi*Z.cpbI),Rin=Yai*A.Ra+Yfi*A.Rf+Ybi*Z.RbI;mt=mdR(P.pa,pin,Tt,Ath(P,s.al),1+Rin/(Yai*A.cva(Tt)+Yfi*A.cvf(Tt)+Ybi*Z.cvbI),Rin)}
+/* 噴射と気化（SPEC-30） */
+/* 噴射中かどうかは開始と終了のイベントで切り替える（ステップの中では一定の率．∫ṁ_inj dt = m_f,cmd が丸めの範囲で成り立つ） */
+let minj=0;{const J=s.inj;if(DI&&J.on)minj=J.m/J.dth*om}const mev=P.tev>0?ml/P.tev:minj;
+/* 燃焼と壁面熱伝達 */
+const dxb=C.on?wiebe((tt-C.th0)/C.db,C.m??K.wm)/C.db:0,r=C.mut*dxb*om,psi=mu>1e-12?mf/mu:0,cm=G.S*om/PI,gx=tt>=Vv.gA&&tt<Vv.gB,I0=s.I0,Q=r*((1-psi)*ea+psi*ef-B.e);
+const ww=gx?K.C1g*cm+K.C2*G.Vd*I0.T/(I0.p*I0.V)*Math.max(0,p-I0.p*(I0.V/kV)**1.33):K.C1s*cm,hc=P.cw*K.Cw0*G.Bm*(p/1e3)**.8*T**-.55*Math.max(ww,.5)**.8,Qw=hc*kA*(T-Tw);
+/* 成分の質量（SPEC-29 B の 3） */
+let ia,if_,ib,ibz;if(mi>=0){ia=mi*Yap;if_=mi*Yfp;ib=mi*Ybp;ibz=ib*Z.z}else{ia=mi*Ya;if_=mi*Yf;ib=mi*Yb;ibz=ib*zt}
+let xa,xf,xb,xbz;if(me>=0){xa=me*Ya;xf=me*Yf;xb=me*Yb;xbz=xb*zt}else{xa=0;xf=0;xb=me;xbz=me*Z.z}
+const dm=mi-me+mev,dmu=ia+if_-xa-xf-r+mev,dmf=if_-xf-r*psi+mev,dmbf=ibz-xbz+r*psi,dmb=dm-dmu,dma=dmu-dmf,dz=hasB?(dmbf*mb-mbf*dmb)/(mb*mb):0;
+/* エネルギーの式と状態方程式を Ṫ，ṗ について解く（SPEC-29 B の 5） */
+const hji=Yap*GC.haI+Yfp*GC.hfI+Ybp*Z.hbI+epp,Hin=(mi>=0?mi*hji:mi*hc0)-(me>=0?me*hc0:me*Z.hbX),pdv=p*kdV*om,
+ SE=-pdv-Qw+Hin+mev*GC.hl-dma*ea-dmf*ef-dmb*B.e-mb*B.ez*dz,SR=-pdv+T*(dma*A.Ra+dmf*A.Rf+dmb*B.R+mb*B.Rz*dz),a21=Rt+T*mb*B.RT,dp=(Cc*SR+a21*SE)/(Cc*(kV-T*mb*B.Rp)+mb*B.ep*a21);
+/* 回転運動 */
+const Ts=s.starter&&!s.fired?K.Tst*Math.max(0,1-om/K.wnl):0,Ti=(p-P.pa)*kdV,Td=s.fe*kwf(P)*om*om,Tf=om>0?fmepCF(G,s.pmx,om)*G.Vd/P4:0,Ta=om>0?P.Ta:0;
+let dom=(Ti+Ts-Tf-Ta-Td)/(K.I+P.Id),dth=om;if(this.fixw)dom=0;if(om<=0&&dom<0){dom=0;dth=0}
+/* 排気系（気体定数は既燃ガスの値） */
+let e0=0,e1=0,e2=0,mtl=me;if(EX){const Ax=PI/4*P.dex*P.dex,Vpe=.5*Ax*P.Lex,re=ppe/(Z.RbX*TX),zx=K.fr*P.Lex/P.dex+K.ze;mtl=pm>P.pa?mdR(pm,P.pa,TX,K.Cdx*P.At,Z.gbX,Z.RbX):mdR(pm,P.pa,TA,K.Cdx*P.At,GC.gA,A.Ra);e0=Ax/P.Lex*(ppe-pm)-zx*mep*Math.abs(mep)/(2*re*Ax*P.Lex);e1=K.gp*Z.RbX*TX/Vpe*(me-mep);e2=Z.RbX*TX/P.Vm*(mep-mtl)}
+/* 吸気弁の逆流が運ぶ余剰エンタルピー（筒内の成分で T と T_in の差）と，順流で戻る分 */
+let xo=0;if(mi<0){let hbI=0;if(hasB){const B2=this.bo2||(this.bo2={});A.burned(TI,p,zt,B2);hbI=B2.e+B2.R*TI}xo=-mi*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbI))}const xi=mi>0?mi*epp:0,xt=mt<0?-mt*epi:0;
+if(this.wx!==0)this.X={T,k:{x:xp,V:kV,dV:kdV,A:kA},mi,me,Ts,Ti,Td,Tf,Ta,tt,Yu,mt,Q,Qw,hc,Ybi,Ybp,mr:RO?mr:mi,pv,mep:EX?mep:me,mtl,pex,pm:EX?pm:pex,g,Tup,hj:hji,minj,mev,zt,Yf};
+/* 吸気側：スロットルと弁（ランナ）の流れを成分ごとに数える．スロットルの順流は，ポート噴射では当量比 φ の予混合気 */
+const ta=mt>=0?mt*(1-fph):mt*Yai,tf=mt>=0?mt*fph:mt*Yfi,tb=mt>=0?0:mt*Ybi;let d6,d7,d8,d9,d10,d16,d17,d41,d42;
+if(RO){const fw=mr>=0,ra=mr*(fw?Yai:Yap),rf=mr*(fw?Yfi:Yfp),rb=mr*(fw?Ybi:Ybp),er=fw?epi:epp;d6=TI/P.Vin*(A.Ra*(ta-ra)+A.Rf*(tf-rf)+Z.RbI*(tb-rb));d7=tb-rb;d41=tf-rf;d8=Ar/P.Lr*(pin-pp)-(K.fr*P.Lr/P.dr+K.ze)*mr*Math.abs(mr)/(2*min_/P.Vin*Ar*P.Lr);d9=K.gp*TI/Vp*(A.Ra*(ra-ia)+A.Rf*(rf-if_)+Z.RbI*(rb-ib));d10=rb-ib;d42=rf-if_;d16=-mr*er-xt;d17=mr*er-xi+xo}
+else{d6=TI/P.Vin*(A.Ra*(ta-ia)+A.Rf*(tf-if_)+Z.RbI*(tb-ib));d7=tb-ib;d41=tf-if_;d8=0;d9=0;d10=0;d42=0;d16=-xi+xo-xt;d17=0}
+const d5=this.fixTw?0:(Qw-K.Gw*(Tw-K.Twc))/K.Cw,His=(mi>0?mi*hji:0)+(me<0?-me*Z.hbX:0),Hos=(mi<0?-mi*hc0:0)+(me>0?me*hc0:0);
+if(!out)out=new Array(NY);
+out[0]=dth;out[1]=dom;out[2]=dp;out[3]=dm;out[4]=dmu;out[5]=d5;out[6]=d6;out[7]=d7;out[8]=d8;out[9]=d9;out[10]=d10;out[11]=mi<0?-ib:0;out[12]=mi>=0?ib:0;out[13]=e0;out[14]=e1;out[15]=e2;out[16]=d16;out[17]=d17;
+out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?pm:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;
+out[38]=dmf;out[39]=dmbf;out[40]=P.tev>0?minj-mev:0;out[41]=d41;out[42]=d42;out[43]=mev*GC.hl;out[44]=minj;out[45]=mev;out[46]=if_;out[47]=xf;out[48]=r*psi;return out}
 
 rnd(){const s=this.s;let t=(s.rs=(s.rs+0x6D2B79F5)>>>0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}
 uz(){return(2*this.rnd()-1)*Math.sqrt(3)}
-ign(T,Yu,p){const s=this.s,P=this.P,C=s.C,om=Math.max(s.y[1],K.wmin),b=burn(this.G,T,p,1-Yu,P.phi,om,s.spa,P.cid,P.cbr);C.th0=b.th0;C.db=b.db;C.m=P.wm;if(P.cvar){const z1=this.uz(),z2=this.uz();s.cz=[z1,z2];C.th0+=CCV.s0*D*z1;C.db*=Math.max(.5,1+CCV.sb*z2)}else s.cz=[0,0];C.Q=s.fuel?C.mut/(1+P.phi/K.AFR)*P.phi/K.AFR*K.Hu*K.etac*richEps(P.phi):0;C.on=!!s.fuel;s.ig=1}
+ign(T,Yu,p,cy){const s=this.s,P=this.P,C=s.C,om=Math.max(s.y[1],K.wmin),phc=cy?GAS.AF*cy.mf/Math.max(cy.ma,1e-12):P.phi,b=burn(this.G,T,p,1-Yu,cy?Math.min(2,Math.max(.3,phc)):P.phi,om,s.spa,P.cid,P.cbr);if(cy){s.phc=phc;C.mut=cy.mu}C.th0=b.th0;C.db=b.db;C.m=P.wm;if(P.cvar){const z1=this.uz(),z2=this.uz();s.cz=[z1,z2];C.th0+=CCV.s0*D*z1;C.db*=Math.max(.5,1+CCV.sb*z2)}else s.cz=[0,0];C.Q=cy?(s.fuel?cy.mf*K.Hu:0):s.fuel?C.mut/(1+P.phi/K.AFR)*P.phi/K.AFR*K.Hu*K.etac*richEps(P.phi):0;C.on=cy?!!s.fuel&&cy.mf>0:!!s.fuel;s.ig=1}
 /* 次のイベント（REQ-13 4）：サイクルの終端，IVO，IVC，EVO，EVC，点火．th より先で最も近い角度を this.ea に置く */
-nextEv(th){const V=this.V,lo=th+1e-7;let a=P4;let x=V.gO;if(x>lo&&x<a)a=x;x=V.gA;if(x>lo&&x<a)a=x;x=V.gB;if(x>lo&&x<a)a=x;x=V.gC;if(x>lo&&x<a)a=x;x=md4(2*PI-this.s.spa*D);if(x>lo&&x<a)a=x;this.ea=a;return a-th}
+nextEv(th){const V=this.V,lo=th+1e-7;let a=P4;let x=V.gO;if(x>lo&&x<a)a=x;x=V.gA;if(x>lo&&x<a)a=x;x=V.gB;if(x>lo&&x<a)a=x;x=V.gC;if(x>lo&&x<a)a=x;x=md4(2*PI-this.s.spa*D);if(x>lo&&x<a)a=x;if(this.P.gam===2&&this.P.inj===1){x=md4(this.P.soi);if(x>lo&&x<a)a=x;const J=this.s.inj;if(J.on){x=md4(J.th0+J.dth);if(x>lo&&x<a)a=x}}this.ea=a;return a-th}
 /* イベントの処理：ステップの終端（角度 th1，状態 y1）で，その角度にあるイベントをすべて処理する */
-doEv(y1,th1){const s=this.s,V=this.V,G=this.G,near=a=>Math.abs(a-th1)<=1e-7,kV=kinV(G,th1),T=y1[2]*kV/(Math.max(y1[3],1e-7)*R),Yu=Math.min(1,Math.max(0,y1[4]/y1[3])),n=s.evn;
+doEv(y1,th1){const s=this.s,V=this.V,G=this.G,P=this.P,near=a=>Math.abs(a-th1)<=1e-7,kV=kinV(G,th1),SPC=P.gam===2,cy=SPC?this.cyl(y1):null,T=SPC?cy.T:y1[2]*kV/(Math.max(y1[3],1e-7)*R),Yu=Math.min(1,Math.max(0,y1[4]/y1[3])),n=s.evn;
+if(SPC&&P.inj===1){const J=s.inj;if(J.on&&near(md4(J.th0+J.dth)))J.on=0;if(near(md4(P.soi))&&s.fuel&&!J.on){const mah=s.mah===s.mah?s.mah:y1[6]*G.Vd/(GAS.Ra*TI),mc=P.phi*mah/GAS.AF,om=Math.max(y1[1],K.wmin);J.m=mc;J.th0=md4(P.soi);J.dth=Math.min(300*D,Math.max(D,om*mc/P.qinj));J.on=1;s.mfc=mc}}
 if(near(V.gO))n[1]++;if(near(V.gC))n[4]++;
-if(near(V.gA)){n[2]++;s.I0={p:y1[2],V:kV,T};s.C.mut=y1[4];s.cx.xr=1-y1[4]/y1[3]}
-if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3]}
-if(near(md4(2*PI-s.spa*D))&&!s.ig){n[5]++;this.ign(T,Yu,y1[2])}
+if(near(V.gA)){n[2]++;s.I0={p:y1[2],V:kV,T};s.C.mut=y1[4];s.cx.xr=1-y1[4]/y1[3];if(SPC){s.mah=cy.ma;s.mfI=cy.mf}}
+if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3];if(SPC&&cy.mb>1e-9)s.zs=cy.z}
+if(near(md4(2*PI-s.spa*D))&&!s.ig){n[5]++;this.ign(T,Yu,y1[2],cy)}
 if(near(P4)){n[0]++;this.cycleEnd();y1[0]-=P4}}
 /* 運転中にランナ・排気系を ON にしたときの初期化（REQ-25 6，REQ-27 7） */
-syncSw(){const s=this.s,P=this.P;if(!!P.exs!==!!s.exOn){s.exOn=P.exs;if(P.exs){const y=s.y;y[13]=0;y[14]=y[15]=P.pa+P.dpx}}if(!!P.run!==!!s.runOn){s.runOn=P.run;if(P.run){const y=s.y,pin=y[6],mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI);y[8]=0;y[9]=pin;y[10]=Math.min(1,Math.max(0,y[7])/mi)*mp;y[17]=Math.max(0,y[16])/mi*mp}}}
+syncSw(){const s=this.s,P=this.P;if((P.gam===2)!==!!s.spc)this.swThermo();if(!!P.exs!==!!s.exOn){s.exOn=P.exs;if(P.exs){const y=s.y;y[13]=0;y[14]=y[15]=P.pa+P.dpx}}if(!!P.run!==!!s.runOn){s.runOn=P.run;if(P.run){const y=s.y,pin=y[6],mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI);y[8]=0;y[9]=pin;y[10]=Math.min(1,Math.max(0,y[7])/mi)*mp;y[17]=Math.max(0,y[16])/mi*mp}}}
+/* 熱物性のモデルを運転中に切り替えたとき：筒内の圧力・温度・未燃分率と，吸気側の圧力・既燃分率を保って質量を取り直す */
+swThermo(){const s=this.s,P=this.P,y=s.y,G=this.G,V=kinV(G,y[0]),A=GAS,fph=P.inj===1?0:P.phi/(A.AF+P.phi),Vp=.5*PI/4*P.dr*P.dr*P.Lr;
+ if(P.gam===2){const T=y[2]*V/(Math.max(y[3],1e-7)*R),Yu=Math.min(1,Math.max(0,y[4]/y[3])),o={};s.zs=A.phi2z(P.phi);this.Zc=null;const Z=this.zc();A.burned(T,y[2],s.zs,o);const Rm=Yu*((1-fph)*A.Ra+fph*A.Rf)+(1-Yu)*o.R,m=y[2]*V/(Rm*T);y[3]=m;y[4]=Yu*m;y[38]=fph*Yu*m;y[39]=s.zs*(1-Yu)*m;y[40]=0;
+  const cv=(pk,Vk,mb)=>{const m0=pk*Vk/(R*TI),Yb=Math.min(1,Math.max(0,mb)/m0),Ru=(1-fph)*A.Ra+fph*A.Rf,mn=pk*Vk/(TI*(Yb*Z.RbI+(1-Yb)*Ru));return[Yb*mn,fph*(1-Yb)*mn]};{const q=cv(y[6],P.Vin,y[7]);y[7]=q[0];y[41]=q[1]}{const q=cv(y[9],Vp,y[10]);y[10]=q[0];y[42]=q[1]}s.mah=NaN;s.inj.on=0}
+ else{const c=this.cylOld(y,V);y[3]=c.m;y[4]=c.mu;const Z=this.zc(),bk=(pk,Vk,mb,mfk)=>{const ma=Math.max(0,(pk*Vk/TI-mb*Z.RbI-mfk*A.Rf)/A.Ra),tot=ma+mb+mfk;return tot>0?mb/tot*pk*Vk/(R*TI):0};y[7]=bk(y[6],P.Vin,Math.max(0,y[7]),Math.max(0,y[41]));y[10]=bk(y[9],Vp,Math.max(0,y[10]),Math.max(0,y[42]));y[38]=y[39]=y[40]=y[41]=y[42]=0}
+ s.spc=P.gam===2;s.a0=y.slice();this.TC=null}
+cylOld(y,V){const m0=Math.max(y[3],1e-7),mu=Math.min(m0,Math.max(0,y[4])),mf=Math.min(mu,Math.max(0,y[38])),mb=m0-mu,z=mb>1e-12?Math.min(.3,Math.max(0,y[39])/mb):this.s.zs,o={},T=this.cylT(y[2],V,mu-mf,mf,mb,z,o),m=y[2]*V/(R*T);return{m,mu:mu/m0*m}}
 step(){const s=this.s,P=this.P,G=this.G;this.updV();this.syncSw();if(!P.sauto||!s.fired)s.spa=P.spb;
 const y0=s.y,w0=y0[1],om=Math.max(w0,K.wmin),p0=y0[2],th0=y0[0],ed=w0>0?this.nextEv(th0):Infinity,ea=this.ea;let dt,X0,y1,hit=0;this.wx=1;
 if(P.sol===0){let h=Math.min(P.dth/om,K.dtR4);if(ed<=w0*h*1.02){h=ed/w0;hit=1}const k1=this.f(y0);X0=this.X;this.wx=0;
 for(let it=0;;it++){const k2=this.f(axpy(y0,k1,h/2)),k3=this.f(axpy(y0,k2,h/2)),k4=this.f(axpy(y0,k3,h));y1=y0.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));if(!hit)break;const dl=ea-y1[0];if(Math.abs(dl)<=1e-9||it>=4)break;h+=dl/Math.max(y1[1],1e-9)}dt=h}
-else{let h=Math.min(s.h,.5*D/om,1e-3);const k1=this.f(y0,this.k0b||(this.k0b=new Array(NY).fill(0)));X0=this.X;this.wx=0;for(let n=0;;n++){let he=h,isEv=0;if(ed<=w0*h*1.02){he=ed/w0;isEv=1}dp45c(this,y0,he,k1);const r5=this.r5,r4=this.r4;let E=0;for(let q=0;q<EIX.length;q++){const i=EIX[q];E=Math.max(E,Math.abs(r5[i]-r4[i])/(ATOL[i]+P.rtol*Math.max(Math.abs(y0[i]),Math.abs(r5[i]))))}const fac=Math.min(2.5,Math.max(.2,.9*Math.pow(Math.max(E,1e-10),-.2)));
+else{let h=Math.min(s.h,.5*D/om,1e-3);const aS=this.atS||1,k1=this.f(y0,this.k0b||(this.k0b=new Array(NY).fill(0)));X0=this.X;this.wx=0;for(let n=0;;n++){let he=h,isEv=0;if(ed<=w0*h*1.02){he=ed/w0;isEv=1}dp45c(this,y0,he,k1);const r5=this.r5,r4=this.r4;let E=0;for(let q=0;q<EIX.length;q++){const i=EIX[q];E=Math.max(E,Math.abs(r5[i]-r4[i])/(ATOL[i]*aS+P.rtol*Math.max(Math.abs(y0[i]),Math.abs(r5[i]))))}const fac=Math.min(2.5,Math.max(.2,.9*Math.pow(Math.max(E,1e-10),-.2)));
 if(E<=1||n>12||he<1e-8){if(!(E<=1))s.nfa++;if(isEv){for(let it=0;it<4;it++){const dl=ea-this.r5[0];if(Math.abs(dl)<=1e-9)break;he+=dl/Math.max(this.r5[1],1e-9);dp45c(this,y0,he,k1)}hit=1}y1=this.r5;dt=he;s.h=isEv?Math.max(h,he*fac):he*fac;break}h=he*fac}}
 /* 射影（REQ-13 7）．通常の運転では働かない */
-if(y1[3]<1e-7||y1[7]<0||y1[10]<0||y1[14]<1e3||y1[15]<1e3||y1[9]<1e3||y1[4]<0||y1[4]>y1[3]||y1[1]<0||y1[2]<1e3||y1[16]<0||y1[17]<0){s.clp++;y1[3]=Math.max(y1[3],1e-7);y1[7]=Math.max(0,y1[7]);y1[14]=Math.max(y1[14],1e3);y1[15]=Math.max(y1[15],1e3);y1[10]=Math.max(0,y1[10]);y1[9]=Math.max(y1[9],1e3);y1[4]=Math.min(y1[3],Math.max(0,y1[4]));y1[1]=Math.max(y1[1],0);y1[2]=Math.max(y1[2],1e3);y1[16]=Math.max(0,y1[16]);y1[17]=Math.max(0,y1[17])}
+/* 成分の質量（m_b,in，m_b,p，m_f，m_bf，m_l，m_f,in，m_f,p）は 0 で切る．−MEPS より下へ出たときだけ回数に数える（流れの向きが変わるステップでは，誤差の許容内で 0 をわずかに下回ることがある） */
+for(let q=0;q<7;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-MEPS)s.clp++;y1[i]=0}}if(y1[38]>y1[4]&&y1[4]>=0){if(y1[38]-y1[4]>MEPS)s.clp++;y1[38]=y1[4]}
+/* 余剰エンタルピーの下限 0 は γ のモデルだけ（化学種のモデルでは，直噴の気化で T_in より冷えた筒内ガスの逆流が負の余剰を運ぶ） */
+const SPC=P.gam===2;if(y1[3]<1e-7||y1[14]<1e3||y1[15]<1e3||y1[9]<1e3||y1[4]<0||y1[4]>y1[3]||y1[1]<0||y1[2]<1e3||(!SPC&&(y1[16]<0||y1[17]<0))){s.clp++;y1[3]=Math.max(y1[3],1e-7);y1[14]=Math.max(y1[14],1e3);y1[15]=Math.max(y1[15],1e3);y1[9]=Math.max(y1[9],1e3);y1[4]=Math.min(y1[3],Math.max(0,y1[4]));y1[1]=Math.max(y1[1],0);y1[2]=Math.max(y1[2],1e3);if(!SPC){y1[16]=Math.max(0,y1[16]);y1[17]=Math.max(0,y1[17])}}
 s.y=y1;this.wx=1;const X=this.X=X0,cw=s.cw,cx=s.cx;
 /* サイクル内の最大・最小（補助積分にできない量） */
 cw.ppn=Math.min(cw.ppn,X.pex);cw.ppx=Math.max(cw.ppx,X.pex);cx.Tmax=Math.max(cx.Tmax,X.T);cx.pmS=Math.max(cx.pmS,p0);
@@ -288,8 +354,8 @@ if(s.t>=s.hn*.05){s.hn++;const H=this.H,M=s.Mx;H.t.push(s.t);H.N.push(s.Nb);H.Nt
 return dt}
 /* サイクルの終端：補助積分の増分から指標を求める（REQ-14） */
 cycleEnd(){const s=this.s,P=this.P,G=this.G,cw=s.cw,cx=s.cx,C=s.C,y=s.y,a=s.a0,d=k=>y[k]-a[k],W=d(18),tc=s.t-s.tc0,Wf=d(20),Wa=d(21),Wd=d(22);s.Wg=d(19);if(cx.pmax>0)s.pmx=cx.pmax;else if(cx.pmS>0)s.pmx=cx.pmS;s.cyc++;s.ca=C.on&&C.Q>0?ca50(C):NaN;if(P.sauto&&s.fired&&s.ca===s.ca)s.spa+=KS*(s.ca-CA50T);
-const ma=C.mut/(1+P.phi/K.AFR),mf=P.phi*ma/K.AFR,mfd=mf/tc,imep=W/G.Vd,fmep=Wf/G.Vd,amep=Wa/G.Vd,bmep=imep-fmep-amep,Pb=bmep*G.Vd/tc,wb=P4/tc,pm=cx.pmax>0?cx.pmax:cx.pmS;
-const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/(R*TA)*G.Vd),xr:cx.xr,pinE:y[6],mexv:d(26)/tc,mepp:d(27)/tc,mtl:d(28)/tc,dpex:d(29)/tc-P.pa,ppeR:cw.ppx-cw.ppn,mr:d(24)/tc,ybi:d(30)/tc,bo:d(11),bi:d(12),pm,pmS:cx.pmS,Tm:cx.Tmax,tb:bmep*G.Vd/P4,pb:Pb,bmep,fmep,amep,Wa,em:imep>0?bmep/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:Wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:Wd/tc,Pf:Wf/tc,mth:d(23)/tc,min:d(25)/tc,YuE:s.YuE,Qc:d(31),Qw:d(32),Hi:d(33),Ho:d(34),Xo:d(35),Xi:d(36),Xt:d(37)};
+const SPC=P.gam===2,ma=SPC?(s.mah===s.mah?s.mah:0):C.mut/(1+P.phi/K.AFR),mf=SPC?(P.inj===1?s.mfc:s.mfI):P.phi*ma/K.AFR,mfd=mf/tc,imep=W/G.Vd,fmep=Wf/G.Vd,amep=Wa/G.Vd,bmep=imep-fmep-amep,Pb=bmep*G.Vd/tc,wb=P4/tc,pm=cx.pmax>0?cx.pmax:cx.pmS;
+const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/((SPC?GAS.Ra:R)*TA)*G.Vd),xr:cx.xr,pinE:y[6],mexv:d(26)/tc,mepp:d(27)/tc,mtl:d(28)/tc,dpex:d(29)/tc-P.pa,ppeR:cw.ppx-cw.ppn,mr:d(24)/tc,ybi:d(30)/tc,bo:d(11),bi:d(12),pm,pmS:cx.pmS,Tm:cx.Tmax,tb:bmep*G.Vd/P4,pb:Pb,bmep,fmep,amep,Wa,em:imep>0?bmep/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:Wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:Wd/tc,Pf:Wf/tc,mth:d(23)/tc,min:d(25)/tc,YuE:s.YuE,Qc:d(31),Qw:d(32),Hi:d(33),Ho:d(34),Xo:d(35),Xi:d(36),Xt:d(37),He:d(43),minj:d(44),mev:d(45),mfx:d(47),phc:s.phc,ma,mf,Tivc:s.I0.T};
 s.a0=y.slice();s.tc0=s.t;s.ig=0;s.Mx=s.cf&&s.fired?M:null;s.Mh=s.Mx?(s.Mh||[]).concat([M]).slice(-10):[];this.lastM=M;this.last={p:Float32Array.from(this.tr.p),V:Float32Array.from(this.tr.V),me:Float32Array.from(this.tr.me),imep,pm,N:M.N,ok:!!s.Mx};s.cf=s.fired;this.rc()}
 ecu(dt,om){const s=this.s,P=this.P;{const N=om*30/PI;s.Nb=N+(s.Nb-N)*Math.exp(-dt/P.tN)}
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
