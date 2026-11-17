@@ -486,7 +486,7 @@ yield*ui();const c1=SW.cur;yield*ui();swSub(0);drawSw();const lg1=(sweepSpec(SW.
 chkB(26,'計測の前後で運転中のエンジンの設定と状態が一致，1 回の計算 ≤ 30 ms',JSON.stringify(LP)===lp0&&JSON.stringify(live.s)===ls0&&SW.maxMs<=30,SW.maxMs.toFixed(1)+' ms');
 tapEl($('swc'));chkB(26,'2 回目の完了で基準（前回）が描かれ，[基準を消す] で消える',lg1.includes('基準')&&SW.ref===null&&c1&&SW.cur!==c1,lg1.join('，'));
 setParam('phin',5*D);swText();const st1=$('swt').textContent;yield*ui();swText();const st2=$('swt').textContent;
-tapEl($('swg'));swTick(8);tapEl($('swg'));const curC=SW.cur;chkB(26,'設定変更で古さの表示が出て再計測で消える，[中止] は結果を置き換えない',st1.includes('設定が変わりました')&&!st2.includes('設定が変わりました')&&!SW.run&&SW.cur===curC,`変更後「${st1.slice(-20)}」`);
+tapEl($('swg'));swTick(8);tapEl($('swg'));const curC=SW.cur;{const ax=[0,1,2,3].flatMap(k=>sweepSpec([],null,k)).map(g=>g.xa),ok=ax.length>=4&&ax.every(a=>a.a===0&&a.b===7000&&a.tv.join()==='0,1000,2000,3000,4000,5000,6000,7000');chkB(26,'性能曲線の全グラフ（4 つの表示の 7 個）の横軸が 0〜7000 rpm，目盛 0, 1000, …, 7000',ok,`${ax.length} 個，${ax[0].a}〜${ax[0].b}，目盛 ${ax[0].tv.join(', ')}`)}chkB(26,'設定変更で古さの表示が出て再計測で消える，[中止] は結果を置き換えない',st1.includes('設定が変わりました')&&!st2.includes('設定が変わりました')&&!SW.run&&SW.cur===curC,`変更後「${st1.slice(-20)}」`);
 U.swTest=0;Object.assign(SW,keep);show(3)};
 /* ---- TEST-27 exhaust system ---- */
 TST[27]=function*(){const P0={...mkPT(),exs:1};
