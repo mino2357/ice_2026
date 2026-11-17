@@ -1,4 +1,4 @@
-# 単気筒4ストロークSI機関シミュレータ 用語の定義集（第25版）
+# 単気筒4ストロークSI機関シミュレータ 用語の定義集（第26版）
 
 要件定義書（`docs/requirements.md`）と仕様書（`docs/specification.md`）で使う記号と用語を，単位と定義式とともにまとめる．式の導出と定数の出典は仕様書の各 SPEC にある．「仕様」の列は，その記号を定める仕様書の節である．
 
@@ -254,6 +254,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 化学平衡，解離 | 高温の既燃ガスで，CO$_2$ ⇌ CO + ½O$_2$ などの反応がつり合った組成．完全燃焼の生成物の一部が CO，H$_2$，O$_2$，OH などに分かれている（解離）ので，その分の発熱が出ない．第26版で 10 種の平衡として扱う（SPEC-29．未実装） |
 | 凍結 | 膨張で温度が下がると反応が遅くなり，組成が平衡に追いつかずに止まること．$T_{fr}$ 以下で組成を固定して表す（SPEC-29） |
 | ポート噴射，直噴 | 燃料を吸気管で気化させて予混合気として吸う方式と，筒内へ液体のまま噴く方式．直噴では気化潜熱が筒内のガスを冷やす（SPEC-30．未実装） |
+| speed-density 方式 | 吸気管圧（と回転数，温度）から，筒内に入る空気の質量を見積もる方式．本モデルの ECU は，前のサイクルの IVC の筒内の質量と，吸気管圧の比 $\pi_S$ から $\hat m_a$ を求める（SPEC-30 の 4） |
 | 燃料空気サイクル | 作動流体を実際の燃料と空気，既燃ガスの物性で扱う理想サイクル（熱損失なし，瞬時の燃焼）．`tools/richburn` の試算に使った |
 | 残留ガス，内部 EGR | 前のサイクルから筒内に残る既燃ガス．バルブオーバーラップ中に吸気側へ吹き返して次の吸気で戻る分を含む．その割合が残留ガス率 $x_r$ |
 | バルブオーバーラップ | 排気弁と吸気弁が同時に開いている期間．角度は $\theta_{\text{OL}} = \text{EVC} - (\text{IVO} + 720^\circ)$ |
@@ -310,9 +311,12 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 項目定義表 | 設定項目の唯一の定義（キー，表示名，単位，単位係数，範囲，刻み，既定値）．表示値 × 単位係数 = 内部値 |
 | MathJax，TeX の表示 | 解説タブの数式の表示．数式は TeX のソースで持ち，ネットワークがあれば MathJax 3.2.2（Apache License 2.0，`tex-svg`）を cdnjs から読み込んで SVG に組む．読み込めなければ TeX のソースを等幅で示す（TeX の表示）．フォントは埋め込まない（C-1，C-8，SPEC-16 3） |
 | 基準サイクル | 設定を変える直前に完了していた 1 サイクルの波形．現在のサイクルと重ねて描く |
+| $p$-$V$ 線図の印 | $p$-$V$ 線図の曲線の上に描く丸印と記号（IVO，IVC，EVO，EVC，IGN，CA50，SOI，EOI，p_max）．記号は互いに重ならない位置に置く（SPEC-17 A の 5） |
+| バルブタイミングの画面 | 線図タブの 8 つ目の画面．両対数の $p$-$V$ 線図を見ながら，IVO，IVC，EVO，EVC をスライダと `[−]` `[＋]` で変える（SPEC-15 I） |
 | 段階型，帯域型（レンジ） | グラフの表示範囲の決め方．段階型はフルスケール $F \in \{1, 2, 5\} \times 10^k$ をデータの最大に応じて切り替える．帯域型はデータの最小・最大のまわりの範囲を取る |
 | 計測（性能曲線） | 回転数を固定して，回転数ごとの定常の特性（$T_b$，$P_b$，$\eta_v$ など）を求めること |
 | 整定 | 計測の各点で，直近 3 サイクルの各量の幅が判定値以下になること |
+| エンストの点（計測） | 性能曲線の計測で，計測中に燃料が OFF になった点（回転数を固定しているので $150\ \text{rpm}$ 未満の点）．記録だけしてグラフに描かない（SPEC-26 A の 4） |
 | $n_{\min}$，$n_{\max}$（計測のサイクル数の最少・最多） | 計測の各点で，判定を始めるまでに完了させる完爆後のサイクル数と，判定を満たさなくても打ち切るサイクル数．条件の画面で指定する（$3 \le n_{\min} \le 30$，$10 \le n_{\max} \le 200$，$n_{\min} \le n_{\max}$．SPEC-26 A.6） |
 | シナリオ | テストで `EngineCore` を走らせる決まった運転の手順（S1，S2，…） |
 | 実行区分 | テスト項目の種類：[A] 解析，[S] シナリオ，[U] 画面，[D] 開発時（ヘッドレスブラウザ），[M] 実機目視 |
@@ -331,9 +335,13 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | MBT | minimum advance for best torque |
 | IVO，IVC，EVO，EVC | intake valve opening／closing，exhaust valve opening／closing |
 | BTDC，ATDC | before／after top dead center（圧縮上死点の前／後） |
+| IGN | ignition（点火の時点．$p$-$V$ 線図の印） |
+| CA50 | 燃焼質量割合が $50\%$ になるクランク角（圧縮上死点後の角度で表す） |
+| SOI，EOI | start／end of injection（噴射の開始，終了） |
 | IMEP，PMEP，FMEP，AMEP，BMEP | indicated／pumping／friction／accessory／brake mean effective pressure |
 | bsfc | brake specific fuel consumption |
 | RK4，DOPRI5 | 4 次の古典的 Runge–Kutta 法，Dormand–Prince の 5(4) 次の埋め込み型 Runge–Kutta 法 |
 | PI | 比例（proportional）と積分（integral）による制御 |
 | WOT | wide open throttle（全開） |
+| LHV | lower heating value（低位発熱量 $H_u$） |
 | CA | crank angle（クランク角） |

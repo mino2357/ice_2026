@@ -1,7 +1,7 @@
 'use strict';
 /* ===== constants (single source) ===== */
 const R=287,TA=298.15,TI=298.15,TX=800,PI=Math.PI,D=PI/180,P4=4*PI;
-const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,pexo:4e3,g0:1.35,kT:.26,dal:1,Ct:6,wmin:20,dtR4:3e-5,Ti0:320};
+const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,g0:1.35,kT:.26,dal:1,Ct:6,wmin:20,dtR4:3e-5,Ti0:320};
 /* ===== item definition table (single source for settings, doc, tests) ===== */
 const PAGES=['機関','VVT・カム','弁タイミング','吸気','燃焼','運転','ECU','動力計','解法','音響','燃焼速度','吸気ランナ','排気系','噴射'];
 const ITEMS=[
@@ -205,6 +205,8 @@ const GAS=(()=>{
  return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab}})();
 /* SPEC-29：温度が固定の場所（吸気 TI，外気 TA，液体の燃料）の物性の定数と，気体定数を引数に取るオリフィスの式 */
 const GC={cvaI:GAS.cva(TI),cpaI:GAS.cva(TI)+GAS.Ra,haI:GAS.ha(TI),cvfI:GAS.cvf(TI),cpfI:GAS.cvf(TI)+GAS.Rf,hfI:GAS.hf(TI),cvaA:GAS.cva(TA),cvfA:GAS.cvf(TA),gA:1+GAS.Ra/GAS.cva(TA),kA:psiK(1+GAS.Ra/GAS.cva(TA)),hl:GAS.hf(GAS.Tl)-GAS.hfg};
+/* ECU の空気量の見積もり m̂_a（SPEC-30 の 4）．mah，mtI：前の IVC の筒内の未燃の空気と全質量．pS，pS0：噴射の開始の時点の吸気管圧（今回，前回）．最初の IVC の前（mah が NaN）は p V_d/(R_a T_in)，前のサイクルの噴射が無いとき（pS0 = 0）は π_S = 1 */
+const ecuAir=(mah,mtI,pS,pS0,Vd)=>mah===mah?Math.max(0,mah+(pS0>0?mtI*(pS/pS0-1):0)):pS*Vd/(GAS.Ra*TI);
 /* 比熱比が決まっている場所（外気，排気系，スロットルの順流）は，Ψ の定数を前計算したものを使う（結果は mdR と同じ） */
 function mdRC(p1,p2,T0,A,q,Rg){const pu=Math.max(p1,p2),pd=Math.min(p1,p2);if(pu===pd||A<=0)return 0;return Math.sign(p1-p2)*A*pu/Math.sqrt(Rg*T0)*psiC(pd/pu,q)}
 function mdR(p1,p2,T0,A,g,Rg){const pu=Math.max(p1,p2),pd=Math.min(p1,p2);if(pu===pd||A<=0)return 0;return Math.sign(p1-p2)*A*pu/Math.sqrt(Rg*T0)*psiF(pd/pu,g)}
@@ -329,7 +331,7 @@ ign(T,Yu,p,cy){const s=this.s,P=this.P,C=s.C,om=Math.max(s.y[1],K.wmin),phc=cy?G
 nextEv(th){const V=this.V,lo=th+1e-7;let a=P4;let x=V.gO;if(x>lo&&x<a)a=x;x=V.gA;if(x>lo&&x<a)a=x;x=V.gB;if(x>lo&&x<a)a=x;x=V.gC;if(x>lo&&x<a)a=x;x=md4(2*PI-this.s.spa*D);if(x>lo&&x<a)a=x;if(this.P.gam===2&&this.P.inj===1){x=md4(this.P.soi);if(x>lo&&x<a)a=x;const J=this.s.inj;if(J.on){x=md4(J.th0+J.dth);if(x>lo&&x<a)a=x}}this.ea=a;return a-th}
 /* イベントの処理：ステップの終端（角度 th1，状態 y1）で，その角度にあるイベントをすべて処理する */
 doEv(y1,th1){const s=this.s,V=this.V,G=this.G,P=this.P,near=a=>Math.abs(a-th1)<=1e-7,kV=kinV(G,th1),SPC=P.gam===2,cy=SPC?this.cyl(y1):null,T=SPC?cy.T:y1[2]*kV/(Math.max(y1[3],1e-7)*R),Yu=Math.min(1,Math.max(0,y1[4]/y1[3])),n=s.evn;
-if(SPC&&P.inj===1){const J=s.inj;if(J.on&&near(md4(J.th0+J.dth)))J.on=0;if(near(md4(P.soi))&&s.fuel&&!J.on){/* ECU の空気量の推定（SPEC-30 の 4）：前の IVC の筒内の全質量が，噴射の開始の時点の吸気管圧（今回／前回）に比例して変わり，残留ガスの量は前のサイクルと同じとする */const pS=y1[6],mah=s.mah===s.mah?Math.max(0,s.mah+(s.pS>0?s.mtI*(pS/s.pS-1):0)):pS*G.Vd/(GAS.Ra*TI),mc=P.phi*mah/GAS.AF,om=Math.max(y1[1],K.wmin);J.m=mc;J.th0=md4(P.soi);J.dth=Math.min(300*D,Math.max(D,om*mc/P.qinj));J.on=1;s.mfc=mc;s.pSn=pS}}
+if(SPC&&P.inj===1){const J=s.inj;if(J.on&&near(md4(J.th0+J.dth)))J.on=0;if(near(md4(P.soi))&&s.fuel&&!J.on){/* ECU の空気量の推定（SPEC-30 の 4）：前の IVC の筒内の全質量が，噴射の開始の時点の吸気管圧（今回／前回）に比例して変わり，残留ガスの量は前のサイクルと同じとする */const pS=y1[6],mah=ecuAir(s.mah,s.mtI,pS,s.pS,G.Vd),mc=P.phi*mah/GAS.AF,om=Math.max(y1[1],K.wmin);J.m=mc;J.th0=md4(P.soi);J.dth=Math.min(300*D,Math.max(D,om*mc/P.qinj));J.on=1;s.mfc=mc;s.pSn=pS}}
 if(near(V.gO))n[1]++;if(near(V.gC))n[4]++;
 if(near(V.gA)){n[2]++;s.I0={p:y1[2],V:kV,T};s.C.mut=y1[4];s.cx.xr=1-y1[4]/y1[3];if(SPC){s.mah=cy.ma;s.mtI=cy.m;s.mfI=cy.mf;s.pS=s.pSn||0}}
 if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3];if(SPC&&cy.mb>1e-9)s.zs=cy.z}
@@ -392,7 +394,7 @@ const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':
 /* ===== WOT sweep (REQ-26) ===== */
 const SWC={als:[90,50,10],alsAll:[10,20,30,40,50,60,70,80,90],al:90,Tw:K.Twc,N1:7000,step:250,steps:[25,100,250,500],last:3,nmax:60,nminR:[3,30],nmaxR:[10,200],nmaxSt:10,
 crit:{std:{n:'標準',tolR:.003,tolA:.02,tolS:.3,nmin:4},strict:{n:'厳格',tolR:.001,tolA:.01,tolS:.1,nmin:6}},critD:'strict',flowD:true,procs:{up:'上り',updown:'往復',indep:'独立'},procD:'up'};
-/* 回転数の点：刻みの 1 つ目から N1 まで（SPEC-26 の 5．N = 0 はサイクルが進まないので含めない） */const swN=st=>Array.from({length:Math.round(SWC.N1/st)},(_,i)=>st*(i+1)),SWN=swN(SWC.step),SWN13=swN(500),SWN7=swN(1000);
+/* 回転数の点：刻みの 1 つ目から N1 まで（SPEC-26 の 5．N = 0 はサイクルが進まないので含めない） */const swN=st=>Array.from({length:Math.round(SWC.N1/st)},(_,i)=>st*(i+1)),SWN=swN(SWC.step),SWN7=swN(1000);
 const swOpt=o=>({crit:SWC.critD,flow:SWC.flowD,proc:SWC.procD,...(o||{})});
 const swR=a=>Math.max(...a)-Math.min(...a),swM=a=>a.reduce((x,v)=>x+v,0)/a.length;
 class Sweep{constructor(P0,Ns,al,opt){this.Ns=Ns||SWN;this.al=al??SWC.al;this.o=swOpt(opt);this.C=SWC.crit[this.o.crit];this.nmin=this.o.nmin??this.C.nmin;this.nmax=this.o.nmax??SWC.nmax;const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:this.al*D});c.fixw=1;c.fixTw=1;c.s.y[5]=SWC.Tw;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}

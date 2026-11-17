@@ -75,3 +75,6 @@ dist/*.wav
 .DS_Store
 dist/flavor_tabs.json
 dist/review_jac.json
+
+# Python
+__pycache__/

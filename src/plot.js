@@ -29,6 +29,11 @@ const xw=Math.max(...xt.map(t=>mw(t.s)))+8,xs=Math.max(1,Math.ceil(xw/(pl.w/Math
 const yn=sp.ya.name,xn=sp.xa.name;R.push({t:'yn',s:yn,x:pl.x+2,y:y+1,w:mw(yn),h:12});R.push({t:'xn',s:xn,x:pl.x+pl.w/2-mw(xn)/2,y:pl.y+pl.h+21,w:mw(xn),h:12});
 let lx=pl.x+pl.w,ly=y+1,lmin=pl.x+mw(yn)+10;(sp.lg||[]).slice().reverse().forEach(l=>{const tw=mw(l.n)+12;if(lx-tw-6<lmin){lx=pl.x+pl.w;ly+=14;lmin=pl.x+4}lx-=tw+6;R.push({t:'lg',s:l.n,c:l.c,x:lx,y:ly,w:tw,h:12})});
 return{pl,sx,sy,xt,yt,R,sp}}
+/* 印の記号の位置（SPEC-17 A の 5）．P：印の画面上の位置 px，py，記号 t（空なら記号なし），記号の幅 w，指定の向き dx，dy．pl：プロット領域．
+   記号ごとに，ほかの記号・印・枠に重ならない最初の候補を選ぶ．どれも重なるときは最初の候補を枠の中に収める．戻り値は記号の左端 x と中心の高さ y（記号なしは null）．描画に依らないので単独で検査できる */
+function placeLabels(P,pl){const box=[],hit=(x,y,w)=>x<pl.x+1||x+w>pl.x+pl.w-1||y-7<pl.y||y+7>pl.y+pl.h||box.some(b=>x<b.x+b.w+2&&x+w+2>b.x&&Math.abs(y-b.y)<13)||P.some(q=>q.px>x-5&&q.px<x+w+5&&Math.abs(q.py-y)<11);
+return P.map(q=>{if(!q.t)return null;const w=q.w,a=Math.abs(q.dx),sg=q.dx<0?-1:1,X=s=>s>0?q.px+a:q.px-a-w,cand=[[X(sg),q.py+q.dy],[X(-sg),q.py+q.dy],[X(sg),q.py-q.dy],[X(-sg),q.py-q.dy],[q.px-w/2,q.py-14],[q.px-w/2,q.py+14],[X(sg),q.py-16],[X(sg),q.py+16],[X(-sg),q.py-16],[X(-sg),q.py+16],[q.px-w/2,q.py-26],[q.px-w/2,q.py+26]];
+ let c=cand.find(v=>!hit(v[0],v[1],w)),free=!!c;if(!c)c=[Math.max(pl.x+2,Math.min(pl.x+pl.w-w-2,cand[0][0])),Math.max(pl.y+7,Math.min(pl.y+pl.h-7,cand[0][1]))];const b={x:c[0],y:c[1],w,free};box.push(b);return b})}
 function drawPlot(g,L,ser,col,cross){const{pl,sx,sy,R,sp}=L;g.font='11px system-ui,sans-serif';g.textBaseline='top';g.textAlign='left';g.lineWidth=1;g.strokeStyle=col.ln;g.beginPath();L.yt.forEach(t=>{g.moveTo(pl.x,Math.round(t.px)+.5);g.lineTo(pl.x+pl.w,Math.round(t.px)+.5)});L.xt.forEach(t=>{g.moveTo(Math.round(t.px)+.5,pl.y);g.lineTo(Math.round(t.px)+.5,pl.y+pl.h)});g.stroke();
 g.strokeStyle=col.fg;g.beginPath();g.moveTo(pl.x+.5,pl.y);g.lineTo(pl.x+.5,pl.y+pl.h+.5);g.lineTo(pl.x+pl.w,pl.y+pl.h+.5);g.stroke();
 for(const r of R){if(r.t==='lg'){g.fillStyle=r.c;g.fillRect(r.x,r.y+4,8,4);g.fillStyle=col.fg;g.fillText(r.s,r.x+12,r.y)}else{g.fillStyle=r.t==='yn'||r.t==='xn'?col.fg:((r.ax==='y'&&sp.ya.hot)||(r.ax==='x'&&sp.xa.hot))?col.ac:col.mu;g.fillText(r.s,r.x,r.y)}}
@@ -37,9 +42,7 @@ for(const q of ser){g.strokeStyle=q.c;g.lineWidth=q.w||1.6;g.beginPath();let s=0
 if(sp.mk&&sp.mk.length){/* 印を先にすべて描き，記号は，ほかの記号と印に重ならない位置を候補（指定の位置，左右の反対側，上，下，斜め）から選んで置く */
 const bg=col.cd||'#fff',P=sp.mk.map(m=>({m,px:sx(m.x),py:sy(m.y),cc:m.c==='fg'?col.fg:m.c}));g.save();g.font='600 11px system-ui,sans-serif';g.textBaseline='middle';g.textAlign='left';g.lineJoin='round';
 for(const q of P){g.beginPath();g.arc(q.px,q.py,3.5,0,2*PI);g.fillStyle=q.cc;g.fill();g.strokeStyle=bg;g.lineWidth=1.2;g.stroke()}
-const box=[],hit=(x,y,w)=>x<pl.x+1||x+w>pl.x+pl.w-1||y-7<pl.y||y+7>pl.y+pl.h||box.some(b=>x<b.x+b.w+2&&x+w+2>b.x&&Math.abs(y-b.y)<13)||P.some(q=>q.px>x-5&&q.px<x+w+5&&Math.abs(q.py-y)<11);
-for(const q of P){const m=q.m;if(!m.t)continue;const w=g.measureText(m.t).width,a=Math.abs(m.dx),sg=m.dx<0?-1:1,X=s=>s>0?q.px+a:q.px-a-w,cand=[[X(sg),q.py+m.dy],[X(-sg),q.py+m.dy],[X(sg),q.py-m.dy],[X(-sg),q.py-m.dy],[q.px-w/2,q.py-14],[q.px-w/2,q.py+14],[X(sg),q.py-16],[X(sg),q.py+16],[X(-sg),q.py-16],[X(-sg),q.py+16],[q.px-w/2,q.py-26],[q.px-w/2,q.py+26]];
- let c=cand.find(v=>!hit(v[0],v[1],w));if(!c)c=[Math.max(pl.x+2,Math.min(pl.x+pl.w-w-2,cand[0][0])),Math.max(pl.y+7,Math.min(pl.y+pl.h-7,cand[0][1]))];box.push({x:c[0],y:c[1],w});g.strokeStyle=bg;g.lineWidth=3;g.strokeText(m.t,c[0],c[1]);g.fillStyle=q.cc;g.fillText(m.t,c[0],c[1])}
+placeLabels(P.map(q=>({px:q.px,py:q.py,t:q.m.t,dx:q.m.dx,dy:q.m.dy,w:q.m.t?g.measureText(q.m.t).width:0})),pl).forEach((c,i)=>{if(!c)return;const q=P[i];g.strokeStyle=bg;g.lineWidth=3;g.strokeText(q.m.t,c.x,c.y);g.fillStyle=q.cc;g.fillText(q.m.t,c.x,c.y)});
 g.restore()}
 if(cross!=null){const px=pl.x+cross*pl.w;g.strokeStyle=col.ac;g.lineWidth=1;g.beginPath();g.moveTo(px,pl.y);g.lineTo(px,pl.y+pl.h);g.stroke()}g.restore()}
 /* ===== screen specifications ===== */

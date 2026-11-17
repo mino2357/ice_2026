@@ -32,6 +32,8 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | `docs/verification.md` | 開発時検証（7 通り）と実機の確認の結果の記録（成果物には埋め込まない．検証の後に書く） |
 | `docs/history/requirements_v24.md` | 第24版までの文書（要件・仕様・テスト・改訂記録が 1 つだった）の全文 |
 | `docs/review_requirements.md`，`docs/report_dynamics.md` | 第24版に対するレビュー（第25版で反映済み），動特性の調査の記録 |
+| `docs/review_v26.md` | 第26版の全体の点検のレポート（整合，文献との照合，テストと仕様の漏れ，リファクタリング，残した課題．成果物には埋め込まない） |
+| `docs/measured_v26.md` | 第26版の成果物での全検査の実測値の一覧（`tools/dev/run.js --md` で作る．手で書き換えない） |
 | `docs/report_richburn.md` | 直噴の気化潜熱とリッチでの出力増の検討の記録（第26版の REQ-29，30 のもとになった考察と試算，実装後の結果．成果物には埋め込まない） |
 | `src/core.js` | `EngineCore`：物理モデル・ECU・動力計・ソルバ・項目定義表 `ITEMS`（DOM 非依存） |
 | `src/audio.js` | エンジン音の合成器 `Synth`（AudioWorklet と共用，DOM 非依存） |
@@ -46,13 +48,16 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | `tools/wav_demo.js`，`tools/bench.js` | 試聴用 WAV の生成，計算時間の計測 |
 | `tools/flavor/` | 演出音（SPEC-21 C）の試聴サンプルの生成（`tabs.js` → `samples.js`，`samples_bass.js`，`live.js`．出力は `dist/`） |
 | `tools/richburn/` | 直噴の潜熱とリッチでの出力増の試算（燃料空気サイクル，化学平衡．`README.md`） |
+| `tools/dev/` | 開発用の道具：文書とコードの整合の点検（`check_docs.js`），使っていない名前の点検，1 ビューポートでのテストの実行，第25版とのビット単位の比較など（`README.md`） |
 | `tools/review/`，`tools/dynamics/` | レビューと調査に使った試作スクリプト（第24版のコア向け．`tools/review/README.md`） |
 
 ## コマンド
 ```
 npm install && npx playwright install chromium   # 初回のみ
 npm run build      # dist/engine.html を生成（pandoc が必要）
-npm test           # ビルドして全テスト（7 通り，約 20 分．MathJax は vendor/ のものを使い，1 通りは遮断）
+npm run check      # 文書とコードの整合の点検（番号，参照，設定の表，古い記述）と，使っていない名前の点検
+npm test           # 整合の点検 → ビルド → 全テスト（7 通り，約 25 分．MathJax は vendor/ のものを使い，1 通りは遮断）
+npm run test:one -- --only 17,30 --names   # 1 ビューポートで一部のテストだけ（tools/dev/run.js）
 npm run wav        # 試聴用 WAV を dist/ に生成
 ```
 
@@ -66,4 +71,7 @@ npm run wav        # 試聴用 WAV を dist/ に生成
 - 画面を操作する [U] の検査は既定設定から始め，終了後に利用者の状態を完全に戻す．
 - Canvas はビットマップ寸法を毎回 CSS 寸法 × dpr と照合する．
 - 解説タブの記号表 `SYM` は 1 記号 1 定義（ビルド時に重複を検査）．
+- 3 文書の番号付きリストは番号を飛ばさない（pandoc が振り直すので，本文の「〜の 14」という参照と表示がずれる．`npm run check` が調べる）．
+- 描画や積分のループの中の計算のうち，仕様で検査するものは，単独の関数に分けておく（例：`placeLabels`，`ecuAir`）．
+- `src/core.js` を変えたら `node tools/dev/bitcheck.js --chromium` で γ(T) の経路が第25版と一致することを確かめる．
 - 成果物は claude.ai のアーティファクトとしても公開している（公開は利用者の確認のうえで行う）．

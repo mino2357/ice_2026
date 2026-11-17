@@ -181,6 +181,7 @@ $0.05$ 刻みで見ると（45 サイクル目．収束判定なしの予備の�
 ## 10. 出典
 
 * J. B. Heywood, *Internal Combustion Engine Fundamentals*（燃料空気サイクル，化学平衡，燃料の物性，ノックの各章．節と表の番号は未確認）．
+  * 2026-11-18 の追記：化学平衡は 3 章，作動流体の物性は 4 章，燃料空気サイクルは 5 章（5.5 節）であることを目次で確かめた．気化潜熱 $350\ \text{kJ/kg}$ は，この本の表の値（$305\ \text{kJ/kg}$）ではなく，米国石油協会の資料に基づく表の値（約 $150\ \text{Btu/lb}$）に当たる．$305$ にしたときの差は `docs/review_v26.md` の 4.1 節．
 * B. J. McBride, S. Gordon, M. A. Reno, "Coefficients for Calculating Thermodynamic and Transport Properties of Individual Species", NASA TM-4513 (1993)：<https://ntrs.nasa.gov/citations/19940013151>．係数は Cantera の `data/nasa_gas.yaml`（commit 25c1ab1c，BSD 3-Clause）から取った．
 * S. Gordon and B. J. McBride, "Computer Program for Calculation of Complex Chemical Equilibrium Compositions and Applications", NASA RP-1311 (1994)：平衡の反復法．
 * "The Volumetric Efficiency of Direct and Port Injection Gasoline Engines with Different Fuels", SAE Technical Paper 2002-01-0839：<https://saemobilus.sae.org/papers/volumetric-efficiency-direct-port-injection-gasoline-engines-different-fuels-2002-01-0839>（直噴で体積効率が約 $9\%$ 増）．
