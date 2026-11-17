@@ -2,10 +2,10 @@
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={mj:{},swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mj:{},swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 const Sim={debt:0,spd:.1};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
-cam:null,camC:0,change(c,now){if(now-this.tl>=3000){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last)this.ref=this.cp(c.last);this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.cam=null;this.tl=-1e9}};
+cam:null,camC:0,vt:null,vtc:()=>({ivo:LP.ivo,ivc:LP.ivc,evo:LP.evo,evc:LP.evc}),change(c,now){if(now-this.tl>=3000){if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9}};
 let COL={};const readCol=()=>{const cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();COL={fg:v('--fg'),mu:v('--mu'),ln:v('--ln'),ac:v('--ac'),cd:v('--cd'),ng:v('--ng')}};
 /* ===== input helpers ===== */
 function tap(el,fn){let d;el.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:NOW()}});el.addEventListener('pointerup',e=>{if(d&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);d=0});el.addEventListener('pointercancel',()=>d=0)}
@@ -73,14 +73,27 @@ const ntU=v=>Math.max(0,Math.min(1,(v-NTS.lo)/(NTS.hi-NTS.lo)));
 const ntVal=u=>NTS.lo+Math.round(Math.max(0,Math.min(1,u))*(NTS.hi-NTS.lo)/NTS.st)*NTS.st;
 function ntRender(){const v=LP.nt,u=ntU(v),w=ntW();if(v!==NTD.v){NTD.v=v;$('ntv').innerHTML=`目標<b>${v}</b>rpm`;$('ntm').disabled=v<=NTS.lo}const x=Math.round(u*w*10)/10;if(x!==NTD.u){NTD.u=x;$('ntk').style.transform=`translateX(${x}px)`}}
 function ntStep(d){const it=IT.nt,v=gv(it,Math.max(gmin(it),gi(it,LP.nt)+d));if(v!==LP.nt)setParam('nt',v);ntRender()}
+/* ===== バルブタイミングの操作の列（SPEC-15 I）：設定の IVO，IVC，EVO，EVC を，つまみのドラッグと [−][＋] で変える ===== */
+const VTK=['ivo','ivc','evo','evc'],VTD={k:null,off:0,sig:''};
+const vtRow=k=>$('vt').querySelector(`.vtr[data-k="${k}"]`),vtW=k=>Math.max(1,vtRow(k).querySelector('.vts').clientWidth-44);
+function vtRender(){if(U.tab!==1||U.sub!==7||!$('vt').firstChild)return;const bv=Base.ref&&Base.vt?Base.vt:null,sig=VTK.map(k=>LP[k]+':'+(bv?bv[k]:'')).join()+'|'+vtW('ivo');if(sig===VTD.sig)return;VTD.sig=sig;
+for(const k of VTK){const it=IT[k],r=vtRow(k),n=gi(it,LP[k]),m=gmax(it),w=vtW(k);r.querySelector('.vtk').style.transform=`translateX(${Math.round(n/m*w*10)/10}px)`;r.querySelector('.vtv').textContent=disp(it,LP[k])+'°';r.querySelector('button[data-d="-1"]').disabled=n<=0;r.querySelector('button[data-d="1"]').disabled=n>=m;
+ const s=r.querySelector('.vts s');if(bv){s.style.display='block';s.style.left=(22+gi(it,bv[k])/m*w)+'px'}else s.style.display='none'}}
+function vtSet(k,n){const it=IT[k],v=gv(it,Math.max(0,Math.min(gmax(it),n)));if(v!==LP[k])setParam(k,v);vtRender()}
+function initVT(){$('vt').innerHTML=VTK.map(k=>`<div class="vtr" data-k="${k}"><span class="vtn" style="color:${k[0]==='i'?MKC.i:MKC.e}">${IT[k].n}</span><button data-d="-1">−</button><div class="vts"><i></i><s></s><div class="vtk"><b></b></div></div><button data-d="1">＋</button><span class="vtv"></span></div>`).join('');
+for(const k of VTK){const r=vtRow(k),kn=r.querySelector('.vtk'),tr=r.querySelector('.vts'),it=IT[k];
+ kn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();VTD.k=k;const R=tr.getBoundingClientRect();VTD.off=e.clientX-(R.left+22+gi(it,LP[k])/gmax(it)*vtW(k));try{kn.setPointerCapture(e.pointerId)}catch(x){}kn.classList.add('on')});
+ const mv=e=>{if(VTD.k!==k)return;e.preventDefault();const R=tr.getBoundingClientRect(),u=(e.clientX-VTD.off-R.left-22)/vtW(k);vtSet(k,Math.round(Math.max(0,Math.min(1,u))*gmax(it)))},up=e=>{if(VTD.k!==k)return;mv(e);VTD.k=null;kn.classList.remove('on')};
+ kn.addEventListener('pointermove',mv);kn.addEventListener('pointerup',up);kn.addEventListener('pointercancel',()=>{VTD.k=null;kn.classList.remove('on')});
+ for(const b of r.querySelectorAll('button'))tap(b,()=>{if(!b.disabled)vtSet(k,gi(it,LP[k])+(+b.dataset.d))})}}
 function initNT(){const k=$('ntk'),r=$('ntr');
 k.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();NTD.on=1;const R=r.getBoundingClientRect();NTD.off=e.clientX-(R.left+22+ntU(LP.nt)*ntW());try{k.setPointerCapture(e.pointerId)}catch(x){}k.classList.add('on')});
 const mv=e=>{if(!NTD.on)return;e.preventDefault();const R=r.getBoundingClientRect(),u=(e.clientX-NTD.off-R.left-22)/ntW(),v=ntVal(u);if(v!==LP.nt)setParam('nt',v);ntRender()};
 const up=e=>{if(!NTD.on)return;mv(e);NTD.on=0;k.classList.remove('on')};
 k.addEventListener('pointermove',mv);k.addEventListener('pointerup',up);k.addEventListener('pointercancel',()=>{NTD.on=0;k.classList.remove('on')});
 tap($('ntm'),()=>{if(LP.nt>NTS.lo)ntStep(-1)});tap($('ntp'),()=>ntStep(1));ntRender()}
-let LAY=[];function drawCh(){const q=prep($('ch'));if(!q)return;LAY=drawScreen(q.g,q.W,q.H,screenSpec(live,AX,U.sub,{now:NOW(),log:U.log,ref:U.sub===0?Base.ref:null}),COL,U.cross[U.sub]);
-const cr=U.cross[U.sub];if(cr!=null&&U.sub>0){const g=q.g,th=U.sub<5;g.font='11px system-ui,sans-serif';g.textBaseline='top';g.fillStyle=COL.ac;LAY.forEach(L=>{const sp=L.sp,xv=sp.xa.a+cr*(sp.xa.b-sp.xa.a),txt=sp.ser.map(s=>{let bi=0,bd=1e9;for(let i=0;i<s.X.length;i++){const dd=Math.abs(s.X[i]-xv);if(dd<bd){bd=dd;bi=i}}const v=s.Y[bi];return v==null||v!==v?'–':(+v).toPrecision(4)}).join(' / ');g.textAlign='right';g.fillText((th?'θ='+xv.toFixed(0)+'°: ':'t='+xv.toFixed(1)+'s: ')+txt,L.pl.x+L.pl.w,L.pl.y+2)})}}
+let LAY=[];function drawCh(){const q=prep($('ch'));if(!q)return;LAY=drawScreen(q.g,q.W,q.H,screenSpec(live,AX,U.sub,{now:NOW(),log:U.log,ref:U.sub===0||U.sub===7?Base.ref:null}),COL,U.sub===7?null:U.cross[U.sub]);if(U.sub===7)vtRender();
+const cr=U.cross[U.sub];if(cr!=null&&U.sub>0&&U.sub<7){const g=q.g,th=U.sub<5;g.font='11px system-ui,sans-serif';g.textBaseline='top';g.fillStyle=COL.ac;LAY.forEach(L=>{const sp=L.sp,xv=sp.xa.a+cr*(sp.xa.b-sp.xa.a),txt=sp.ser.map(s=>{let bi=0,bd=1e9;for(let i=0;i<s.X.length;i++){const dd=Math.abs(s.X[i]-xv);if(dd<bd){bd=dd;bi=i}}const v=s.Y[bi];return v==null||v!==v?'–':(+v).toPrecision(4)}).join(' / ');g.textAlign='right';g.fillText((th?'θ='+xv.toFixed(0)+'°: ':'t='+xv.toFixed(1)+'s: ')+txt,L.pl.x+L.pl.w,L.pl.y+2)})}}
 const camPg=()=>U.pg===1||U.pg===2;
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref,nt:1}),COL,null)}
 function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
@@ -88,20 +101,20 @@ const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */
 function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
-function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';pvo()}
+function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';$('vt').className=n===7?'vt on':'vt';pvo();vtRender()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
-function initUI(){readCol();initNT();
+function initUI(){readCol();initNT();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
 document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
-['p-V','p-θ','弁','吸気','トルク','ECU','動力計'].forEach(t=>$('sg').insertAdjacentHTML('beforeend',`<button>${t}</button>`));
+['p-V','p-θ','弁','吸気','トルク','ECU','動力計','バルブタイミング'].forEach(t=>$('sg').insertAdjacentHTML('beforeend',`<button>${t}</button>`));
 tap($('sg'),e=>{const b=e.target.closest('button');if(b)setSub([...$('sg').children].indexOf(b))});
 tap($('lin'),()=>{U.log=0;pvo()});tap($('lg'),()=>{U.log=1;pvo()});tap($('bs2'),()=>{Base.set(live)});
-tap($('ch'),e=>{if(!LAY.length)return;const r=$('ch').getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,L=LAY.find(q=>x>=q.pl.x&&x<=q.pl.x+q.pl.w&&y>=q.pl.y-16&&y<=q.pl.y+q.pl.h+34)||LAY.find(q=>x>=q.pl.x&&x<=q.pl.x+q.pl.w),f=L?(x-L.pl.x)/L.pl.w:-1;U.cross[U.sub]=U.cross[U.sub]!=null||f<0||f>1?null:f});
+tap($('ch'),e=>{if(!LAY.length||U.sub===7)return;const r=$('ch').getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,L=LAY.find(q=>x>=q.pl.x&&x<=q.pl.x+q.pl.w&&y>=q.pl.y-16&&y<=q.pl.y+q.pl.h+34)||LAY.find(q=>x>=q.pl.x&&x<=q.pl.x+q.pl.w),f=L?(x-L.pl.x)/L.pl.w:-1;U.cross[U.sub]=U.cross[U.sub]!=null||f<0||f>1?null:f});
 tap($('pp'),()=>{U.pg=(U.pg+PAGES.length-1)%PAGES.length;rs()});tap($('pn'),()=>{U.pg=(U.pg+1)%PAGES.length;rs()});tap($('pt'),()=>{$('pl').className='on'});
 $('pl').innerHTML=PAGES.map((n,i)=>`<button data-p="${i}">${n}</button>`).join('');tap($('pl'),e=>{const b=e.target.closest('button');if(b){U.pg=+b.dataset.p;$('pl').className='';rs()}});
 tap($('Pg'),e=>{const b=e.target.closest('button[data-k]');if(!b||b.disabled)return;const it=IT[b.dataset.k];if(b.dataset.c!=null){if(!ctlSt(it.k))setParam(it.k,it.vals?it.vals[+b.dataset.c]:+b.dataset.c)}else stepItem(it.k,+b.dataset.s)});
