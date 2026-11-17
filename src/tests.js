@@ -1,5 +1,5 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;let TR={};const TST={},NT=30,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+const mkPT=()=>({...mkP(),cvar:0}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;let TR={};const TST={},NT=31,RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{const e=Math.abs(val-ref)/(Math.abs(ref)||1);(TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})};
 const chkB=(id,n,ok,val,ref)=>{(TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})};
@@ -158,7 +158,7 @@ const s1=yield*scen('S1');chkB(14,'S1 全期間：無効なメトリクスを表
 const pev=(el,type,x,y,w)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,width:w||20,height:w||20,pointerId:7,pointerType:'touch',isPrimary:true}));
 const ctr=el=>{const r=el.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2]};
 const tapEl=(el,w)=>{const[x,y]=ctr(el);pev(el,'pointerdown',x,y,w);pev(el,'pointerup',x,y,w)};
-function*allScreens(fn){for(const i of[0,1,2,3,5]){show(i);if(i===0)for(const m of[0,1]){U.mpg=m;met();drawEng();fn(`運転${m+1}`)}
+function*allScreens(fn){for(const i of[0,6,1,2,3,5]){show(i);if(i===6){for(const m of[0,1]){setSys(m);fn(`全体${m+1}`)}setSys(0)}else if(i===0)for(const m of[0,1]){U.mpg=m;met();drawEng();fn(`運転${m+1}`)}
 else if(i===1){for(let s=0;s<8;s++){setSub(s);drawCh();fn(`線図${s+1}`)}setSub(0)}
 else if(i===2){for(let p=0;p<PAGES.length;p++){U.pg=p;rs();if(p)drawPv();fn(`設定:${PAGES[p]}`)}$('pl').className='on';fn('設定:一覧');$('pl').className=''}
 else if(i===5){for(let k=0;k<5;k++){swSub(k);if(k<4)drawSw();swText();fn(`性能曲線${k+1}`)}swSub(0)}
@@ -479,7 +479,7 @@ chkB(25,'慣性過給：L_r = 450 mm の Δη_v の最大 ≥ 0.02',Math.max(...
 TST[26]=function*(){const keep={cur:SW.cur,ref:SW.ref,sub:SW.sub,run:SW.run,step:SW.step,als:SW.als.slice(),crit:SW.crit,flow:SW.flow,proc:SW.proc,nmin:SW.nmin,nmax:SW.nmax};uiDefault();Object.assign(SW,{step:SWC.step,als:SWC.als.slice(),crit:SWC.critD,flow:SWC.flowD,proc:SWC.procD,nmin:SWC.crit[SWC.critD].nmin,nmax:SWC.nmax,cur:null,ref:null});show(5);yield 'frame';const nb=[...$('N').children],sec=$('s5'),fitB=el=>[...el.querySelectorAll('button')].filter(b=>{const r=b.getBoundingClientRect();return r.width<43.5||r.height<43.5||txtW(b)>.95*room(b)}).map(b=>b.textContent);
 const S=yield*swRun('on45',{...mkPT(),run:1,Lr:.45});SW.cur={sets:[{al:90,pts:S.pts}],pts:S.pts,sig:swSig(),el:S.el,P:{...LP},step:SW.step,o:swO()};let bl=0;for(let k=0;k<4;k++){swSub(k);drawSw();if(sec.scrollHeight>sec.clientHeight+1||document.body.scrollHeight>innerHeight+1)bl++;for(const L of SLAY){const sp=L.sp;if(!/\[.+\]/.test(sp.ya.name)||!/\[.+\]/.test(sp.xa.name)||L.yt.length<2||L.xt.length<2)bl++}}
 SW.ref=SW.cur;swSub(0);swText();const rw=[...$('swt').children],ov=rw.filter(r=>r.scrollWidth>r.clientWidth+1).length,sb=fitB($('sws'));SW.ref=null;
-chkB(26,'6 タブ・表示ボタン6つ（44 px 以上，文字の余裕），「掃引」無し，4 グラフ表示に単位付き軸名と目盛・スクロール無し，状態表示 3 行が切れない',JSON.stringify(nb.map(b=>b.textContent))==='["運転","線図","性能曲線","設定","検証","解説"]'&&$('sws').children.length===6&&!sb.length&&![...document.querySelectorAll('nav,section:not(#s4)')].some(e=>e.textContent.includes('掃引'))&&bl===0&&ov===0&&rw.length===3,`違反 ${bl}，はみ出し ${ov}，余裕不足 ${sb.join(' ')}`);yield;
+chkB(26,'7 タブ・表示ボタン6つ（44 px 以上，文字の余裕），「掃引」無し，4 グラフ表示に単位付き軸名と目盛・スクロール無し，状態表示 3 行が切れない',JSON.stringify(nb.map(b=>b.textContent))==='["運転","全体","線図","性能曲線","設定","検証","解説"]'&&$('sws').children.length===6&&!sb.length&&![...document.querySelectorAll('nav,section:not(#s4)')].some(e=>e.textContent.includes('掃引'))&&bl===0&&ov===0&&rw.length===3,`違反 ${bl}，はみ出し ${ov}，余裕不足 ${sb.join(' ')}`);yield;
 const p=S.pts,w=o=>2*PI*o.Na/60;chkB(26,'各点で ω が目標と一致し，サイクルの時間から求めた回転数も目標と一致（どちらも相対誤差 10⁻⁹）',p.every(o=>Math.abs(o.Nw-o.N)<=1e-9*o.N&&Math.abs(o.Na-o.N)<=1e-9*o.N),'最大の相対差 '+Math.max(...p.map(o=>Math.abs(o.Na-o.N)/o.N)).toExponential(1),'≤ 10⁻⁹');
 chkB(26,'P_b = T_b ω，BMEP V_d = 4π T_b（10⁻⁹）',p.every(o=>Math.abs(o.pb-o.tb*w(o))<=1e-9*Math.abs(o.pb)&&Math.abs(o.bmep*geo(mkPT()).Vd-P4*o.tb)<=1e-9*Math.abs(P4*o.tb)));
 const S2=new Sweep({...mkPT()});while(!S2.run(10))yield;chkB(26,'同じ設定で2回の計測が完全一致',JSON.stringify(S2.pts)===JSON.stringify(p));
@@ -613,6 +613,43 @@ chkB(30,'噴射の幅の下限と上限：アイドルで q_inj = 40 g/s にす�
 {const q=(yield*scen('S2')).c.clone(),rec=function*(T){let mn=1e9,st=1;const w=[],t0=q.s.t;yield*runC(q,T,{tick(c){mn=Math.min(mn,c.s.Nb);if(!c.s.fired||!c.s.fuel)st=0;if(c.s.t>t0+T-2)w.push(c.s.Nb)}});return{mn,st,dev:mdev(w,800)}};
 q.P.inj=0;const a=yield*rec(6);q.P.inj=1;const b=yield*rec(6);
 chkB(30,'運転中の噴射方式の切り替え（アイドル．直噴 → ポート噴射 6 s → 直噴 6 s）：止まらない（N̄ の最小 ≥ 550 rpm），状態が有限．直噴へ戻して最後の 2 s は 800 ± 40 rpm',a.st&&b.st&&a.mn>=550&&b.mn>=550&&fin(q)&&b.dev<=40,`直噴 → ポート噴射：N̄ の最小 ${a.mn.toFixed(0)} rpm（最後の 2 s の偏差 ${a.dev.toFixed(1)} rpm）．ポート噴射 → 直噴：最小 ${b.mn.toFixed(0)} rpm，最後の 2 s の偏差 ${b.dev.toFixed(1)} rpm`)}};
+/* TEST-31：全体図（SPEC-31） */
+TST[31]=function*(){uiDefault();const Bx=e=>e.getBoundingClientRect(),cv=document.createElement('canvas'),g=cv.getContext('2d'),mk=o=>{const c=new Core(Object.assign(mkPT(),o||{}));c.start();for(let i=0;i<300;i++)c.step();return c};
+/* 1：タブと切り替え */
+{const nb=[...$('N').children],q=[];q.push(nb.length===7&&nb[1].textContent==='全体'&&+nb[1].dataset.t===6&&nb.every(b=>Bx(b).width>=43.5&&Bx(b).height>=43.5&&b.scrollWidth<=b.clientWidth+.5));
+ show(6);for(const m of[1,0]){tapEl($('sysb').children[m]);yield 'frame';const sc=$('s6'),cvs=sc.querySelectorAll('canvas'),r=Bx($('sys')),rs6=Bx(sc);q.push(U.sys===m&&$('sysb').children[m].className==='on'&&$('sysb').children[1-m].className===''&&cvs.length===1&&rs6.bottom-r.bottom<=8&&sc.scrollHeight<=sc.clientHeight+1&&document.documentElement.scrollHeight<=innerHeight+1&&[...$('sysb').children].every(b=>Bx(b).height>=43.5))}
+ chkB(31,'タブと切り替え：上のタブ 7 個で 2 番目が「全体」（44 px 以上，文字が収まる）．[系統図][状態網] で切り替わり，Canvas 1 つが下端まで（8 px 以内），スクロールなし',q.every(x=>x),q.map(x=>x?1:0).join(''))}
+/* 2：要素の一覧 */
+{const W=380,H=560,c0=mk(),A=sysSpec(c0,0,W,H,g).el,sigs=A.sig.map(o=>o.to).sort().join(),need=['atm','thr','man','runner','inj','spark','exPipe','muf','out','fly','dyno','st','aux','ecu'],miss=need.filter(k=>!A[k]),cR=mk({run:0}),R=sysSpec(cR,0,W,H,g).el,cE=mk({exs:0}),E=sysSpec(cE,0,W,H,g).el,cP=mk({inj:0}),Pn=sysSpec(cP,0,W,H,g).el,nn=c=>sysSpec(c,1,W,H,g).N.map(o=>o.id).join();
+ const ok=miss.length===0&&A.inj.at==='cyl'&&sigs==='dyno,inj,spark,thr'&&!R.runner&&!!R.short&&!E.exPipe&&!E.muf&&!E.out&&!!E.back&&Pn.inj.at==='port'&&nn(c0)==='man,por,cyl,epo,muf'&&nn(cR)==='man,cyl,epo,muf'&&nn(cE)==='man,por,cyl';
+ chkB(31,'要素の一覧：既定の系統図に 14 要素と 4 本の信号線．ランナ OFF で短い管，排気系 OFF で背圧，ポート噴射でインジェクタがポート．状態網の節点 5／4（ランナ OFF）／3（排気系 OFF）',ok,`不足 ${miss.join(',')||'なし'}，信号 ${sigs}，節点 ${nn(c0)}／${nn(cR)}／${nn(cE)}，インジェクタ ${A.inj.at}／${Pn.inj.at}`)}
+/* 3：寸法と状態の反映 */
+{const W=380,H=560,c=mk({dr:.03,dex:.05}),e=[];for(const a of[0,6.9,45,90]){c.s.al=a*D;const t=sysSpec(c,0,W,H,g).el.thr;e.push(Math.abs(t.ang-(90-a)*D)/((90-a)*D||1))}
+ const A=sysSpec(c,0,W,H,g),el=A.el,rp=Math.abs(el.inPipe.w/el.runner.w-c.P.Dt/c.P.dr)/(c.P.Dt/c.P.dr)+Math.abs(el.exPipe.w/el.runner.w-c.P.dex/c.P.dr)/(c.P.dex/c.P.dr),rv=Math.abs(el.vin.d/el.vex.d-c.V.i.d/c.V.e.d)/(c.V.i.d/c.V.e.d),lv=[];
+ for(const f of[0,.5,1]){c.s.fe=f;const d=sysSpec(c,0,W,H,g).el.dyno;lv.push(Math.abs(d.lvl-2*d.R*f)/(2*d.R))}
+ const q=A.eng.q,q0=scene(c,300,400),ge=Math.max(Math.abs((q.crownY-q.headY)/q.sc-(q0.crownY-q0.headY)/q0.sc),Math.abs((q.cpin[1]-q.cc[1])/q.sc-(q0.cpin[1]-q0.cc[1])/q0.sc),Math.abs((q.cpin[0]-q.cc[0])/q.sc-(q0.cpin[0]-q0.cc[0])/q0.sc));
+ chkB(31,'寸法と状態の反映：板の角 = 90° − α（α = 0，6.9，45，90°），管の太さの比 = D_t : d_r : d_e，弁の傘の幅の比 = 弁径の比（既定で吸気 > 排気），水位 = 2 R_d f（f = 0，0.5，1），断面の位置が運転タブの図と同じ縮尺の比',Math.max(...e)<=1e-9&&rp<=1e-9&&rv<=1e-9&&el.vin.d>el.vex.d&&Math.max(...lv)<=1e-9&&ge<=1e-12,`角 ${Math.max(...e).toExponential(1)}，管 ${rp.toExponential(1)}，弁 ${rv.toExponential(1)}（${(el.vin.d).toFixed(1)}／${(el.vex.d).toFixed(1)} px），水位 ${Math.max(...lv).toExponential(1)}，位置 ${ge.toExponential(1)} m`)}
+/* 4，5：状態のネットワークとトルク */
+{const sc=yield*scen('S2'),c=sc.c.clone();c.step();const S=sysSpec(c,1,380,560,g),N=S.N.filter(o=>!o.clip);let ea=0,ec=0,et=0,eb=0;
+ for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++)ea=Math.max(ea,Math.abs((N[i].r*N[i].r)/(N[j].r*N[j].r)/(N[i].V/N[j].V)-1));
+ for(const o of S.N){const pc=pcol(o.p/1e3);ec=Math.max(ec,...o.col.map((v,i)=>Math.abs(v-pc[i])));if(o.txt!==(o.p/1e3).toFixed(1))et++;eb=Math.max(eb,Math.abs(o.Y[0]+o.Y[1]+o.Y[2]-1))}
+ const y=c.s.y,m=y[3],mu=y[4],mf=y[38],cy=S.N.find(o=>o.id==='cyl'),ey=Math.max(Math.abs(cy.Y[0]-(mu-mf)/m),Math.abs(cy.Y[1]-mf/m),Math.abs(cy.Y[2]-(m-mu)/m));let ew=0,ed=0;for(const e of S.E){ew=Math.max(ew,Math.abs(e.w-S.k*Math.min(9,1.5+2.5*Math.log10(1+Math.abs(e.m)*1e3))));if(e.dir!==(e.m>=0?1:-1))ed++}
+ chkB(31,'状態のネットワーク（S2）：面積の比 = 容積の比，色 = 圧力の色，中の数値 = 圧力，組成の和 = 1，筒内の組成の式，線の太さの式，矢印の向き = 流量の符号',ea<=1e-9&&ec===0&&et===0&&eb<=1e-12&&ey<=1e-12&&ew<=1e-12&&ed===0,`面積 ${ea.toExponential(1)}（${N.length} 節点），色 ${ec}，数値 ${et}，組成 ${eb.toExponential(1)}，筒内 ${ey.toExponential(1)}，太さ ${ew.toExponential(1)}，向き ${ed}`);
+ const M=c.lastM,w=[M.W/P4,-M.Wf/P4,-M.Wd/P4,-M.Wa/P4],tv=S.tq.map(o=>o.v),et2=Math.max(...tv.map((v,i)=>Math.abs(v-w[i])/(Math.abs(w[i])||1))),es=Math.abs(S.sum-w.reduce((a,b)=>a+b,0))/Math.abs(w[0]);
+ chkB(31,'トルクの内訳：枠の値 = 前のサイクルの W/4π，−W_f/4π，−W_d/4π，−W_a/4π，ΣT = 和（相対 1e-12）',et2<=1e-12&&es<=1e-12,`${tv.map(v=>v.toFixed(3)).join('，')} N·m，ΣT ${S.sum.toFixed(3)}`)}
+/* 6：数値の一致（運転中の機関を S2 にして描く） */
+{const sc=yield*scen('S2'),sv=live;live=sc.c.clone();live.step();show(6);setSys(0);const SA=drawSys(prep($('sys')).g,live,$('sys').clientWidth,$('sys').clientHeight,COL,0),t=id=>SA.tags.find(o=>o.id===id),y=live.s.y,q=[];
+ q.push(SA.man.l3===`${(y[6]/1e3).toFixed(1)} kPa`,t('cyl').lines[1]===`p ${(y[2]/1e3).toFixed(1)} kPa`,t('run2').lines[1]===`N̄ ${live.s.Nb.toFixed(0)} rpm`);setSys(1);const SB=drawSys(prep($('sys')).g,live,$('sys').clientWidth,$('sys').clientHeight,COL,1);q.push(SB.N.find(o=>o.id==='cyl').txt===(y[2]/1e3).toFixed(1));live=sv;setSys(0);
+ chkB(31,'数値の一致：系統図の p_in，筒内の p，N̄，状態網の筒内の圧力が，その時点の状態から作った文字列と一致',q.every(x=>x),q.map(x=>x?1:0).join(''))}
+/* 7：重なり無し（現在のビューポートの Canvas の寸法で） */
+{show(6);yield 'frame';const W=$('sys').clientWidth,H=$('sys').clientHeight,IT_=ITEMS,ex=(k,w)=>{const it=IT_.find(i=>i.k===k);return{[k]:(w?it.hi:it.lo)*it.f}},cf=[['既定',{}],['ランナ OFF',{run:0}],['排気系 OFF',{exs:0}],['ポート噴射',{inj:0}]];
+ for(const k of['B','S','lr','Vin','Vm','Lr','dr'])for(const w of[0,1])cf.push([`${k} ${w?'最大':'最小'}`,ex(k,w)]);
+ const bad=[];let n=0;for(const [nm,o] of cf){const c=mk(o);for(const m of[0,1]){const S=sysSpec(c,m,W,H,g),R=[...S.tags,...S.labels];n+=R.length;for(let i=0;i<R.length;i++){const a=R[i];if(a.x<0||a.y<0||a.x+a.w>W+.5||a.y+a.h>H+.5)bad.push(`${nm}・${m?'状態網':'系統図'}：${a.id} が外`);for(let j=i+1;j<R.length;j++){const b=R[j];if(a.x<b.x+b.w+1&&b.x<a.x+a.w+1&&a.y<b.y+b.h+1&&b.y<a.y+a.h+1)bad.push(`${nm}・${m?'状態網':'系統図'}：${a.id} と ${b.id}`)}}}yield}
+ chkB(31,`重なり無し（${W.toFixed(0)}×${H.toFixed(0)} px，${cf.length} 通りの設定 × 2 図）：数値の枠と節点の名前が互いに 1 px 以上離れ，Canvas の中`,bad.length===0,bad.length?bad.slice(0,4).join('；')+(bad.length>4?` ほか ${bad.length-4} 件`:''):`枠 ${n} 個`)}
+/* 8：描画の時間 */
+{show(6);const t=[];for(const m of[0,1]){setSys(m);yield 'frame';const q=prep($('sys')),t0=performance.now();for(let i=0;i<30;i++)drawSys(q.g,live,q.W,q.H,COL,m);t.push((performance.now()-t0)/30)}setSys(0);
+ chkB(31,'描画の時間：各図を 30 回描いた平均が 6 ms 以下',Math.max(...t)<=6,`系統図 ${t[0].toFixed(2)} ms，状態網 ${t[1].toFixed(2)} ms`,'≤ 6 ms')}
+show(0);uiDefault()};
 TST[28]=function*(){const s2=yield*scen('S2'),c2=s2.c,am=avgM(c2.s),at=d=>Math.round(d*2)%1440,nx=tr=>Math.log(tr.p[at(400)]/tr.p[at(480)])/Math.log(tr.V[at(480)]/tr.V[at(400)]);
 chkB(28,'アイドル（S2）：燃料流量 0.030〜0.050 g/s（10 サイクル平均）',am.mfd>=3e-5&&am.mfd<=5e-5,(am.mfd*1e3).toFixed(4)+' g/s');
 const fa=am.fmep+am.amep;chkB(28,'アイドル（S2）：FMEP + AMEP が 90〜130 kPa',fa>=9e4&&fa<=13e4,`${(am.fmep/1e3).toFixed(0)} + ${(am.amep/1e3).toFixed(0)} = ${(fa/1e3).toFixed(0)} kPa`);
@@ -622,14 +659,14 @@ chkB(28,'記録（判定は有限のみ）：アイドルの吸気管圧，x_r�
 /* ---- runner ---- */
 const axc=o=>{const r={cyc:o.cyc};for(const k in o)if(o[k]&&o[k].up)r[k]=Object.assign(Object.create(Object.getPrototypeOf(o[k])),o[k]);return r};
 function snapLive(){return{s:structuredClone(live.s),P:{...LP},tr:live.tr,H:live.H,last:live.last,lastM:live.lastM,X:live.X,U:{...U,pend:{...U.pend},cross:U.cross.slice()},ref:Base.ref,vt:Base.vt,tl:Base.tl,spd:Sim.spd,debt:Sim.debt,ax:axc(AX),top:$('s4').scrollTop,note:$('ts').textContent}}
-function restLive(q){Object.assign(LP,q.P);live.s=structuredClone(q.s);live.G=geo(LP);live.tr=q.tr;live.H=q.H;live.last=q.last;live.lastM=q.lastM;live.X=q.X;live.sig=NaN;live.updV();const keep={busy:U.busy,cancel:U.cancel,uiDraw:U.uiDraw};Object.assign(U,q.U,keep);Base.ref=q.ref;Base.vt=q.vt||null;Base.tl=q.tl;Sim.spd=q.spd;Sim.debt=q.debt;AX=axc(q.ax);$('ts').textContent=q.note;sp();$('mp').textContent=U.mpg?'指標2':'指標1';setSub(U.sub);rs()}
+function restLive(q){Object.assign(LP,q.P);live.s=structuredClone(q.s);live.G=geo(LP);live.tr=q.tr;live.H=q.H;live.last=q.last;live.lastM=q.lastM;live.X=q.X;live.sig=NaN;live.updV();const keep={busy:U.busy,cancel:U.cancel,uiDraw:U.uiDraw};Object.assign(U,q.U,keep);Base.ref=q.ref;Base.vt=q.vt||null;Base.tl=q.tl;Sim.spd=q.spd;Sim.debt=q.debt;AX=axc(q.ax);$('ts').textContent=q.note;sp();$('mp').textContent=U.mpg?'指標2':'指標1';setSub(U.sub);sysB();rs()}
 const nextFrame=()=>new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};requestAnimationFrame(f);setTimeout(f,60)});
 const ST={};
 async function runAll(only){if(U.busy)return;U.busy=1;U.cancel=0;U.uiDraw=0;TR={};SC={};for(let i=1;i<=NT;i++)ST[i]='';const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();RUN.maxF=0;$('rt').textContent='中止';let lastF=performance.now();
-for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
+for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,31,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
 while(!done&&!U.cancel){await nextFrame();const n0=performance.now();if(n0-lastF>RUN.maxF){RUN.maxF=n0-lastF;RUN.maxId=id}lastF=n0;RUN.t0=n0;try{for(;;){const r=it.next(send);send=undefined;if(r.done){done=true;break}if(r.value&&typeof r.value.then==='function'){try{send=await r.value}catch(e){send={err:String(e)}}lastF=performance.now();break}if(r.value==='frame'||RUN.over())break}}catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}}
-if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30)restLive(snap);
-if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19，21〜30 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):`${NT-1} / ${NT-1}`);chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 240 s',RUN.total<=240,RUN.total.toFixed(1)+' s','≤ 240 s')}
+if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31)restLive(snap);
+if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const un=Object.keys(TST).filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,'TEST-01〜19，21〜31 がすべて実行され結果を持つ',un.length===0||!!only,un.length?'未実行: '+un.join(','):`${NT-1} / ${NT-1}`);chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 240 s',RUN.total<=240,RUN.total.toFixed(1)+' s','≤ 240 s')}
 ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'}else ST[id]=''}
 restLive(snap);U.busy=0;U.uiDraw=0;$('rt').textContent='全テスト実行';show(3);rchips();window.__done=1}
 function rchips(cur){const ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng'),np=ids.filter(k=>ST[k]==='ok').length,ni=ids.reduce((s,k)=>s+TR[k].length,0),nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0);
@@ -638,4 +675,4 @@ $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="
 function dtl(){const r=TR[U.sel],n=pad(U.sel),st=ST[U.sel];[...$('cp').children].forEach((b,j)=>b.classList.toggle('sl',j+1===U.sel));
 if(!r||!r.length){$('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}<br>${st==='run'?'実行中':'未実行'}`;return}U.ix=Math.min(U.ix,r.length-1);const x=r[U.ix],nf=r.filter(q=>!q.ok).length;
 $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok?'ok':'ng'}">${x.ok?'PASS':'FAIL'}</b>`}
-const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性','化学種の熱物性と化学平衡','燃料の噴射と気化'];
+const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性','化学種の熱物性と化学平衡','燃料の噴射と気化','全体図'];

@@ -2,7 +2,7 @@
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={mj:{},swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mj:{},swTest:0,sys:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 const Sim={debt:0,spd:.1};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
 cam:null,camC:0,vt:null,vtc:()=>({ivo:LP.ivo,ivc:LP.ivc,evo:LP.evo,evc:LP.evc}),change(c,now){if(now-this.tl>=3000){if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9}};
@@ -67,6 +67,10 @@ function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){co
 if(!R&&SW.cur&&SW.cur.sig!==swSig())b='設定が変わりました（再計測で更新）';else if(SW.ref)b='灰色：基準（前回の計測）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
 let SLAY=[];function drawSw(){const q=prep($('tc'));if(!q)return;const cur=SW.run?SW.run.sets.filter(x=>x.pts.length):SW.cur&&SW.cur.sets;SLAY=drawScreen(q.g,q.W,q.H,sweepSpec(cur,SW.ref&&SW.ref.sets,SW.sub),COL,null)}
 function drawPv0(){const q=prep($('pv0'));if(q)drawScreen(q.g,q.W,q.H,screenSpec(live,AX,0,{now:NOW(),ref:Base.ref,nt:1}),COL,null)}
+/* 全体タブ（SPEC-31） */
+function drawSysT(){const q=prep($('sys'));if(q)drawSys(q.g,live,q.W,q.H,COL,U.sys)}
+function sysB(){[...$('sysb').children].forEach(b=>b.className=+b.dataset.m===U.sys?'on':'')}
+function setSys(m){U.sys=m;sysB();drawSysT()}
 function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-NTB,COL);ntRender()}
 /* ===== target-rpm slider (REQ-23) ===== */
 const NTD={on:0,off:0,v:NaN,u:NaN};
@@ -103,13 +107,13 @@ function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */
-function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<6;j++)$('s'+j).className=i===j?'on':'';if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
+function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<7;j++)$('s'+j).className=i===j?'on':'';if(i===6)sysB();if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
 function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';$('vt').className=n===7?'vt on':'vt';pvo();vtRender()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initVT();
-tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
+tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('sysb'),e=>{const b=e.target.closest('button[data-m]');if(b)setSys(+b.dataset.m)});
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
@@ -129,5 +133,5 @@ let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
 if(!U.busy){advance(Sim,live,el,9);swTick(8)}axUpdate(live,AX,now);sndTick();
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
-if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
+if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}

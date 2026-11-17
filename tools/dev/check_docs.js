@@ -10,7 +10,7 @@ const V=process.argv.includes('-v');
 const req=rd('docs/requirements.md'),spec=rd('docs/specification.md'),glo=rd('docs/glossary.md'),claude=rd('CLAUDE.md');
 const core=rd('src/core.js'),tests=rd('src/tests.js'),docjs=rd('src/doc.js'),uijs=rd('src/ui.js'),plotjs=rd('src/plot.js'),audiojs=rd('src/audio.js');
 const out=[];const bad=(k,m)=>out.push('['+k+'] '+m);
-const N=30,pad=i=>String(i).padStart(2,'0');
+const N=31,pad=i=>String(i).padStart(2,'0');
 const lines=s=>s.split('\n');
 /* 見出しの間の本文を取る */
 const sect=(src,re)=>{const L=lines(src),r={};let cur=null;for(const l of L){const m=l.match(re);if(m){cur=m[1];r[cur]={title:m[2],body:[]}}else if(/^## /.test(l))cur=null;else if(/^### /.test(l)&&!re.test(l))cur=null;else if(cur)r[cur].body.push(l)}return r};
