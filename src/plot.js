@@ -34,18 +34,26 @@ g.strokeStyle=col.fg;g.beginPath();g.moveTo(pl.x+.5,pl.y);g.lineTo(pl.x+.5,pl.y+
 for(const r of R){if(r.t==='lg'){g.fillStyle=r.c;g.fillRect(r.x,r.y+4,8,4);g.fillStyle=col.fg;g.fillText(r.s,r.x+12,r.y)}else{g.fillStyle=r.t==='yn'||r.t==='xn'?col.fg:((r.ax==='y'&&sp.ya.hot)||(r.ax==='x'&&sp.xa.hot))?col.ac:col.mu;g.fillText(r.s,r.x,r.y)}}
 g.save();g.beginPath();g.rect(pl.x,pl.y-1,pl.w+1,pl.h+2);g.clip();const lg=sp.xa.log;
 for(const q of ser){g.strokeStyle=q.c;g.lineWidth=q.w||1.6;g.beginPath();let s=0;const X=q.X,Y=q.Y,n=X.length;for(let i=0;i<n;i++){const u=X[i],v=Y[i];if(u!==u||v!==v||(lg&&(u<=0||v<=0))){s=0;continue}const px=sx(u),py=sy(v);s?g.lineTo(px,py):g.moveTo(px,py);s=1}g.stroke();if(q.mk){/* 印は点の間隔が 8 px 以上のときだけ．狭いときは未整定（白抜き）の印だけ（SPEC-26 の 6） */let dx=Infinity;for(let i=1;i<n;i++){const d=Math.abs(sx(X[i])-sx(X[i-1]));if(d===d&&d<dx)dx=d}const all=dx>=8;for(let i=0;i<n;i++){const u=X[i],v=Y[i];if(u!==u||v!==v||(!all&&!(q.ho&&q.ho[i])))continue;g.beginPath();g.arc(sx(u),sy(v),3,0,2*PI);if(q.ho&&q.ho[i]){g.fillStyle=col.cd||'#fff';g.fill();g.stroke()}else{g.fillStyle=q.c;g.fill()}}}}
+if(sp.mk&&sp.mk.length){const bg=col.cd||'#fff';g.save();g.font='600 11px system-ui,sans-serif';g.textBaseline='middle';g.lineJoin='round';for(const m of sp.mk){const px=sx(m.x),py=sy(m.y),cc=m.c==='fg'?col.fg:m.c;g.beginPath();g.arc(px,py,3.5,0,2*PI);g.fillStyle=cc;g.fill();g.strokeStyle=bg;g.lineWidth=1.2;g.stroke();if(m.t){const w=g.measureText(m.t).width;let left=m.dx<0;if(!left&&px+m.dx+w>pl.x+pl.w-1)left=true;else if(left&&px+m.dx-w<pl.x+2)left=false;const tx=left?px-Math.abs(m.dx)-w:px+Math.abs(m.dx),ty=Math.max(pl.y+7,Math.min(pl.y+pl.h-7,py+m.dy));g.textAlign='left';g.strokeStyle=bg;g.lineWidth=3;g.strokeText(m.t,tx,ty);g.fillStyle=cc;g.fillText(m.t,tx,ty)}}g.restore()}
 if(cross!=null){const px=pl.x+cross*pl.w;g.strokeStyle=col.ac;g.lineWidth=1;g.beginPath();g.moveTo(px,pl.y);g.lineTo(px,pl.y+pl.h);g.stroke()}g.restore()}
 /* ===== screen specifications ===== */
 const CL={a:'#e8590c',b:'#1c7ed6',k:'#2f9e44',g:'#868e96',v:'#9c36b5'};
 const TH=Float32Array.from({length:1440},(_,i)=>360+i/2);
 const TH0=Float32Array.from({length:1440},(_,i)=>i/2);
 const rot=a=>{const o=new Float32Array(1440);for(let i=0;i<1440;i++)o[i]=a[(i+720)%1440];return o};
+/* p-V 線図の印（SPEC-17 A の 5）：曲線のデータ（0.5° ごと）の，その角度の点．記号は ASCII だけ．txt = 0 で印だけ */
+const MKC={i:'#1c7ed6',e:'#e03131',s:'#e8a400',j:'#2f9e44'};
+function pvMarks(c,V,p,log,txt){const s=c.s,P=c.P,v=c.V,out=[],add=(t,deg,col,dx,dy)=>{const k=((Math.round(deg*2)%1440)+1440)%1440,x=V[k],y=p[k];if(x===x&&y===y)out.push({x,y,c:col,t:txt?t:'',dx,dy})},dg=a=>md4(a)/D;
+ add('IVO',dg(v.i.o),MKC.i,log?-8:8,log?-9:-15);add('IVC',dg(v.i.c),MKC.i,log?8:-8,-9);add('EVO',dg(v.e.o),MKC.e,8,-9);add('EVC',dg(v.e.c),MKC.e,log?-8:8,log?10:-3);
+ if(log&&txt){if(s.fuel)add('IGN',360-s.spa,MKC.s,-8,0);if(s.fuel&&s.ca===s.ca)add('CA50',360+s.ca,MKC.s,-8,0);if(P.gam===2&&P.inj===1&&s.fuel&&s.inj.m>0){add('SOI',dg(s.inj.th0),MKC.j,6,12);add('EOI',dg(s.inj.th0+s.inj.dth),MKC.j,8,-9)}
+  let im=-1;for(let k=0;k<1440;k++)if(p[k]===p[k]&&(im<0||p[k]>p[im]))im=k;if(im>=0)add('p_max',im/2,'fg',8,-7)}
+ return out}
 function screenSpec(c,AX,sub,o){o=o||{};const t0=c.tr,t=new Proxy({},{get:(o,k)=>o[k]||(o[k]=rot(t0[k]))}),H=c.H,G=c.G,now=o.now||0,hot=a=>now-a.tc<1000,xth={a:0,b:720,name:'θ [°CA]（0 = 吸気上死点）',tv:[0,180,360,540,720]},xpt={a:180,b:540,name:'θ [°CA]（360 = 圧縮上死点）',tv:[180,270,360,450,540]},xtv={a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},S=(X,Y,cc,w)=>({X,Y,c:cc,w});
 const st=(a,name)=>({a:a.a,b:a.b,name,hot:hot(a)}),fx=(a,b,name)=>({a,b,name});
 const tn=H.t.length?H.t[H.t.length-1]:0,HX=Float32Array.from(H.t,v=>v-tn),xt={a:-30,b:0,name:'t [s]（0 = 現在）'};
-const pvS=()=>{const cur=o.last?(c.last?S(c.last.V,c.last.p,CL.a):null):S(t0.V,t0.p,CL.a),ser=[];if(o.ref)ser.push(S(o.ref.V,o.ref.p,CL.g,1.2));if(cur)ser.push(cur);const lg=[{n:'現在',c:CL.a}];if(o.ref)lg.unshift({n:'基準',c:CL.g});
-if(o.log){const vm=(G.Vc+G.Vd)*1e6,v0=G.Vc*1e6,pm=Math.max(AX.p.F,1e4);return{xa:{a:Math.pow(10,Math.floor(Math.log10(v0))),b:Math.pow(10,Math.ceil(Math.log10(vm))),name:'V [cm³]',log:1},ya:{a:10,b:lam(pm)===pm&&Math.log10(pm)%1===0?pm:Math.pow(10,Math.ceil(Math.log10(pm))),name:'p [kPa]',log:1},lg,ser}}
-return{xa:fx(0,niceCeil((G.Vc+G.Vd)*1e6),'V [cm³]'),ya:st(AX.p,'p [kPa]'),lg,ser}};
+const pvS=()=>{const cur=o.last?(c.last?S(c.last.V,c.last.p,CL.a):null):S(t0.V,t0.p,CL.a),ser=[];if(o.ref)ser.push(S(o.ref.V,o.ref.p,CL.g,1.2));if(cur)ser.push(cur);const lg=[{n:'現在',c:CL.a}];if(o.ref)lg.unshift({n:'基準',c:CL.g});const mk=cur?pvMarks(c,cur.X,cur.Y,!!o.log,!o.nt):[];
+if(o.log){const vm=(G.Vc+G.Vd)*1e6,v0=G.Vc*1e6,pm=Math.max(AX.p.F,1e4);return{xa:{a:Math.pow(10,Math.floor(Math.log10(v0))),b:Math.pow(10,Math.ceil(Math.log10(vm))),name:'V [cm³]',log:1},ya:{a:10,b:lam(pm)===pm&&Math.log10(pm)%1===0?pm:Math.pow(10,Math.ceil(Math.log10(pm))),name:'p [kPa]',log:1},lg,ser,mk}}
+return{xa:fx(0,niceCeil((G.Vc+G.Vd)*1e6),'V [cm³]'),ya:st(AX.p,'p [kPa]'),lg,ser,mk}};
 switch(sub){
 case 0:return[pvS()];
 case 1:return[{xa:xpt,ya:st(AX.p,'p [kPa]'),ser:[S(TH0,t0.p,CL.a)]},{xa:xpt,ya:st(AX.T,'T [K]'),ser:[S(TH0,t0.T,CL.b)]},{xa:xpt,ya:st(AX.dq,'熱発生率 [J/°CA]'),ser:[S(TH0,t0.dq,CL.k)]}];
@@ -71,7 +79,7 @@ if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → $
 if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':s.al<=almin(P)+1e-12?' 下限':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
 const sat=s.fc>=1?' 上限':s.fc<=0?' 下限':'';return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 /* SPEC-30 の 10：ページ「噴射」のパネルの文字 */
-function injText(c){const s=c.s,P=c.P,ph=s.phc===s.phc&&s.phc!=null?`φ_c ${s.phc.toFixed(3)}`:'φ_c –';if(P.gam!==2)return'ポート噴射（予混合気．熱物性が「化学種」のときだけ噴射方式を選べます）';if(P.inj!==1)return`ポート噴射（予混合気）  ${ph}`;const J=s.inj;if(!(J.m>0))return`直噴  噴射なし  ${ph}`;const a=md4(J.th0)/D,b=a+J.dth/D;return`噴射 ${a.toFixed(0)}°〜${b.toFixed(1)}°（幅 ${(J.dth/D).toFixed(1)}°${J.dth>=300*D-1e-9?'．幅が上限：インジェクタ流量を超える率':''}）  ${(J.m*1e6).toFixed(2)} mg  ${ph}`}
+function injText(c){const s=c.s,P=c.P,ph=s.phc===s.phc&&s.phc!=null?`φ_c ${s.phc.toFixed(3)}`:'φ_c –';if(P.gam!==2)return'ポート噴射（予混合気．熱物性が「化学平衡」のときだけ噴射方式を選べます）';if(P.inj!==1)return`ポート噴射（予混合気）  ${ph}`;const J=s.inj;if(!(J.m>0))return`直噴  噴射なし  ${ph}`;const a=md4(J.th0)/D,b=a+J.dth/D;return`噴射 ${a.toFixed(0)}°〜${b.toFixed(1)}°（幅 ${(J.dth/D).toFixed(1)}°${J.dth>=300*D-1e-9?'．幅が上限：インジェクタ流量を超える率':''}）  ${(J.m*1e6).toFixed(2)} mg  ${ph}`}
 /* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
 const plotCols=(n,W,H)=>W>1.25*H?Math.max(1,Math.min(n,Math.floor(W/320))):1;
 const plotCells=(n,W,H)=>{const nc=plotCols(n,W,H),nr=Math.ceil(n/nc),cw=W/nc,ch=H/nr;return Array.from({length:n},(_,i)=>({x:(i%nc)*cw,y:Math.floor(i/nc)*ch,w:cw,h:ch}))};

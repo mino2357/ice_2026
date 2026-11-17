@@ -44,7 +44,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 14 | $p_m$ | 消音器の圧力 | Pa | $\dfrac{dp_m}{dt} = \dfrac{RT_X}{V_m}(\dot m_e - \dot m_t)$ | SPEC-27 |
 | 15 | $E_{\text{in}}$ | マニホールドの余剰エンタルピー | J | $\dfrac{dE_{\text{in}}}{dt} = -\dot m_r\varepsilon_r + \min(0, \dot m_{\text{th}})\,\varepsilon_{\text{in}}$（ランナ ON） | SPEC-05，25 |
 | 16 | $E_p$ | 吸気ポートの余剰エンタルピー | J | $\dfrac{dE_p}{dt} = \dot m_r\varepsilon_r - \dot m_{\text{in}}^+\varepsilon_p + \dot X_o$ | SPEC-25 |
-| 17 | $m_f$ | 筒内の未燃の燃料蒸気の質量（化学種のモデル） | kg | $\dfrac{dm_f}{dt} = \sum_j\dot m_j Y_{f,j} + \dot m_{\text{ev}} - r\,\psi$ | SPEC-29 |
+| 17 | $m_f$ | 筒内の未燃の燃料蒸気の質量（化学平衡のモデル） | kg | $\dfrac{dm_f}{dt} = \sum_j\dot m_j Y_{f,j} + \dot m_{\text{ev}} - r\,\psi$ | SPEC-29 |
 | 18 | $m_{bf}$ | 筒内の既燃ガスのうち燃料に由来する質量（同） | kg | $\dfrac{dm_{bf}}{dt} = \sum_j\dot m_j Y_{b,j}\zeta_j + r\,\psi$ | SPEC-29 |
 | 19 | $m_l$ | 筒内の液体の燃料の質量（同） | kg | $\dfrac{dm_l}{dt} = \dot m_{\text{inj}} - \dot m_{\text{ev}}$ | SPEC-30 |
 | 20 | $m_{f,\text{in}}$ | 吸気マニホールド内の燃料蒸気の質量（同） | kg | 既燃ガスの追跡と同じ形 | SPEC-30 |
@@ -223,7 +223,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | BMEP | 正味平均有効圧 | Pa | $\text{BMEP} = \text{IMEP} - \text{FMEP} - \text{AMEP}$ | SPEC-14 |
 | $T_b$，$P_b$，$P_i$ | 軸トルク，軸出力，図示出力 | N·m，W，W | $T_b = \dfrac{\text{BMEP}\cdot V_d}{4\pi}$，$P_b = \dfrac{\text{BMEP}\cdot V_d}{t_c}$，$P_i = \dfrac{W_{i,\text{net}}}{t_c}$ | SPEC-14 |
 | $\eta_m$，$\eta_i$，$\eta_b$ | 機械効率，図示熱効率，正味熱効率 | – | $\eta_m = \dfrac{\text{BMEP}}{\text{IMEP}}$，$\eta_i = \dfrac{W_{i,\text{net}}}{m_f H_u}$，$\eta_b = \dfrac{P_b}{\dot m_f H_u}$ | SPEC-14 |
-| $\eta_v$ | 体積効率 | – | $\eta_v = \dfrac{m_{\text{air}}}{\rho_{\text{atm}}V_d}$，$\rho_{\text{atm}} = \dfrac{p_{\text{atm}}}{RT_{\text{amb}}}$（化学種のモデルでは $m_{\text{air}} = m_{a,\text{IVC}}$，気体定数は $R_a$） | SPEC-14 |
+| $\eta_v$ | 体積効率 | – | $\eta_v = \dfrac{m_{\text{air}}}{\rho_{\text{atm}}V_d}$，$\rho_{\text{atm}} = \dfrac{p_{\text{atm}}}{RT_{\text{amb}}}$（化学平衡のモデルでは $m_{\text{air}} = m_{a,\text{IVC}}$，気体定数は $R_a$） | SPEC-14 |
 | bsfc | 正味燃料消費率 | g/kWh | $\text{bsfc} = \dfrac{\dot m_f}{P_b}$，$\dot m_f = \dfrac{m_f}{t_c}$ | SPEC-14 |
 | $p_{\max}$，$T_{\max}$ | 1 サイクルの最高筒内圧，最高ガス温度 | Pa，K | $p_{\max}$ は 3 点の放物線の頂点，$T_{\max}$ はステップ点の最大 | SPEC-13，14 |
 | $\eta_{\text{Otto}}$ | 理論サイクルの熱効率（上限の目安） | – | $\eta_{\text{Otto}} = 1 - \varepsilon^{1 - 1.40}$ | TEST-14 |
