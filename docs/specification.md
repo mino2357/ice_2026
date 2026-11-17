@@ -148,7 +148,7 @@ $$A_w(\theta) = \frac{\pi B^2}{2} + \pi B\left(x(\theta) + h_c\right)$$
    カムの種類と最大リフト $L_{\max}$ は吸気・排気で共通とする．
 2. **有効開口面積**：弁のカーテン面積 $\pi d_v L_v$ を，弁座の面積 $\frac{\pi}{4}d_v^2$ で頭打ちにする．
    $$A_{\text{eff}}(\theta) = C_d\,\min\left(\pi d_v L_v,\ \frac{\pi}{4}d_v^2\right), \qquad C_d = 0.6$$
-   弁径は，吸気が $d_{v,\text{in}} = \min(d_v, 0.45B)$，排気が $d_{v,\text{ex}} = \min(d_{ve}, 0.45B)$（$d_v$，$d_{ve}$：設定値の吸気弁径と排気弁径）．実機では吸気弁のほうが大きく，排気弁径と吸気弁径の比は $0.8$〜$0.87$ 程度の例が多い（[Ghazal らの例 $26/31 = 0.84$ など](https://www.mdpi.com/1996-1073/13/6/1330)．文献の幅は `docs/review_v26.md` の 10 節）．既定は $38$ と $32\ \text{mm}$（比 $0.84$）．第26版の途中までは $d_{v,\text{ex}} = 0.9375\,d_{v,\text{in}}$ に固定していた．
+   弁径は，吸気が $d_{v,\text{in}} = \min(d_v, 0.45B)$，排気が $d_{v,\text{ex}} = \min(d_{ve}, 0.45B)$（$d_v$，$d_{ve}$：設定値の吸気弁径と排気弁径）．実機では吸気弁のほうが大きい．確かめた例は，[Energies 13(6) 1330 (2020)](https://www.mdpi.com/1996-1073/13/6/1330) が引く Ghazal らの機関の $26/31 = 0.84$（ポートの径）である．比が $0.8$〜$0.87$ 程度という幅は記憶による推定で，文献では確かめていない（`docs/review_v26.md` の 10 節）．既定は $38$ と $32\ \text{mm}$（比 $0.84$）．第26版の途中までは $d_{v,\text{ex}} = 0.9375\,d_{v,\text{in}}$ に固定していた．
 3. **基本の開閉時期と VVT**：吸気 IVO，IVC，排気 EVO，EVC と，位相 $\varphi_{\text{in}}$，$\varphi_{\text{ex}}$（正が遅角）から，$\theta_o = \text{IVO} + \varphi_{\text{in}}$，$\theta_c = \text{IVC} + \varphi_{\text{in}}$（排気も同様）．位相は作用角とリフト曲線の形を変えない：$L_v(\theta; \varphi) = L_v(\theta - \varphi; 0)$．
 4. **弁とピストンの干渉**：平らなヘッド面とピストン頂面を仮定し，全クランク角（$0.5^\circ$ 刻み）で $L_v(\theta) < h_c + x(\theta)$ を検査する．破る角度があれば `VALVE HIT` を運転タブに表示する（衝突はモデル化せず，計算は続ける）．
 
