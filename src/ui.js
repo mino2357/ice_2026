@@ -11,7 +11,7 @@ let COL={};const readCol=()=>{const cs=getComputedStyle(document.documentElement
 function tap(el,fn){let d;el.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:NOW()}});el.addEventListener('pointerup',e=>{if(d&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);d=0});el.addEventListener('pointercancel',()=>d=0)}
 function hold(el,ms,fn){let t;el.addEventListener('pointerdown',()=>{clearTimeout(t);t=setTimeout(fn,ms)});['pointerup','pointercancel','pointerleave'].forEach(v=>el.addEventListener(v,()=>clearTimeout(t)))}
 /* ===== time advance (frame-rate independent) ===== */
-function advance(st,c,el,budget){st.debt+=Math.min(el,.05)*st.spd;const t0=performance.now();let n=0;while(st.debt>0){st.debt-=c.step();if(budget&&(++n&31)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}}}
+function advance(st,c,el,budget){st.debt+=Math.min(el,.05)*st.spd;const t0=performance.now();let n=0;while(st.debt>0){st.debt-=c.step();/* 上限の判定は 4 ステップごと（既燃ガスの表の節点を作るステップは 1 ステップが長い．SPEC-15 F の 2） */if(budget&&(++n&3)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}}}
 /* ===== settings logic ===== */
 const note=t=>{$('ts').textContent=t};
 function setParam(k,v,noUndo){const it=IT[k],old=LP[k];if(it.c==='r'){if(v===LP[k])delete U.pend[k];else U.pend[k]=v;rs();return}if(v===old)return;
