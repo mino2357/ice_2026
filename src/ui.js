@@ -17,7 +17,9 @@ const note=t=>{$('ts').textContent=t};
 function setParam(k,v,noUndo){const it=IT[k],old=LP[k];if(it.c==='r'){if(v===LP[k])delete U.pend[k];else U.pend[k]=v;rs();return}if(v===old)return;
 Base.change(live,NOW());if(k==='sauto'&&v===0&&old===1&&live.s.fired){const sv=LP.spb;LP.spb=gv(IT.spb,gi(IT.spb,live.s.spa));live.s.spa=LP.spb;if(!noUndo)U.undo=null;note(`点火の自動最適化：ON → OFF（自動値 ${LP.spb}° を手動値へ引継ぎ，前の手動値 ${sv}°）`);LP[k]=v;rs();return}LP[k]=v;if(!noUndo)U.undo={k,old};note(`${it.n}：${disp(it,old)} → ${disp(it,v)}${it.u?' '+it.u:''}`);rs()}
 const pval=k=>k in U.pend?U.pend[k]:LP[k];
-function stepItem(k,dir){if(ctlSt(k))return;const it=IT[k],n=gi(it,pval(k))+dir*(U.x10?10:1),m=Math.max(gmin(it),Math.min(gmax(it),n));setParam(k,gv(it,m))}
+/* 設定画面の 1 刻みの行き先（SPEC-18 B の 3）：範囲の外の値（バルブタイミングの画面で変えた弁の時期）からは範囲へ近づく向きにだけ動く．弁の時期は作用角の制約（vtLim）の中に収める．動けないときは n を返す */
+function stepTo(it,n,dir,mul){let lo=Math.min(gmin(it),n),hi=Math.max(gmax(it),n);if(VTK.includes(it.k)){const L=vtLim(it.k,LP);lo=Math.max(lo,L[0]-lo0(it));hi=Math.min(hi,L[1]-lo0(it))}const m=n+dir*mul;return m<lo||m>hi?(dir<0?Math.min(n,Math.max(lo,m)):Math.max(n,Math.min(hi,m))):m}
+function stepItem(k,dir){if(ctlSt(k))return;const it=IT[k],n=gi(it,pval(k)),m=stepTo(it,n,dir,U.x10?10:1);if(m!==n)setParam(k,gv(it,m))}
 const lamOK=()=>pval('S')/2/pval('lr')<=.5+1e-12;
 function applyPend(){if(!Object.keys(U.pend).length||!lamOK())return;const ks=Object.keys(U.pend);ks.forEach(k=>LP[k]=U.pend[k]);U.pend={};U.undo=null;live.reset();Base.clear();axReset(AX);Sim.debt=0;note('適用：'+ks.map(k=>IT[k].n).join('，')+'（コールドリセット）');rs()}
 function undo(){const u=U.undo;if(!u)return;U.undo=null;setParam(u.k,u.old,1);note(`元に戻しました：${IT[u.k].n} = ${disp(IT[u.k],u.old)}`)}
@@ -32,7 +34,7 @@ const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(
 function liveVals(){for(const k of['spb','alm','fm']){if(!(k==='spb'?LP.sauto:ctlSt(k)==='a'))continue;const e=$('Pg').querySelector(`b[data-v="${k}"]`);if(e)e.textContent=ctlVal(k)}}
 function rs(){const its=ITEMS.filter(i=>i.pg===U.pg),eng=U.pg===0;$('pt').textContent=`${PAGES[U.pg]}  ${U.pg+1}/${PAGES.length}`;
 $('Pg').innerHTML=its.map(it=>{const v=pval(it.k),pd=it.k in U.pend;if(it.ch){const na=ctlSt(it.k)==='n',cur=na?0:it.vals?it.vals.indexOf(v):v;return`<div class="r c"><span>${it.n}${na?'（不使用）':''}</span><div>${it.ch.map((n,i)=>`<button data-k="${it.k}" data-c="${i}" class="${i===cur?'on':''}"${na?' disabled':''}>${n}</button>`).join('')}</div></div>`}
-const n=gi(it,v),cs=ctlSt(it.k),au=it.k==='spb'&&LP.sauto||cs==='a',na=cs==='n',lk=au||na;return`<div class="r${pd?' p':''}"><span>${it.n}${au?'（自動）':na?'（不使用）':''}${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?ctlVal(it.k):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${lk||n<=gmin(it)?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${lk||n>=gmax(it)?' disabled':''}>＋</button></div>`}).join('');
+const n=gi(it,v),cs=ctlSt(it.k),au=it.k==='spb'&&LP.sauto||cs==='a',na=cs==='n',lk=au||na;return`<div class="r${pd?' p':''}"><span>${it.n}${au?'（自動）':na?'（不使用）':''}${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?ctlVal(it.k):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${lk||stepTo(it,n,-1,1)===n?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${lk||stepTo(it,n,1,1)===n?' disabled':''}>＋</button></div>`}).join('');
 $('x10').textContent=U.x10?'刻み×10':'刻み×1';$('x10').className=U.x10?'on':'';$('un').disabled=!U.undo;
 $('bs').style.display=eng?'none':'';$('ap').style.display=$('ds').style.display=eng?'':'none';$('act').style.gridTemplateColumns=`repeat(${eng?5:4},1fr)`;
 const hasP=Object.keys(U.pend).length>0;$('ap').disabled=!hasP||!lamOK();$('ds').disabled=!hasP;
@@ -77,13 +79,14 @@ function ntStep(d){const it=IT.nt,v=gv(it,Math.max(gmin(it),gi(it,LP.nt)+d));if(
 const VTK=['ivo','ivc','evo','evc'],VTD={k:null,off:0,sig:''};
 const vtRow=k=>$('vt').querySelector(`.vtr[data-k="${k}"]`),vtW=k=>Math.max(1,vtRow(k).querySelector('.vts').clientWidth-44);
 function vtRender(){if(U.tab!==1||U.sub!==7||!$('vt').firstChild)return;const bv=Base.ref&&Base.vt?Base.vt:null,sig=VTK.map(k=>LP[k]+':'+(bv?bv[k]:'')).join()+'|'+vtW('ivo');if(sig===VTD.sig)return;VTD.sig=sig;
-for(const k of VTK){const it=IT[k],r=vtRow(k),n=gi(it,LP[k]),m=gmax(it),w=vtW(k);r.querySelector('.vtk').style.transform=`translateX(${Math.round(n/m*w*10)/10}px)`;r.querySelector('.vtv').textContent=disp(it,LP[k])+'°';r.querySelector('button[data-d="-1"]').disabled=n<=0;r.querySelector('button[data-d="1"]').disabled=n>=m;
- const s=r.querySelector('.vts s');if(bv){s.style.display='block';s.style.left=(22+gi(it,bv[k])/m*w)+'px'}else s.style.display='none'}}
-function vtSet(k,n){const it=IT[k],v=gv(it,Math.max(0,Math.min(gmax(it),n)));if(v!==LP[k])setParam(k,v);vtRender()}
+for(const k of VTK){const it=IT[k],r=vtRow(k),n=gi(it,LP[k]),m=gmax(it),w=vtW(k),L=vtLim(k,LP),c01=x=>Math.max(0,Math.min(1,x));r.querySelector('.vtk').style.transform=`translateX(${Math.round(c01(n/m)*w*10)/10}px)`;r.querySelector('.vtv').textContent=disp(it,LP[k])+'°';r.querySelector('button[data-d="-1"]').disabled=n-1+lo0(it)<L[0];r.querySelector('button[data-d="1"]').disabled=n+1+lo0(it)>L[1];
+ const s=r.querySelector('.vts s');if(bv){s.style.display='block';s.style.left=(22+c01(gi(it,bv[k])/m)*w)+'px'}else s.style.display='none'}}
+/* sl：スライダ（項目の範囲の中だけ）．ボタンは範囲によらない．どちらも作用角の制約（vtLim）の中だけ（SPEC-15 I の 2） */
+function vtSet(k,n,sl){const it=IT[k],L=vtLim(k,LP);let lo=L[0]-lo0(it),hi=L[1]-lo0(it);if(sl){lo=Math.max(lo,0);hi=Math.min(hi,gmax(it));if(lo>hi)return;n=Math.max(lo,Math.min(hi,n))}else if(n<lo||n>hi)return;const v=gv(it,n);if(v!==LP[k])setParam(k,v);vtRender()}
 function initVT(){$('vt').innerHTML=VTK.map(k=>`<div class="vtr" data-k="${k}"><span class="vtn" style="color:${k[0]==='i'?MKC.i:MKC.e}">${IT[k].n}</span><button data-d="-1">−</button><div class="vts"><i></i><s></s><div class="vtk"><b></b></div></div><button data-d="1">＋</button><span class="vtv"></span></div>`).join('');
 for(const k of VTK){const r=vtRow(k),kn=r.querySelector('.vtk'),tr=r.querySelector('.vts'),it=IT[k];
- kn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();VTD.k=k;const R=tr.getBoundingClientRect();VTD.off=e.clientX-(R.left+22+gi(it,LP[k])/gmax(it)*vtW(k));try{kn.setPointerCapture(e.pointerId)}catch(x){}kn.classList.add('on')});
- const mv=e=>{if(VTD.k!==k)return;e.preventDefault();const R=tr.getBoundingClientRect(),u=(e.clientX-VTD.off-R.left-22)/vtW(k);vtSet(k,Math.round(Math.max(0,Math.min(1,u))*gmax(it)))},up=e=>{if(VTD.k!==k)return;mv(e);VTD.k=null;kn.classList.remove('on')};
+ kn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();VTD.k=k;const R=tr.getBoundingClientRect();VTD.off=e.clientX-(R.left+22+Math.max(0,Math.min(1,gi(it,LP[k])/gmax(it)))*vtW(k));try{kn.setPointerCapture(e.pointerId)}catch(x){}kn.classList.add('on')});
+ const mv=e=>{if(VTD.k!==k)return;e.preventDefault();const R=tr.getBoundingClientRect(),u=(e.clientX-VTD.off-R.left-22)/vtW(k);vtSet(k,Math.round(Math.max(0,Math.min(1,u))*gmax(it)),1)},up=e=>{if(VTD.k!==k)return;mv(e);VTD.k=null;kn.classList.remove('on')};
  kn.addEventListener('pointermove',mv);kn.addEventListener('pointerup',up);kn.addEventListener('pointercancel',()=>{VTD.k=null;kn.classList.remove('on')});
  for(const b of r.querySelectorAll('button'))tap(b,()=>{if(!b.disabled)vtSet(k,gi(it,LP[k])+(+b.dataset.d))})}}
 function initNT(){const k=$('ntk'),r=$('ntr');

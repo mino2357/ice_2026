@@ -5,4 +5,4 @@
 const fs=require('fs'),path=require('path');
 exports.load=(o={})=>{let src=fs.readFileSync(o.file||path.resolve(__dirname,'../../src/core.js'),'utf8');
   for(const [a,b] of o.sub||[]){if(!(a instanceof RegExp?a.test(src):src.includes(a)))throw new Error('書き換える箇所が見つからない: '+a);src=src.replace(a,b)}
-  return new Function(src+';return {Core,mkP,Sweep,SweepSet,SWC,swN,GAS,GC,K,ITEMS,PAGES,R,D,PI}')()};
+  return new Function(src+';return {Core,mkP,Sweep,SweepSet,SWC,swN,GAS,GC,K,ITEMS,PAGES,R,D,PI,valves,vtLim}')()};

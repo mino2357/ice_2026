@@ -84,7 +84,8 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $L_v$，$L_{\max}$ | 弁リフト，最大リフト | m | カムの種類ごとの関数 $L_v = L_{\max}\,g(\xi)$，$\xi = \delta/\Delta\theta_{\text{cam}}$ | SPEC-03 |
 | IVO，IVC，EVO，EVC | 吸気弁の開・閉，排気弁の開・閉の時期 | rad | 設定（位相 $\varphi$ を加える前の基本の時期） | SPEC-03 |
 | $\varphi_{\text{in}}$，$\varphi_{\text{ex}}$ | カムの位相（正が遅角） | rad | $L_v(\theta; \varphi) = L_v(\theta - \varphi; 0)$ | SPEC-03 |
-| $A_{\text{eff}}$ | 弁の有効開口面積 | m² | $A_{\text{eff}} = C_d\min\left(\pi d_v L_v,\ \dfrac{\pi}{4}d_v^2\right)$，$C_d = 0.6$ | SPEC-03 |
+| $A_{\text{eff}}$ | 弁の有効開口面積 | m² | $A_{\text{eff}} = C_d\min\left(\pi d L_v,\ \dfrac{\pi}{4}d^2\right)$（$d$：$d_{v,\text{in}}$ または $d_{v,\text{ex}}$），$C_d = 0.6$ | SPEC-03 |
+| $d_v$，$d_{ve}$ | 吸気弁径，排気弁径（設定値） | m | 計算に使う弁径は $d_{v,\text{in}} = \min(d_v, 0.45B)$，$d_{v,\text{ex}} = \min(d_{ve}, 0.45B)$．既定 $38$，$32\ \text{mm}$ | SPEC-03 |
 | $\theta_{\text{OL}}$ | オーバーラップ角 | rad | $\theta_{\text{OL}} = \text{EVC} - (\text{IVO} + 4\pi)$ | SPEC-24 |
 
 ### 2.5 熱力学と物性
@@ -258,6 +259,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 燃料空気サイクル | 作動流体を実際の燃料と空気，既燃ガスの物性で扱う理想サイクル（熱損失なし，瞬時の燃焼）．`tools/richburn` の試算に使った |
 | 残留ガス，内部 EGR | 前のサイクルから筒内に残る既燃ガス．バルブオーバーラップ中に吸気側へ吹き返して次の吸気で戻る分を含む．その割合が残留ガス率 $x_r$ |
 | バルブオーバーラップ | 排気弁と吸気弁が同時に開いている期間．角度は $\theta_{\text{OL}} = \text{EVC} - (\text{IVO} + 720^\circ)$ |
+| 作用角 | 弁が開いている間のクランク角の幅（吸気 $\text{IVC} - \text{IVO}$，排気 $\text{EVC} - \text{EVO}$）．バルブタイミングの画面では $1^\circ$〜$719^\circ$ に制限する（SPEC-15 I の 2） |
 | 吹き返し | 吸気弁を筒内から吸気側へ流れる逆流（$\dot m_{\text{in}} < 0$） |
 | 吹き抜け | 新気が燃えずに排気側へ出ること．本モデルでは排気側へ出た新気は既燃ガスとして扱う |
 | 完爆 | 始動中に，燃料 ON で $\bar N > 550\ \text{rpm}$ かつ直前のサイクルの $W_g > 20\ \text{J}$ になったこと．スターターを切る |
