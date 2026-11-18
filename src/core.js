@@ -419,3 +419,71 @@ return pg?[['ṁ_f',fmtv(m.mfd*1e3,3,' g/s')],['T_b',fmtv(m.tb,1,' N·m')],['P_b
 :[['N̄',fmtv(s.Nb,0,' rpm')],['IMEP',fmtv(m.imep/1e3,0,' kPa')],['PMEP',fmtv(m.pmep/1e3,0,' kPa')],['ηi',fmtv(m.ei,3,'',...e)],['Pi',fmtv(m.pi/1e3,2,' kW')],['ηv',fmtv(m.ev,3,'',...e)],['xr',fmtv(m.xr,3,'',0,1)],['p_max',fmtv(m.pm/1e3,0,' kPa')],['T_max',fmtv(m.Tm,0,' K')],['T_w',fmtv(y[5],0,' K')],['α',fmtv(s.al/D,1,'°')],['p_in',fmtv(y[6]/1e3,1,' kPa')]]}
 const MJP={'ṁ_f':'燃料流量','T_b':'軸トルク','P_b':'軸出力','BMEP':'正味平均有効圧','FMEP':'摩擦平均有効圧','ηm':'機械効率','bsfc':'正味燃料消費率','ηb':'正味熱効率','T_dyno':'動力計トルク','f_eff':'実効充水率','Yb,in':'吸気管既燃率','点火':'点火時期','N̄':'平均回転数','IMEP':'図示平均有効圧','PMEP':'ポンプ損失平均有効圧','ηi':'図示熱効率','Pi':'図示出力','ηv':'体積効率','xr':'残留ガス率','p_max':'最高筒内圧','T_max':'最高ガス温度','T_w':'壁温','α':'スロットル開度','p_in':'吸気管圧'};
 function metricList(c,pg){return metricList0(c,pg).map(q=>q[0]==='点火'?[q[0],q[1]==='–'?q[1]:q[1]+' BTDC',MJP[q[0]]]:[q[0],q[1],MJP[q[0]]])}
+/* ===== 最適化：バルブタイミングの探索（SPEC-32） ===== */
+const OPT={nmc:[24,8],sd:[20,60],ns:2,sep:8,h0:4,hmin:2,t0:8,ts:[16,8,4,2,1],nit:20,nmax:400,seed:20261119,cmin:4,cmax:30,
+ tol:{mc:{r:1e-3,a:.01,s:.1},fine:{r:1e-4,a:1e-3,s:.01}}};
+const VTK4=['ivo','ivc','evo','evc'];
+/* 種を固定した擬似乱数（mulberry32．SPEC-21 と同じ） */
+function mb32(seed){let s=seed>>>0;return()=>{let t=(s=(s+0x6D2B79F5)>>>0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+/* 作用角の制約（1〜719°） */
+const vtOk=x=>{const di=x[1]-x[0],de=x[3]-x[2];return di>=1&&di<=719&&de>=1&&de<=719};
+/* 探索器（SPEC-32 C）．generator：yield {x, cls} で評価を求め，next(J) で値を受け取る．feas(x)：作用角以外の制約（VALVE HIT）．
+   cls は評価の許容の種類（'mc'：粗い，'fine'：細かい）．値は種類ごとに覚え，同じ点を 2 度評価しない */
+function* vtSearch(x0,feas,O){O=O||OPT;const rnd=mb32(O.seed),gau=()=>{let u=0;while(u===0)u=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*PI*rnd())},memo=new Map,R={x0:x0.slice(),hist:[],ne:0,stop:false,stage:''};
+ const ok=x=>vtOk(x)&&feas(x),ev=function*(x,cls){const k=cls+':'+x.join(',');if(memo.has(k))return memo.get(k);let J=-Infinity;if(ok(x)){if(R.ne>=O.nmax){R.stop=true;return-Infinity}R.ne++;J=yield{x:x.slice(),cls};R.hist.push({x:x.slice(),J,stage:R.stage})}memo.set(k,J);return J};
+ /* 1．始点と 2．モンテカルロ（粗い許容） */
+ R.stage='mc';const pts=[{x:x0.slice(),J:yield*ev(x0,'mc')}];
+ for(let g=0;g<O.nmc.length&&!R.stop;g++)for(let i=0;i<O.nmc[g]&&!R.stop;i++){let x,n=0;do{x=x0.map(v=>Math.round(v+O.sd[g]*gau()));n++}while((!ok(x)||memo.has('mc:'+x.join(',')))&&n<200);if(n<200)pts.push({x,J:yield*ev(x,'mc')})}
+ /* 3．勾配の段の始点：J の大きい順に，互いに sep° 以上離れた ns 点 */
+ const st=[];for(const p of pts.filter(p=>p.J>-Infinity).sort((a,b)=>b.J-a.J)){if(st.every(s=>Math.max(...s.x.map((v,i)=>Math.abs(v-p.x[i])))>=O.sep))st.push(p);if(st.length>=O.ns)break}
+ /* 4．勾配（中心差分．制約で片側が無ければ片側差分）と直線探索（細かい許容） */
+ R.stage='grad';let best=null;
+ for(const s0 of st){if(R.stop)break;let x=s0.x.slice(),J=yield*ev(x,'fine'),h=O.h0,tp=O.t0;
+  for(let it=0;it<O.nit&&!R.stop;it++){const g=[];for(let i=0;i<4;i++){const xp=x.slice(),xm=x.slice();xp[i]+=h;xm[i]-=h;const Jp=yield*ev(xp,'fine'),Jm=yield*ev(xm,'fine');g.push(Jp>-Infinity&&Jm>-Infinity?(Jp-Jm)/(2*h):Jp>-Infinity?(Jp-J)/h:Jm>-Infinity?(J-Jm)/h:0)}
+   const gm=Math.max(...g.map(Math.abs));let mv=false;
+   if(gm>0){const d=g.map(v=>v/gm);for(const t of O.ts.filter(t=>t<=Math.min(16,2*tp))){const xn=x.map((v,i)=>Math.round(v+t*d[i]));if(xn.every((v,i)=>v===x[i]))continue;const Jn=yield*ev(xn,'fine');if(Jn>J){x=xn;J=Jn;tp=t;mv=true;break}}}
+   if(!mv){if(h>O.hmin)h/=2;else break}}
+  if(!best||J>best.J)best={x,J}}
+ if(!best){const p=st[0]||pts[0];best={x:p.x.slice(),J:yield*ev(p.x,'fine')}}
+ /* 5．1° の仕上げ：8 近傍で最も増える点へ，増えなくなるまで */
+ R.stage='fine';let {x,J}=best;for(let more=true;more&&!R.stop;){more=false;let bx=null,bJ=J;for(let i=0;i<4;i++)for(const sg of[1,-1]){const xn=x.slice();xn[i]+=sg;const Jn=yield*ev(xn,'fine');if(Jn>bJ){bJ=Jn;bx=xn}}if(bx){x=bx;J=bJ;more=true}}
+ /* 探索の前の点も細かい許容で評価して並べる */
+ R.stage='x0';const J0=yield*ev(x0,'fine');
+ return Object.assign(R,{x,J,J0,local:!R.stop})}
+/* 評価器（SPEC-32 B）：運転中の機関を複製し，回転数・開度・壁温を固定して，弁時期 x の周期定常の値を求める．run(ms) は値が出たら true */
+class VTEval{constructor(c0,obj,O){O=O||OPT;this.O=O;this.obj=obj|0;const c=this.base=c0.clone();c.P.cvar=0;c.P.sauto=1;this.N0=c0.s.Nb;this.al0=c0.s.al;c.P.alm=this.al0;c.P.mode=1;c.s.mode=1;c.fixw=1;c.fixTw=1;c.s.y[1]=this.N0*PI/30;c.s.fired=1;c.s.starter=0;this.cur=null;this.c=null;this.n=0;this.nu=0}
+ feas(x){const P={...this.base.P};VTK4.forEach((k,i)=>P[k]=x[i]*D);return!valveHit(P,this.base.G)}
+ start(x,cls){const c=(cls==='fine'&&this.cur?this.cur:this.base).clone();VTK4.forEach((k,i)=>c.P[k]=x[i]*D);c.P.alm=this.al0;c.s.al=this.al0;this.c=c;this.cls=cls;this.tol=this.O.tol[cls]||this.O.tol.fine;this.h=[];this.cy=c.s.cyc;this.J=null}
+ val(M){return this.obj?M.eb:M.tb}
+ run(ms){const c=this.c,t0=performance.now();let k=0;for(;;){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;if(c.lastM)this.h.push(c.lastM);if(this.check())return true}if((++k&3)===0&&performance.now()-t0>ms)return false}}
+ /* 周期定常の判定（SPEC-32 B の 3） */
+ check(){const h=this.h,T=this.tol,O=this.O;if(h.length<O.cmin)return false;const a=h.slice(-3),tb=a.map(m=>m.tb),z=tb[2],rng=v=>Math.max(...v)-Math.min(...v),rel=v=>rng(v)/Math.max(1e-30,Math.abs(swM(v)));
+  const ok=rng(tb)<=T.r*Math.abs(z)+T.a&&rng(a.map(m=>m.spa))<=T.s&&rel(a.map(m=>m.ev))<=T.r&&rel(a.map(m=>m.mth))<=T.r&&rel(a.map(m=>m.pinE))<=T.r;
+  if(ok||h.length>=O.cmax){if(!ok)this.nu++;this.n++;this.ok=ok;this.J=this.val(a[2]);this.M=a[2];this.cur=this.c;return true}return false}}
+/* 探索の進行（評価器と探索器をつなぐ．時間を区切って進める） */
+class VTOpt{constructor(c0,obj,O){this.O=O||OPT;this.h=[];this.E=new VTEval(c0,obj,this.O);this.x0=VTK4.map(k=>Math.round(c0.P[k]/D));this.g=vtSearch(this.x0,x=>this.E.feas(x),this.O);this.req=this.g.next();this.done=false;this.R=null;this.t=0;this.best=null;this.stop=false;if(this.req.done)this.fin(this.req.value);else this.E.start(this.req.value.x,this.req.value.cls)}
+ fin(R){this.done=true;this.R=R}
+ run(ms){if(this.done)return true;const t0=performance.now();while(!this.done&&performance.now()-t0<ms){if(this.E.run(Math.max(1,ms-(performance.now()-t0)))){const J=this.E.J,q=this.req.value;this.h.push({J,cls:q.cls});if(J>-Infinity&&(!this.best||J>this.best.J))this.best={x:q.x,J};if(this.stop){this.g.return();this.fin(null);break}this.req=this.g.next(J);if(this.req.done){this.fin(this.req.value);break}this.E.start(this.req.value.x,this.req.value.cls)}}this.t+=performance.now()-t0;return this.done}}
+/* ===== 熱効率の損失の内訳（SPEC-33） ===== */
+const LBK={g:1.4,Ra:287,th0:359,db:2,dg:.1};
+/* 段 A：空気標準（γ = 1.4）で IVC の質量 m，温度 T1，容積 V1 から，上死点で Q を等容で加え，V_max まで膨張したときの仕事 */
+function airW(m,T1,V1,Vc,Vm,Q){const g=LBK.g,cv=LBK.Ra/(g-1),T2=T1*(V1/Vc)**(g-1),T3=T2+Q/(m*cv),T4=T3*(Vc/Vm)**(g-1);return m*cv*((T3-T4)-(T2-T1))}
+/* 等容度：Wiebe の燃焼割合 x_b(θ) で，1 − (V/V_max)^(γ−1) を平均し，η_O で割る（0.1° ごとの台形則．x_b(1) で正規化） */
+function glh(G,C){const g=LBK.g,eO=1-Math.pow(G.eps,1-g),m=C.m??K.wm,xb=z=>1-Math.exp(-K.wa*Math.max(0,Math.min(1,z))**(m+1)),n=Math.max(1,Math.ceil(C.db/(LBK.dg*D))),Vm=G.Vc+G.Vd;let s=0;for(let i=0;i<n;i++){const z0=i/n,z1=(i+1)/n,th=C.th0+(i+.5)/n*C.db;s+=(1-Math.pow(kinV(G,th)/Vm,g-1))*(xb(z1)-xb(z0))}return s/xb(1)/eO}
+/* 計算の進行：運転中の機関を複製し，回転数・壁温を固定，サイクル変動なしで 1 サイクル余り進め，その次の 1 サイクルを実際のサイクルとする．
+   IVC で複製した機関から，弁を閉じた再計算を 3 つ（FA：断熱・瞬時燃焼，t：断熱・実際の燃焼，h：熱伝達・実際の燃焼）を 540° まで行う．run(ms) は終われば true */
+class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fixTw=1;c.s.y[1]=c0.s.Nb*PI/30;this.N0=c0.s.Nb;this.al0=c0.s.al;this.g=this.gen();this.done=false;this.res=null;this.t=0}
+ run(ms){const t0=performance.now();while(!this.done&&performance.now()-t0<ms){const r=this.g.next();if(r.done){this.done=true;this.res=r.value}}this.t+=performance.now()-t0;return this.done}
+ *gen(){const c=this.c,s=c.s;let k=0;const st=()=>{c.step();return(++k&3)===0};
+  let cy=s.cyc;while(s.cyc===cy){if(st())yield}
+  /* 実際のサイクル */
+  cy=s.cyc;const z0=s.y[19];let rep=null,zI=0,pE=NaN,ivc=null;
+  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]}}if(s.evn[3]!==n3)pE=s.y[2];if((++k&3)===0)yield}
+  const M=c.lastM,C={...s.C},G=c.G;if(!rep||!M||!(M.ei>0)||!C.on)return{ok:false,why:'燃焼したサイクルが得られない'};
+  const Qf=M.W/M.ei,W180=zI-z0;
+  /* 再計算（弁を閉じ，点火の処理をしない） */
+  const R={};for(const [nm,cw,inst] of[['FA',0,1],['t',0,0],['h',1,0]]){const q=rep.clone();q.P.Lv=0;if(!cw)q.P.cw=0;q.s.ig=1;q.s.C={...C};if(inst){q.s.C.th0=LBK.th0*D;q.s.C.db=LBK.db*D}const zs=q.s.y[19];let pe=NaN;
+   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){const n3=q.s.evn[3];q.step();if(q.s.evn[3]!==n3)pe=q.s.y[2];if((++k&3)===0)yield}R[nm]={W:q.s.y[19]-zs,pe}}
+  const eO=1-Math.pow(G.eps,1-LBK.g),eA=(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,Qf))/Qf,eFA=(W180+R.FA.W)/Qf,et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
+  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['作動ガスの物性（比熱・解離）',eA-eFA],['燃焼の遅れ（等容度）',eFA-et],['冷却損失',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
+  return{ok:true,eO,eA,eFA,et,eh,eig,ei,L,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei}}}

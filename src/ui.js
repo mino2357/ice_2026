@@ -22,7 +22,9 @@ function stepTo(it,n,dir,mul){let lo=Math.min(gmin(it),n),hi=Math.max(gmax(it),n
 function stepItem(k,dir){if(ctlSt(k))return;const it=IT[k],n=gi(it,pval(k)),m=stepTo(it,n,dir,U.x10?10:1);if(m!==n)setParam(k,gv(it,m))}
 const lamOK=()=>pval('S')/2/pval('lr')<=.5+1e-12;
 function applyPend(){if(!Object.keys(U.pend).length||!lamOK())return;const ks=Object.keys(U.pend);ks.forEach(k=>LP[k]=U.pend[k]);U.pend={};U.undo=null;live.reset();Base.clear();axReset(AX);Sim.debt=0;note('適用：'+ks.map(k=>IT[k].n).join('，')+'（コールドリセット）');rs()}
-function undo(){const u=U.undo;if(!u)return;U.undo=null;setParam(u.k,u.old,1);note(`元に戻しました：${IT[u.k].n} = ${disp(IT[u.k],u.old)}`)}
+function undo(){const u=U.undo;if(!u)return;U.undo=null;if(u.ks){Base.change(live,NOW());u.ks.forEach((k,i)=>LP[k]=u.olds[i]);note(`元に戻しました：${u.ks.map((k,i)=>IT[k].n+' '+disp(IT[k],u.olds[i])).join('，')}`);rs();optText();return}setParam(u.k,u.old,1);note(`元に戻しました：${IT[u.k].n} = ${disp(IT[u.k],u.old)}`)}
+/* 複数の項目を 1 回の操作で変える（最適化の [適用]．[元に戻す] で一度に戻る） */
+function setParams(o){const ks=Object.keys(o).filter(k=>o[k]!==LP[k]);if(!ks.length)return;Base.change(live,NOW());U.undo={ks,olds:ks.map(k=>LP[k])};ks.forEach(k=>LP[k]=o[k]);note(`${ks.map(k=>IT[k].n+' '+disp(IT[k],o[k])).join('，')}`);rs()}
 function defaults(){ITEMS.filter(i=>i.pg===U.pg).forEach(i=>setParam(i.k,defv(i),1));U.undo=null;note('このページを既定値に戻しました');rs()}
 function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* ===== rendering: settings ===== */
@@ -107,14 +109,33 @@ function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */
-function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<7;j++)$('s'+j).className=i===j?'on':'';if(i===6)sysB();if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
+function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<8;j++)$('s'+j).className=i===j?'on':'';if(i===6)sysB();if(i===7){optSub(OP.m);optText()}if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
 function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';$('vt').className=n===7?'vt on':'vt';pvo();vtRender()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
+/* ===== 最適化タブ（SPEC-32，33） ===== */
+const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0};
+function optSub(m){OP.m=m;[...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');$('o0').className=m===0?'opv on':'opv';$('o1').className=m===1?'opv on':'opv';if(m===1)OP.lt=-1e9}
+function optObj(o){if(OP.run)return;OP.obj=o;[...$('oob').children].forEach(b=>b.className=+b.dataset.o===o?'on':'');optText()}
+const optReady=()=>live.s.fired&&live.s.Nb>=300;
+function optStart(){if(OP.run){optStop();return}if(!optReady()){$('opr').textContent='運転タブで START してください';return}OP.run=new VTOpt(live,OP.obj);OP.h=OP.run.h;OP.res=null;OP.t0=NOW();optText()}
+function optStop(){const r=OP.run;if(!r)return;OP.run=null;const b=r.best;OP.res=b?{x0:r.x0,x:b.x,J:b.J,J0:NaN,ne:r.h.length,nu:r.E.nu,t:r.t/1e3,obj:r.E.obj,N:r.E.N0,al:r.E.al0,part:true}:null;optText()}
+function optTick(ms){const r=OP.run;if(!r)return;const t=performance.now(),d=r.run(ms);OP.maxMs=Math.max(OP.maxMs,performance.now()-t);if(d){OP.run=null;const R=r.R;if(R)OP.res={x0:R.x0,x:R.x,J:R.J,J0:R.J0,ne:R.ne,nu:r.E.nu,t:r.t/1e3,obj:r.E.obj,N:r.E.N0,al:r.E.al0,local:R.local};optText()}}
+function optApply(){const r=OP.res;if(!r)return;const o={};VTK4.forEach((k,i)=>o[k]=r.x[i]*D);setParams(o);optText()}
+const optFmt=(o,J)=>!(J>-Infinity)?'–':o?(J*100).toFixed(2)+' %':J.toFixed(2)+' N·m';
+function optText(){if(!$('s7'))return;$('orn').textContent=OP.run?'中止':'探索';$('oun').disabled=!U.undo;$('oap').disabled=!OP.res||!!OP.run;[...$('oob').children].forEach(b=>b.className=+b.dataset.o===OP.obj?'on':'');
+ $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:'運転タブで START してください';
+ const r=OP.run;if(r){const n=r.h.length,b=r.best;$('opr').textContent=`探索中：評価 ${n} 回，${(r.t/1e3).toFixed(1)} s，最良 ${b?optFmt(r.E.obj,b.J):'–'}`}else if(OP.res){const q=OP.res;$('opr').textContent=`${q.part?'中止':'終了'}：評価 ${q.ne} 回，${q.t.toFixed(1)} s${q.nu?`（判定を満たさない ${q.nu} 回）`:''}${q.local?'，1° の局所最大':''}`}else if(!$('opr').textContent.includes('START'))$('opr').textContent='';
+ const q=OP.res,cur=VTK4.map(k=>Math.round(LP[k]/D)),x0=q?q.x0:cur,x=q?q.x:null,dur=v=>[v[1]-v[0],v[3]-v[2],v[3]-(v[0]+720)],row=(n,a,b)=>`<tr><td>${n}</td><td>${a}</td><td>${b??'–'}</td><td>${b!=null&&typeof a==='number'?(b-a>0?'+':b-a<0?'−':'')+Math.abs(b-a):''}</td></tr>`;
+ let h=`<tr><th>${q?'':'現在'}</th><th>探索の前</th><th>結果</th><th>差</th></tr>`;['IVO','IVC','EVO','EVC'].forEach((n,i)=>h+=row(n+' °',x0[i],x?x[i]:null));const d0=dur(x0),d1=x?dur(x):null;['吸気の作用角 °','排気の作用角 °','オーバーラップ °'].forEach((n,i)=>h+=row(n,d0[i],d1?d1[i]:null));
+ const o=q?q.obj:OP.obj;h+=`<tr><td>${o?'正味熱効率':'軸トルク'}</td><td>${q?optFmt(o,q.J0):'–'}</td><td>${q?optFmt(o,q.J):'–'}</td><td>${q&&q.J0===q.J0?(q.J>=q.J0?'+':'−')+(o?(Math.abs(q.J-q.J0)*100).toFixed(2)+' %pt':Math.abs(q.J-q.J0).toFixed(2)):''}</td></tr>`;if($('otb').innerHTML!==h)$('otb').innerHTML=h}
+function drawOpt(){if(OP.m===0){const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}else{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
+/* 熱効率の内訳の計算：表示中だけ，前の計算から 1 s 以上たってサイクルが進んでいれば始め，1 フレームに ms ずつ進める */
+function lossTick(ms){if(U.tab!==7||OP.m!==1||LP.gam!==2||!optReady()){OP.lb=null;return}const now=performance.now();if(!OP.lb&&now-OP.lt>=1000&&live.s.cyc!==OP.lcy){OP.lb=new LossBk(live);OP.lcy=live.s.cyc}if(OP.lb){const t=performance.now();if(OP.lb.run(ms)){const r=OP.lb.res;if(r&&r.ok)OP.lres=r;OP.lb=null;OP.lt=performance.now()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('sysb'),e=>{const b=e.target.closest('button[data-m]');if(b)setSys(+b.dataset.m)});
-tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
+tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
 document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
@@ -127,11 +148,11 @@ $('pl').innerHTML=PAGES.map((n,i)=>`<button data-p="${i}">${n}</button>`).join('
 tap($('Pg'),e=>{const b=e.target.closest('button[data-k]');if(!b||b.disabled)return;const it=IT[b.dataset.k];if(b.dataset.c!=null){if(!ctlSt(it.k))setParam(it.k,it.vals?it.vals[+b.dataset.c]:+b.dataset.c)}else stepItem(it.k,+b.dataset.s)});
 tap($('x10'),()=>{U.x10^=1;rs()});tap($('un'),undo);tap($('df'),defaults);tap($('bs'),()=>{Base.set(live);note('現在のサイクルを基準にしました')});tap($('ap'),applyPend);tap($('ds'),()=>{U.pend={};note('保留を破棄しました');rs()});
 tap($('rt'),()=>{U.busy?(U.cancel=1):runAll()});tap($('cp'),e=>{const b=e.target.closest('button');if(b){U.sel=+b.dataset.i;const r=TR[U.sel];U.ix=r?Math.max(0,r.findIndex(q=>!q.ok)):0;dtl()}});tap($('pvb'),()=>{const r=TR[U.sel];if(r&&r.length){U.ix=(U.ix+r.length-1)%r.length;dtl()}});tap($('nxb'),()=>{const r=TR[U.sel];if(r&&r.length){U.ix=(U.ix+1)%r.length;dtl()}});
-buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(a)docGo(+a.dataset.go)});tap($('dtop'),()=>{$('s4').scrollTop=0});tap($('dsw'),e=>{const b=e.target.closest('button[data-d]');if(b)docShow(+b.dataset.d)});for(const k of[1,2,3])tap($('dv'+k),docTap);docShow(0);addEventListener('resize',()=>{if(DV.cur)docFit(DV.cur)});setSub(0);sp();rs();rchips();show(0);
+buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(a)docGo(+a.dataset.go)});tap($('dtop'),()=>{$('s4').scrollTop=0});tap($('dsw'),e=>{const b=e.target.closest('button[data-d]');if(b)docShow(+b.dataset.d)});for(const k of[1,2,3])tap($('dv'+k),docTap);docShow(0);addEventListener('resize',()=>{if(DV.cur)docFit(DV.cur)});setSub(0);optSub(0);optObj(0);sp();rs();rchips();show(0);
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
-if(!U.busy){advance(Sim,live,el,9);swTick(8)}axUpdate(live,AX,now);sndTick();
+if(!U.busy){advance(Sim,live,el,9);swTick(8);optTick(12);lossTick(6)}axUpdate(live,AX,now);sndTick();
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
-if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
+if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}

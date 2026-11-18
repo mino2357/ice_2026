@@ -291,3 +291,23 @@ function drawSys(g,c,W,H,col,m){const S=sysSpec(c,m,W,H,g),{k,f,X,Y,el}=S,fb=`60
   for(let i=0;i<40;i++){g.fillStyle=`rgb(${pcol(10*Math.pow(500,i/39)).map(Math.round)})`;g.fillRect(X(250+i*3.6),ly-4*k,3.7*k,8*k)}txt('10 kPa',X(250),ly-1.2*f,'#9aa3b2',fn);txt('5 MPa',X(394),ly-1.2*f,'#9aa3b2',fn,'right');
  }
  for(const o of S.tags)drawTag(o);g.restore();return S}
+/* ===== 最適化タブの図（SPEC-32 A の 2，SPEC-33 C） ===== */
+/* 評価の履歴：横軸 評価の番号，縦軸 目的の値．粗い評価（モンテカルロ）は灰，細かい評価は橙，それまでの最良を線で */
+function drawOptH(g,W,H,h,col,lab){g.font='12px system-ui,sans-serif';g.textBaseline='middle';const pl={x:44,y:10,w:W-54,h:H-34};g.strokeStyle=col.ln;g.lineWidth=1;g.strokeRect(pl.x,pl.y,pl.w,pl.h);
+ const v=h.filter(q=>q.J>-Infinity);if(!v.length){g.fillStyle=col.mu;g.textAlign='center';g.fillText(lab||'探索の結果がここに出ます',pl.x+pl.w/2,pl.y+pl.h/2);return null}
+ let lo=Math.min(...v.map(q=>q.J)),hi=Math.max(...v.map(q=>q.J));const top=hi;lo=Math.max(lo,hi-Math.max(.25*Math.abs(hi),1e-9));if(hi-lo<1e-9){hi+=1e-3*Math.abs(hi||1);lo-=1e-3*Math.abs(lo||1)}
+ const n=h.length,X=i=>pl.x+pl.w*(n>1?i/(n-1):.5),Y=J=>pl.y+pl.h*(1-(Math.max(lo,J)-lo)/(hi-lo));
+ g.fillStyle=col.mu;g.textAlign='right';for(const t of[lo,(lo+hi)/2,hi]){const y=Y(t);g.fillText(fmtJ(t),pl.x-4,y)}g.textAlign='center';g.fillText(`評価 ${n} 回`,pl.x+pl.w/2,H-10);
+ let b=-Infinity;g.strokeStyle=col.fg;g.lineWidth=1.5;g.beginPath();h.forEach((q,i)=>{if(q.J>b&&q.cls==='fine')b=q.J;if(b>-Infinity){const x=X(i),y=Y(b);i&&isFinite(b)?g.lineTo(x,y):g.moveTo(x,y)}});g.stroke();
+ h.forEach((q,i)=>{if(!(q.J>-Infinity))return;g.fillStyle=q.cls==='fine'?col.ac:col.mu;g.beginPath();g.arc(X(i),Y(q.J),q.cls==='fine'?2.2:1.8,0,7);g.fill()});return{pl,lo,hi,top}}
+const fmtJ=v=>Math.abs(v)<2?v.toFixed(4):v.toFixed(2);
+/* 熱効率の損失の内訳：横向きの滝の図．r は LossBk の結果 */
+function lossSpec(r,W,H){const rows=[['理論（オットー，ε '+r.eps.toFixed(1)+'）',0,r.eO,'t']];let e=r.eO;for(const [n,v] of r.L){rows.push([n,e-v,e,v>=0?'l':'g',v]);e-=v}rows.push(['正味の図示熱効率 η_i',0,r.ei,'r']);
+ /* 幅が 520 px 未満では，名前を棒の上の行に置く（SPEC-33 C の 1） */
+ const nr=rows.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),260),pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-62},rh=pl.h/nr,mx=Math.ceil(r.eO*10)/10,X=v=>pl.x+pl.w*Math.max(0,v)/mx,bh=Math.min(20,rh*(two?.4:.62));
+ return{two,rows:rows.map((q,i)=>{const a=Math.min(q[1],q[2]),b=Math.max(q[1],q[2]),yt=pl.y+rh*i;return{name:q[0],kind:q[3],v:q[4],lo:q[1],hi:q[2],ny:two?yt+8:yt+rh/2,y:two?yt+16+bh/2+1:yt+rh/2,x0:X(a),x1:X(b),h:bh,yt}}),pl,mx,X,rh}}
+function drawLoss(g,W,H,r,col,msg){g.font='12px system-ui,sans-serif';g.textBaseline='middle';if(!r){g.fillStyle=col.mu;g.textAlign='center';g.fillText(msg||'',W/2,H/2);return null}
+ const S=lossSpec(r,W,H),pc=(v,d)=>(v*100).toFixed(d);g.strokeStyle=col.ln;g.lineWidth=1;for(let v=0;v<=S.mx+1e-9;v+=.1){const x=S.X(v);g.beginPath();g.moveTo(x,S.pl.y);g.lineTo(x,S.pl.y+S.pl.h);g.stroke();g.fillStyle=col.mu;g.textAlign='center';g.fillText(Math.round(v*100)+'',x,S.pl.y+S.pl.h+9)}g.fillText('熱効率（%）',S.pl.x+S.pl.w/2,S.pl.y+S.pl.h+22);
+ S.rows.forEach((q,i)=>{const c=q.kind==='l'?'#e8590c':q.kind==='g'?'#37b24d':q.kind==='t'?col.mu:col.ac;g.fillStyle=c;g.fillRect(q.x0,q.y-q.h/2,Math.max(1,q.x1-q.x0),q.h);if(i&&i<S.rows.length-1){g.strokeStyle=col.mu;g.setLineDash([2,2]);g.beginPath();g.moveTo(S.X(q.hi),q.y-S.rh+q.h/2);g.lineTo(S.X(q.hi),q.y-q.h/2);g.stroke();g.setLineDash([])}
+  g.fillStyle=col.fg;if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}g.textAlign='left';g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${pc(q.hi,1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)});
+ g.fillStyle=col.mu;g.textAlign='left';g.fillText(`等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}° ATDC，壁への熱 Q_w/Q_f ${pc(r.qw,1)} %`,4,H-22);g.fillText(`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°（回転数を固定した直前のサイクル）`,4,H-7);return S}
