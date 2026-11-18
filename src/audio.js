@@ -9,7 +9,7 @@ const ACON={nu:8.4e-5,Pr:.7,gx:1.35,fref:1000,T:.35,Rc:4,tauR:.3,ko:1.6,sa:.03,s
 function loopMag(f,L,d,c){const a=d/2,al=Math.sqrt(PI*f*ACON.nu)*(1+(ACON.gx-1)/Math.sqrt(ACON.Pr))/(a*c),ka=2*PI*f/c*a;return Math.exp(-2*al*L-ka*ka/2)}
 function onePoleB(m,w){if(!(m<1))return 0;const A=m*m-1,B=2*(1-m*m*Math.cos(w)),dd=B*B-4*A*A;const r1=(-B+Math.sqrt(dd))/(2*A),r2=(-B-Math.sqrt(dd))/(2*A);return [r1,r2].find(x=>x>=0&&x<1)||0}
 /* REQ-21 D：演出音（物理モデルではない．定数は試聴で決めた） */
-const FLV={ref:15.10,gain:.13,hg:[1,.98,1.02,1],hd:[0,5e-5,1e-4,5e-5],L:.55,r:.8,damp:.06,drive:2.6,asym:.35,form:[[95,2.5,5],[190,3,3],[420,4,4],[1150,4,7],[2600,3,6]],dark:1400,bright:9000,lpmix:.7,intake:.2,noise:.045,pop:.5,popG:.7,shelf:[150,4],jit:.04,vg:2.5};
+const FLV={ref:20.64,gain:.13,hg:[1,.98,1.02,1],hd:[0,5e-5,1e-4,5e-5],L:.55,r:.8,damp:.06,drive:2.6,asym:.35,form:[[95,2.5,5],[190,3,3],[420,4,4],[1150,4,7],[2600,3,6]],dark:1400,bright:9000,lpmix:.7,intake:.2,noise:.045,pop:.5,popG:.7,shelf:[150,4],jit:.04,vg:2.5};
 const sndLoad=(pin,pa)=>Math.min(1,Math.max(0,(pin/pa-.3)/.6));
 function bqC(type,f0,Q,g,fs){const w=2*Math.PI*f0/fs,al=Math.sin(w)/(2*Q),c=Math.cos(w);let b0,b1,b2,a0,a1,a2;if(type==='bp'){b0=al;b1=0;b2=-al;a0=1+al;a1=-2*c;a2=1-al}else if(type==='lp'){b0=(1-c)/2;b1=1-c;b2=b0;a0=1+al;a1=-2*c;a2=1-al}else if(type==='hp'){b0=(1+c)/2;b1=-(1+c);b2=b0;a0=1+al;a1=-2*c;a2=1-al}else{const A=Math.pow(10,g/40),sq=2*Math.sqrt(A)*al;b0=A*((A+1)-(A-1)*c+sq);b1=2*A*((A-1)-(A+1)*c);b2=A*((A+1)-(A-1)*c-sq);a0=(A+1)+(A-1)*c+sq;a1=-2*((A-1)+(A+1)*c);a2=(A+1)+(A-1)*c-sq}return[b0/a0,b1/a0,b2/a0,a1/a0,a2/a0,0,0,0,0]}
 function bqP(q,x){const y=q[0]*x+q[1]*q[5]+q[2]*q[6]-q[3]*q[7]-q[4]*q[8];q[6]=q[5];q[5]=x;q[8]=q[7];q[7]=y;return y}

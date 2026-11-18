@@ -11,7 +11,8 @@
 | `bitcheck.js` | 熱物性 γ(T) の経路が第25版（commit `1ef8ff1`）とビット単位で一致するか．`--chromium` でブラウザでも比べる | git，（Playwright） |
 | `node_core.js` | `src/core.js` を Node.js で読み込む（`require('./node_core').load()`）．`sub` でソースを書き換えて感度を調べられる | Node.js |
 | `phi_sweep.js` | 当量比に対する全開の軸トルク，IVC の筒内温度，空気量，点火の時点の当量比．`--hfg 305e3` で気化潜熱を変える | Node.js |
-| `valves4.js` | 4 弁（吸気 2・排気 2）にしたときの全開の性能の試算．弁の数・径・リフトを JSON で渡す（`docs/review_v26.md` の 11.2 節） | Node.js |
+| `valves4.js` | 弁の数・径・リフトと排気系（大気開放か，第42版までの消音器か）を変えたときの全開の性能の比較．JSON で渡す（`docs/review_v26.md` の 11.2，12 節） | Node.js |
+| `stiff.js` | 定常のサイクルに沿ったヤコビアンの固有値の絶対値の最大（系の硬さ）と，RK4 の安定の条件 $\lvert\lambda\rvert\Delta t \le 2.79$ との比較（仕様書 SPEC-13，TEST-13 項目 10 と同じ求め方） | Node.js |
 | `bench_core.js` | 全開・3000 rpm 固定の 1 サイクルあたりの計算時間とステップ数（熱物性・噴射方式ごと） | Node.js |
 | `idle.js` | 始動からのアイドルの回転数の偏差（設定の上書きを JSON で渡す） | Node.js |
 
@@ -25,14 +26,15 @@ node tools/dev/run.js --json /tmp/tr.json && node tools/dev/coverage.js /tmp/tr.
 node tools/dev/run.js --md docs/measured_v26.md # 全検査の実測値の一覧を作り直す
 node tools/dev/bitcheck.js --chromium
 node tools/dev/phi_sweep.js --rpm 2000,4000
+node tools/dev/stiff.js 2                      # 系の硬さ（2° ごと）
 ```
 
 ## `check_docs.js` が調べること
 
-1. **番号と題**：REQ-01〜30，SPEC-01〜30，TEST-01〜30 の見出しがそろい，題が同じ（SPEC の「の確かめ方」は許す）．
-2. **対応表**：要件定義書 6 節の表が 30 行で，同じ番号の SPEC と TEST を引いている．
+1. **番号と題**：REQ-01〜31，SPEC-01〜31，TEST-01〜31 の見出しがそろい，題が同じ（SPEC の「の確かめ方」は許す）．
+2. **対応表**：要件定義書 6 節の表が 31 行で，同じ番号の SPEC と TEST を引いている．
 3. **連番**：受入基準とテスト項目の番号が 1 から続く．3 文書の番号付きリストの番号が飛ばない（pandoc は先頭の番号から振り直すので，原稿の番号が飛ぶと，本文の「〜の 14」という参照と表示がずれる）．
-4. **参照の切れ**：`REQ-nn`，`SPEC-nn`，`TEST-nn` が 01〜30 の範囲にある．「TEST-nn 項目 k」「REQ-nn の受入基準 k」の k が項目の数以下．「SPEC-nn X」の節 X がある．
+4. **参照の切れ**：`REQ-nn`，`SPEC-nn`，`TEST-nn` が 01〜31 の範囲にある．「TEST-nn 項目 k」「REQ-nn の受入基準 k」の k が項目の数以下．「SPEC-nn X」の節 X がある．
 5. **設定の表**：仕様書 SPEC-18 C の表が，項目定義表 `ITEMS` の全項目（ページ，範囲，刻み，既定，選択肢）を含む．1 ページが 6 項目以内．
 6. **数**：`NY`，テストの数，設定のページの数についての記述．
 7. **表記と古い記述**：句読点「、」「。」，句読点の重なり（「．．」など），ファイルの末尾の改行，圧力の単位 bar，題の版の番号，改めた名前（「化学種」「比熱」など）の残り．要件定義書の 7 節（改訂の記録）は調べない．
