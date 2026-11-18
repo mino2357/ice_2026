@@ -7,7 +7,7 @@
 1. 計算の内部は SI 単位．圧力は Pa 系（$\text{Pa}$，$\text{kPa}$，$\text{MPa}$）で表し，$\text{bar}$ は使わない．
 2. 角度は内部が $\text{rad}$，表示と本文の数値は $^\circ$．クランク角は $^\circ\text{CA}$．点火時期は圧縮上死点より前を正とする $^\circ\text{BTDC}$．
 3. 回転数 $N\ [\text{rpm}]$ と角速度 $\omega\ [\text{rad/s}]$ の関係は $N = \dfrac{30}{\pi}\,\omega$．
-4. 添字：$u$ 未燃，$b$ 既燃，$\text{in}$ 吸気（マニホールド，吸気弁），$\text{ex}$ 排気弁，$p$ 吸気ポート，$pe$ 排気ポート，$r$ 吸気ランナ，$e$ 排気管，$te$ 排気管の出口側，$t$ 排気管の出口，$\text{th}$ スロットル，$w$ 壁，$\text{atm}$ 大気，$0$ 上流のよどみ状態．
+4. 添字：$u$ 未燃，$b$ 既燃，$\text{in}$ 吸気（マニホールド，吸気弁），$\text{ex}$ 排気弁，$p$ 吸気ポート，$pe$ 排気ポート，$r$ 吸気ランナ，$e$ 排気管，$te$，$t$ 排気管の出口，$\text{th}$ スロットル，$w$ 壁，$\text{atm}$ 大気，$0$ 上流のよどみ状態．
 5. $\dot m^+ = \max(0, \dot m)$，$\dot m^- = \max(0, -\dot m)$．$\text{clamp}(x, a, b) = \min(b, \max(a, x))$．$\text{md}(a) = a - 4\pi\lfloor a/4\pi\rfloor \in [0, 4\pi)$．
 6. $\Delta$ を量の前に付けたときは，指定した区間（多くは 1 サイクル）での増分を表す．$\overline{\ \cdot\ }$ はサイクル平均または一次遅れの平均．
 
@@ -39,9 +39,9 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 9 | $\dot m_r$ | 吸気ランナの質量流量（マニホールド → ポートが正） | kg/s | $\dfrac{d\dot m_r}{dt} = \dfrac{A_r}{L_r}(p_{\text{in}} - p_p) - \dfrac{\zeta\,\dot m_r\lvert\dot m_r\rvert}{2\rho_r A_r L_r}$ | SPEC-25 |
 | 10 | $p_p$ | 吸気ポート圧 | Pa | $\dfrac{dp_p}{dt} = \dfrac{\gamma_0 RT_{\text{in}}}{V_p}(\dot m_r - \dot m_{\text{in}})$ | SPEC-25 |
 | 11 | $m_{b,p}$ | 吸気ポート内の既燃ガスの質量 | kg | $\dfrac{dm_{b,p}}{dt} = \dot m_r Y_r - \dot m_{\text{in}}Y_v$ | SPEC-25 |
-| 12 | $\dot m_e$ | 排気管の質量流量（ポート → 出口が正） | kg/s | $\dfrac{d\dot m_e}{dt} = \dfrac{A_e}{L_e}(p_{pe} - p_{te}) - \dfrac{\zeta_x\,\dot m_e\lvert\dot m_e\rvert}{2\rho_e A_e L_e}$ | SPEC-27 |
+| 12 | $\dot m_e$ | 排気管の質量流量（ポート → 出口が正） | kg/s | $\dfrac{d\dot m_e}{dt} = \dfrac{A_e}{L_e}(p_{pe} - p_{\text{atm}}) - \dfrac{(\zeta_x + 1)\,\dot m_e\lvert\dot m_e\rvert}{2\rho_e A_e L_e}$ | SPEC-27 |
 | 13 | $p_{pe}$ | 排気ポート圧 | Pa | $\dfrac{dp_{pe}}{dt} = \dfrac{\gamma_0 RT_X}{V_{pe}}(\dot m_{\text{ex}} - \dot m_e)$ | SPEC-27 |
-| 14 | $p_{te}$ | 排気管の出口側の半分の圧力 | Pa | $\dfrac{dp_{te}}{dt} = \dfrac{RT_X}{V_{te}}(\dot m_e - \dot m_t)$ | SPEC-27 |
+| 14 | $p_{te}$ | 排気管の出口側の圧力（大気開放では使わない） | Pa | $\dfrac{dp_{te}}{dt} = 0$（SPEC-27 の 8 の内部の値で出口に容積を置いたときだけ $\dfrac{RT_X}{V_m}(\dot m_e - \dot m_t)$） | SPEC-27 |
 | 15 | $E_{\text{in}}$ | マニホールドの余剰エンタルピー | J | $\dfrac{dE_{\text{in}}}{dt} = -\dot m_r\varepsilon_r + \min(0, \dot m_{\text{th}})\,\varepsilon_{\text{in}}$（ランナ ON） | SPEC-05，25 |
 | 16 | $E_p$ | 吸気ポートの余剰エンタルピー | J | $\dfrac{dE_p}{dt} = \dot m_r\varepsilon_r - \dot m_{\text{in}}^+\varepsilon_p + \dot X_o$ | SPEC-25 |
 | 17 | $m_f$ | 筒内の未燃の燃料蒸気の質量（化学平衡のモデル） | kg | $\dfrac{dm_f}{dt} = \sum_j\dot m_j Y_{f,j} + \dot m_{\text{ev}} - r\,\psi$ | SPEC-29 |
@@ -137,7 +137,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $\dot m$ | オリフィスの質量流量 | kg/s | $\dot m = \text{sgn}(p_1 - p_2)\,\dfrac{A\,p_0}{\sqrt{RT_0}}\,\Psi(r_p)$ | SPEC-04 |
 | $r_p$，$r_{\text{crit}}$ | 圧力比，臨界圧力比 | – | $r_p = \dfrac{\min(p_1, p_2)}{\max(p_1, p_2)}$，$r_{\text{crit}} = \left(\dfrac{2}{\gamma_0 + 1}\right)^{\gamma_0/(\gamma_0 - 1)}$ | SPEC-04 |
 | $\Psi$ | 流量関数 | – | 亜音速で $\Psi_{\text{sub}} = r_p^{1/\gamma_0}\sqrt{\dfrac{2\gamma_0}{\gamma_0 - 1}\left(1 - r_p^{(\gamma_0 - 1)/\gamma_0}\right)}$，$r_p \le r_{\text{crit}}$ で一定，$1 - r_p < \delta_r = 10^{-3}$ で直線 | SPEC-04 |
-| $\dot m_{\text{th}}$，$\dot m_{\text{in}}$，$\dot m_{\text{ex}}$，$\dot m_t$ | スロットル，吸気弁（筒内へが正），排気弁（筒内からが正），排気管の出口（大気へが正）の流量 | kg/s | SPEC-04 の式に各断面の圧力と面積を入れる | SPEC-04 |
+| $\dot m_{\text{th}}$，$\dot m_{\text{in}}$，$\dot m_{\text{ex}}$，$\dot m_t$ | スロットル，吸気弁（筒内へが正），排気弁（筒内からが正），排気管の出口（大気へが正）の流量 | kg/s | SPEC-04 の式に各断面の圧力と面積を入れる（出口は大気開放なので $\dot m_t = \dot m_e$） | SPEC-04，27 |
 | $\alpha$ | スロットル開度（$0$：全閉，$\pi/2$：全開） | rad | 入力 | SPEC-05，12 |
 | $A_{\text{th}}$ | スロットルの有効開口面積 | m² | $A_{\text{th}} = C_{d,\text{th}}\dfrac{\pi}{4}D_{\text{th}}^2(1 - \cos\alpha)$，$C_{d,\text{th}} = 0.8$ | SPEC-05 |
 | $p_{\text{atm}}$，$T_{\text{amb}}$ | 大気圧，大気温 | Pa，K | 設定（既定 $101.3\ \text{kPa}$），$298.15$ | SPEC-05 |
@@ -151,9 +151,9 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $\zeta$，$\rho_r$ | ランナの損失係数，ガス密度 | –，kg/m³ | $\zeta = f_r\dfrac{L_r}{d_r} + \zeta_e$（$f_r = 0.02$，$\zeta_e = 0.2$），$\rho_r = \dfrac{p_{\text{in}}}{RT_{\text{in}}}$ | SPEC-25 |
 | $Y_r$，$\varepsilon_r$，$Y_v$ | ランナの流れ，吸気弁の流れに乗る値（上流側の値） | – | $\dot m_r \ge 0$ でマニホールドの値，$< 0$ でポートの値．$Y_v$ は $\dot m_{\text{in}} \ge 0$ で $Y_{b,p}$，$< 0$ で $1 - Y_u$ | SPEC-25 |
 | $\omega_H$ | 吸気ランナの共鳴の角振動数（弁が閉じているとき） | rad/s | $\omega_H = \sqrt{\dfrac{A_r}{L_r}\left(\dfrac{\gamma_0 RT_{\text{in}}}{V_p} + \dfrac{RT_{\text{in}}}{V_{\text{in}}}\right)}$ | SPEC-25 |
-| $L_e$，$d_e$，$A_e$，$V_{pe}$，$V_{te}$ | 排気管の長さ，内径，断面積（開放端の有効面積でもある），排気ポート容積（管の弁側の半分），管の出口側の半分の容積 | m，m，m²，m³，m³ | $A_e = \dfrac{\pi}{4}d_e^2$，$V_{pe} = V_{te} = \dfrac12 A_e L_e$ | SPEC-27 |
+| $L_e$，$d_e$，$A_e$，$V_{pe}$ | 排気管の長さ，内径，断面積，排気ポート容積（管の弁側の半分） | m，m，m²，m³ | $A_e = \dfrac{\pi}{4}d_e^2$，$V_{pe} = \dfrac12 A_e L_e$ | SPEC-27 |
 | $T_X$ | 排気系のガス温度（一定） | K | $T_X = 800$ | SPEC-27 |
-| $\omega_E$ | 排気管の共鳴の角振動数 | rad/s | $\omega_E = \sqrt{\dfrac{A_e}{L_e}\left(\dfrac{\gamma_0 RT_X}{V_{pe}} + \dfrac{RT_X}{V_{te}}\right)}$ | SPEC-27 |
+| $\omega_E$ | 排気管の共鳴の角振動数 | rad/s | $\omega_E = \sqrt{\dfrac{A_e}{L_e}\dfrac{\gamma_0 RT_X}{V_{pe}}}$ | SPEC-27 |
 | $\Delta\bar p_{\text{ex}}$ | 排気背圧（サイクル平均） | Pa | $\Delta\bar p_{\text{ex}} = \dfrac{\Delta P_{pe}}{t_c} - p_{\text{atm}}$ | SPEC-14，27 |
 
 ### 2.7 燃焼
@@ -262,7 +262,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | バルブオーバーラップ | 排気弁と吸気弁が同時に開いている期間．角度は $\theta_{\text{OL}} = \text{EVC} - (\text{IVO} + 720^\circ)$ |
 | 作用角 | 弁が開いている間のクランク角の幅（吸気 $\text{IVC} - \text{IVO}$，排気 $\text{EVC} - \text{EVO}$）．バルブタイミングの画面では $1^\circ$〜$719^\circ$ に制限する（SPEC-15 I の 2） |
 | 4 弁 | 吸気弁 2 個と排気弁 2 個を持つこと．本モデルの機関は 4 弁で，有効開口面積は弁 2 個の分（SPEC-03 の 2） |
-| 開放端 | 排気管の出口．消音器も触媒も無く，大気に開いている．出口の流量は，有効面積を管の断面積としたオリフィスの式で求める（SPEC-27 の 4） |
+| 開放端 | 排気管の出口．消音器も触媒も無く，大気に開いている．出口の圧力を大気圧とし，管を出る流れの動圧 1 つ分を損失に数える（SPEC-27 の 2） |
 | 吹き返し | 吸気弁を筒内から吸気側へ流れる逆流（$\dot m_{\text{in}} < 0$） |
 | 吹き抜け | 新気が燃えずに排気側へ出ること．本モデルでは排気側へ出た新気は既燃ガスとして扱う |
 | 完爆 | 始動中に，燃料 ON で $\bar N > 550\ \text{rpm}$ かつ直前のサイクルの $W_g > 20\ \text{J}$ になったこと．スターターを切る |
@@ -271,7 +271,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | CA50 | 質量燃焼割合が $50\%$ になるクランク角（圧縮上死点後の角度） |
 | 火炎発達角 | 点火から $x_b = 0.1$ までのクランク角 |
 | 慣性過給 | 吸気ランナのガス柱の慣性で，吸気弁が閉じる直前のポート圧が上がり，充填が増えること |
-| 背圧 | 排気弁の下流（排気ポート）の圧力の 1 サイクル平均と大気圧の差．排気管は大気に開いていて，管の摩擦と出口の動圧から決まる |
+| 背圧 | 排気弁の下流（排気ポート）の圧力の 1 サイクル平均と大気圧の差．排気管は大気に開いていて，管の損失と出口の動圧から決まる |
 | チョーク | オリフィスののど部の流速が音速に達し，流量が下流の圧力によらなくなること（$r_p \le r_{\text{crit}}$） |
 
 ### 3.2 モデルと数値計算

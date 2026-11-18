@@ -194,7 +194,7 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
   tag('cyl',396,PE[1]/k-oy/k+64,['筒内',Cl('p',kPa(y[2]),T_.pc,'kPa'),Cl('T',(Xc.T||0).toFixed(0),T_.T,'K'),Cl('θ',(tt/D).toFixed(0),T_.th,`°（${ph}）`)],'#e8ecf2','r');
   if(EX)tag('exp',332,98,['排気管',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('d_e',(P.dex*1e3).toFixed(0),0,'mm'),Cl('p_pe',kPa(y[14]),T_.p,'kPa')],SYC.exl,'r');
   else tag('back',396,PE[1]/k-oy/k-36,['背圧',`Δp_ex ${(P.dpx/1e3).toFixed(1)} kPa`],SYC.exl,'r');
-  if(EX)tag('out',396,2,['出口（大気開放）',Cl('A_e',(PI/4*P.dex*P.dex*1e6).toFixed(0),0,'mm²'),Cl('p_te',kPa(y[15]),T_.p,'kPa')],SYC.exl,'r');
+  if(EX)tag('out',396,2,['出口（大気開放）',Cl('A_e',(PI/4*P.dex*P.dex*1e6).toFixed(0),0,'mm²'),Cl('ṁ_e',gs(Xc.mep||0),T_.m,'g/s')],SYC.exl,'r');
   {const o=tag('dyno',396,(CC[1]-oy)/k+46,['動力計',Cl('充水率 f',s.fe.toFixed(2),T_.f),Cl('T_d',(Xc.Td||0).toFixed(1),T_.Td,'N·m'),Cl('定格',P.Tr.toFixed(0),0,'N·m')],'#74c0fc','r');o.y=Math.min(o.y,Y(500)-4*k-o.h)}
   tag('run2',396,500,['運転',Cl('N̄',s.Nb.toFixed(0),T_.N,'rpm'),Cl('T_b',num(M.tb||0,1),T_.Tb,'N·m'),Cl('P_b',num((M.pb||0)/1e3,2),T_.Pb,'kW'),Cl('IMEP',num((M.imep||0)/1e3,0),T_.im,'kPa')],'#ff8a4c','r');
   const ecu=['ECU',`回転数：${P.mode?'動力計':'スロットル'}の PI，目標 ${P.nt.toFixed(0)} rpm`,[`点火：${P.sauto?'自動最適化':'手動'} `,Nv(num(s.spa,1),T_.sa),'° BTDC'],[`噴射：${DI?'直噴':'ポート噴射'}，φ ${P.phi.toFixed(2)}，`,Nv((s.mfc*1e6).toFixed(1),T_.mf),' mg'],[`動力計：充水率 ${P.mode?'PI':'固定'} f `,Nv(s.fe.toFixed(2),T_.f)]];
@@ -209,7 +209,7 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
  const nd=[{id:'man',x:xI,y:yM,V:P.Vin,p:y[6],T:TI,name:'マニホールド',vol:`V_in ${(P.Vin*1e3).toFixed(2)} L`,Y:frac(y[7],P.gam===2?y[41]:0,mi),pref:['r','l','t','b']}];
  if(RO){const Vp=.5*Ar*P.Lr;nd.push({id:'por',x:xI,y:yC,V:Vp,p:y[9],T:TI,name:'ポート',vol:`V_p ${(Vp*1e3).toFixed(2)} L`,Y:frac(y[10],P.gam===2?y[42]:0,tot(y[9],Vp)),pref:['l','b','r','t']})}
  nd.push({id:'cyl',x:200,y:yC,V:Vc,p:y[2],T:Xc.T||TI,name:'筒内',vol:`V ${(Vc*1e3).toFixed(3)} L`,Y:[(mu-mf)/cylm,mf/cylm,(cylm-mu)/cylm],pref:['t','b']});
- if(EX){const Vpe=.5*Ae*P.Lex;nd.push({id:'epo',x:xE,y:yC,V:Vpe,p:y[14],T:TX,name:'排気ポート',vol:`V_pe ${(Vpe*1e3).toFixed(2)} L`,Y:[0,0,1],pref:['r','b','l','t']});nd.push({id:'ete',x:xE,y:yM,V:Vpe,p:y[15],T:TX,name:'管の出口側',vol:`V_te ${(Vpe*1e3).toFixed(2)} L`,Y:[0,0,1],pref:['l','b','r','t']})}
+ if(EX){const Vpe=.5*Ae*P.Lex;nd.push({id:'epo',x:xE,y:yC,V:Vpe,p:y[14],T:TX,name:'排気ポート',vol:`V_pe ${(Vpe*1e3).toFixed(2)} L`,Y:[0,0,1],pref:['r','b','l','t']})}
  /* 縮尺と，名前を置くときの半径 rL は，筒内を下死点の容積で考える（筒内の円は毎フレーム変わるが，名前と辺の枠は動かさない．SPEC-31 A の 5） */
  const VcM=G.Vc+G.Vd,Vmax=Math.max(VcM*1e3,...nd.map(o=>o.V*1e3)),ka=k*Math.min(30,56/Math.sqrt(Vmax));
  for(const o of nd){const r0=ka*Math.sqrt(o.V*1e3),r=Math.max(15*k,r0);Object.assign(o,{px:X(o.x),py:Y(o.y),r,r0,rL:o.id==='cyl'?Math.max(15*k,ka*Math.sqrt(VcM*1e3)):r,clip:r0<15*k,col:pcol(o.p/1e3),txt:kPa(o.p)});o.pL=cl([Nv(o.txt,o.id==='cyl'?T_.pc:T_.p)],1,o.px);N.push(o)}
@@ -221,7 +221,7 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
  ed('thr','スロットル','orif',[man.px,atmY],[man.px,man.py-man.r],Xc.mt||0,SYC.inl,['スロットル',Cl('α',thr.toFixed(1),T_.a,'°'),Cl('ṁ',gs(Xc.mt||0),T_.m,'g/s')],'r');
  if(RO)ed('run','吸気ランナ','pipe',[man.px,man.py+man.r],[inlet.px,inlet.py-inlet.r],Xc.mr||0,SYC.inl,['ランナ',Cl('L_r',(P.Lr*1e3).toFixed(0),0,'mm'),Cl('ṁ',gs(Xc.mr||0),T_.m,'g/s')],'l');
  const iv0=RO?[inlet.px+inlet.r,inlet.py]:[man.px+man.r*.71,man.py+man.r*.71];ed('iv','吸気弁','orif',iv0,[cyl.px-cyl.r,cyl.py],Xc.mi||0,SYC.inl,['吸気弁',Cl('ṁ',gs(Xc.mi||0),T_.m,'g/s')],'b',iv0,[cyl.px-cyl.rL,cyl.py]);
- if(EX){const mu_=nb('ete');ed('ev','排気弁','orif',[cyl.px+cyl.r,cyl.py],[exl.px-exl.r,exl.py],Xc.me||0,SYC.exl,['排気弁',Cl('ṁ',gs(Xc.me||0),T_.m,'g/s')],'b',[cyl.px+cyl.rL,cyl.py],[exl.px-exl.r,exl.py]);ed('exp','排気管','pipe',[exl.px,exl.py-exl.r],[mu_.px,mu_.py+mu_.r],Xc.mep||0,SYC.exl,['排気管',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('ṁ',gs(Xc.mep||0),T_.m,'g/s')],'r');ed('out','出口','orif',[mu_.px,mu_.py-mu_.r],[mu_.px,atmY],Xc.mtl||0,SYC.exl,['出口（開放）',Cl('A_e',(Ae*1e6).toFixed(0),0,'mm²'),Cl('ṁ',gs(Xc.mtl||0),T_.m,'g/s')],'l')}
+ if(EX){ed('ev','排気弁','orif',[cyl.px+cyl.r,cyl.py],[exl.px-exl.r,exl.py],Xc.me||0,SYC.exl,['排気弁',Cl('ṁ',gs(Xc.me||0),T_.m,'g/s')],'b',[cyl.px+cyl.rL,cyl.py],[exl.px-exl.r,exl.py]);/* 排気管は排気ポートから大気の線まで（開放端） */ed('exp','排気管','pipe',[exl.px,exl.py-exl.r],[exl.px,atmY],Xc.mep||0,SYC.exl,['排気管（大気開放）',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('d_e',(P.dex*1e3).toFixed(0),0,'mm'),Cl('ṁ',gs(Xc.mep||0),T_.m,'g/s')],'r')}
  else ed('ev','排気弁','orif',[cyl.px+cyl.r,cyl.py],[X(xE),Y(yA)],Xc.me||0,SYC.exl,['排気弁 → 背圧',Cl('Δp_ex',(P.dpx/1e3).toFixed(1),0,'kPa'),Cl('ṁ',gs(Xc.me||0),T_.m,'g/s')],'l',[cyl.px+cyl.rL,cyl.py],[X(xE),Y(yA)]);
  /* 回転系と ECU の枠を先に置き，辺の名前と節点の名前は，候補の位置のうち，置いた枠・節点の円・Canvas の端に重ならない最初の位置に置く（SPEC-31 C の 6） */
  const T4=v=>(v||0)/P4,TQ=[{id:'ti',name:'図示',v:T4(M.W),x:70,y:390,c:'#ff8a4c'},{id:'tf',name:'摩擦',v:-T4(M.Wf),x:70,y:462,c:'#9aa3b2'},{id:'td',name:['動力計（f ',Nv(s.fe.toFixed(2),T_.f),'）'],v:-T4(M.Wd),x:330,y:390,c:'#74c0fc'},{id:'ta',name:'補機',v:-T4(M.Wa),x:330,y:462,c:'#9aa3b2'}];
@@ -233,11 +233,11 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
  const aw=mw(`大気 ${(P.pa/1e3).toFixed(1)} kPa，${TI.toFixed(0)} K`,1),obs=[...tags,{x:X(200)-aw/2,y:atmY-1.7*f,w:aw,h:1.4*f},/* 筒内から ω への線 */{x:X(200)-1.5*k,y:Y(yC),w:3*k,h:S.om.y-S.om.r-Y(yC)}],gap=2,hitC=r=>N.some(o=>Math.hypot(o.px-Math.max(r.x,Math.min(o.px,r.x+r.w)),o.py-Math.max(r.y,Math.min(o.py,r.y+r.h)))<o.rL+gap),hitE=r=>E.some(e=>{const hw=(e.kind==='pipe'?7*k:4.5*k)+gap;for(let i=0;i<=16;i++){const x=e.la[0]+(e.lb[0]-e.la[0])*i/16,y=e.la[1]+(e.lb[1]-e.la[1])*i/16;if(x>r.x-hw&&x<r.x+r.w+hw&&y>r.y-hw&&y<r.y+r.h+hw)return true}return false}),ok=r=>r.x>=1&&r.y>=1&&r.x+r.w<=W-1&&r.y+r.h<=H-1&&!hitC(r)&&!hitE(r)&&!obs.some(q=>r.x<q.x+q.w+gap&&q.x<r.x+r.w+gap&&r.y<q.y+q.h+gap&&q.y<r.y+r.h+gap),
   put=(o,cands)=>{const c=cands.find(([x,y])=>ok({x,y,w:o.w,h:o.h}))||cands[0];o.x=c[0];o.y=c[1];o.free=!!cands.find(([x,y])=>x===c[0]&&y===c[1]&&ok({x,y,w:o.w,h:o.h}));obs.push(o)},
   sh=h=>[0,-.5*h,.5*h,-h,h,-1.5*h,1.5*h,-2*h,2*h,-2.5*h,2.5*h];
- /* 節点の名前を置く．筒内の名前を先に置き（下死点の半径で，円の上か下），次に辺の名前，残りの節点の名前（マニホールド，管の出口側，排気ポート，ポートの順）を置く */
+ /* 節点の名前を置く．筒内の名前を先に置き（下死点の半径で，円の上か下），次に辺の名前，残りの節点の名前（マニホールド，排気ポート，ポートの順）を置く */
  const putN=o=>{const nw=mw(o.name,1),vw=mw(o.vol);o.inside=o.id!=='cyl'&&o.r>=2.1*lh&&2*Math.sqrt(o.r*o.r-(1.1*lh)**2)>=Math.max(nw,vw)+.4*f;if(o.inside)return;const src=o.id==='cyl'?[o.name,['V ',Nv((o.V*1e3).toFixed(3),T_.V),' L'],[Nv(o.T.toFixed(0),T_.T),' K']]:[o.name,o.vol],LL=src.map((q,i)=>lay(q,!i)),R=o.rL,w=Math.max(50*k,...LL.map(q=>q.w))+.2*f,h=src.length*lh+8*k;const L={id:'n_'+o.id,w,h,lines:src.map(lnText),L:LL,fr:o.Y,node:o},pos={r:d=>[o.px+R+6*k,o.py-h/2+d],l:d=>[o.px-R-6*k-w,o.py-h/2+d],t:d=>[o.px-w/2+d,o.py-R-h-4*k],b:d=>[o.px-w/2+d,o.py+R+4*k]},cands=[];for(const sd of o.pref)for(const d of sh(sd==='t'||sd==='b'?w:h))cands.push(pos[sd](d));put(L,cands);L.side=L.x>=o.px+R?'r':L.x+L.w<=o.px-R?'l':L.y<o.py?'t':'b';for(const q of LL)q.x0=L.side==='l'?L.x+L.w-q.w:L.side==='r'?L.x:L.x+L.w/2-q.w/2;labels.push(L)};
  putN(cyl);
  for(const e of E){const mx=(e.la[0]+e.lb[0])/2,my=(e.la[1]+e.lb[1])/2,o=tag('e_'+e.id,0,0,e.lab,e.col);tags.pop();const pos={r:d=>[mx+12*k,my-o.h/2+d],l:d=>[mx-12*k-o.w,my-o.h/2+d],b:d=>[mx-o.w/2+d,my+12*k],t:d=>[mx-o.w/2+d,my-12*k-o.h]},pref=e.side==='b'?['b','t','l','r']:e.side==='l'?['l','r','b','t']:['r','l','b','t'],cands=[];for(const sd of pref)for(const d of sh(sd==='b'||sd==='t'?o.w:o.h))cands.push(pos[sd](d));put(o,cands);tags.push(o)}
- for(const o of ['man','ete','epo','por'].map(id=>N.find(q=>q.id===id)).filter(Boolean))putN(o);
+ for(const o of ['man','epo','por'].map(id=>N.find(q=>q.id===id)).filter(Boolean))putN(o);
  S.tq=TQ;S.N=N;S.E=E;S.labels=labels;S.atmY=atmY;S.Ts=Ts;return S}
 /* 描画 */
 function drawSys(g,c,W,H,col,m){const S=sysSpec(c,m,W,H,g),{k,f,X,Y,el}=S,fb=`600 ${f}px system-ui,sans-serif`,fn=`${f}px system-ui,sans-serif`;
