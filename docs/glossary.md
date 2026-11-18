@@ -204,7 +204,8 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $\alpha_{\text{manual}}$，$f_{\text{manual}}$，$f_{\text{base}}$ | 固定開度（動力計制御で使う），固定充水率（スロットル制御で使う），基準充水率（動力計制御の PI の基準） | rad，–，– | 設定．使わない制御のときは設定画面で変更できない（SPEC-18 B.7） | SPEC-11，18 |
 | $e_N$，$e_d$ | 偏差 | rpm | $e_N = N_{\text{target}} - \bar N$，$e_d = \bar N - N_{\text{target}}$ | SPEC-11，12 |
 | $\alpha_{\text{ff}}$，$\alpha_{\min}$ | feedforward を加えた基準開度，開度の下限 | rad | $\alpha_{\text{ff}} = \alpha_{\text{base}} + k_T T_{\text{aux}}$，$\alpha_{\min} = \min(\alpha_{\max},\ \max(0,\ \alpha_{\text{ff}} - \delta_\alpha))$ | SPEC-12 |
-| $I_\alpha$，$I_f$ | スロットル制御・動力計制御の積分の状態 | rad，– | $\dfrac{dI_\alpha}{dt} = K_i e_N$，$\dfrac{dI_f}{dt} = K_{i,d}\,e_d$（張り付きを深める向きでは $0$） | SPEC-11，12 |
+| $I_\alpha$，$I_f$ | スロットル制御・動力計制御の積分の状態 | rad，– | $\dfrac{dI_\alpha}{dt} = K_i e_N$，$\dfrac{dI_f}{dt} = \sigma K_{i,d}\,e_d$（張り付きを深める向きでは $0$） | SPEC-11，12 |
+| $\sigma$，$T_0$ | 動力計制御のゲインの規格化の係数，その基準のトルク | –，N·m | $\sigma = \dfrac{T_0}{T_{\text{rated}}}\left(\dfrac{N_{\text{rated}}}{N_{\text{target}}}\right)^2$，$T_0 = 35$ | SPEC-11 |
 
 ### 2.11 数値積分
 
@@ -229,6 +230,10 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | bsfc | 正味燃料消費率 | g/kWh | $\text{bsfc} = \dfrac{\dot m_f}{P_b}$，$\dot m_f = \dfrac{m_f}{t_c}$ | SPEC-14 |
 | $p_{\max}$，$T_{\max}$ | 1 サイクルの最高筒内圧，最高ガス温度 | Pa，K | $p_{\max}$ は 3 点の放物線の頂点，$T_{\max}$ はステップ点の最大 | SPEC-13，14 |
 | $\eta_{\text{Otto}}$ | 理論サイクルの熱効率（上限の目安） | – | $\eta_{\text{Otto}} = 1 - \varepsilon^{1 - 1.40}$ | TEST-14 |
+| $\eta_O$，$\eta_A$，$\eta_{FA}$，$\eta_t$，$\eta_h$，$\eta_{ig}$ | 熱効率の損失の内訳の段の熱効率：理論（オットー），空気標準（IVC から），断熱・瞬時燃焼，断熱・実際の燃焼，熱伝達・実際の燃焼，圧縮と膨張の行程の図示 | – | $\eta_O = \eta_{\text{Otto}}$．ほかは IVC からの閉じた系の再計算の仕事を $Q_f$ で割った値 | SPEC-33 |
+| $Q_f$ | 1 サイクルの燃料の熱 | J | $Q_f = m_f H_u$ | SPEC-33 |
+| $\eta_{glh}$ | 等容度 | – | $\eta_{glh} = \dfrac{1}{\eta_O}\displaystyle\int_0^1\left[1 - \left(\dfrac{V(\theta)}{V_{\max}}\right)^{0.4}\right]dx_b$ | SPEC-33 |
+| $\mathbf x$，$J$ | 弁時期の組（IVO，IVC，EVO，EVC．整数の °），探索の目的の値（軸トルクまたは正味熱効率） | °，N·m または – | 回転数と開度を固定した周期定常のサイクルの値 | SPEC-32 |
 
 ### 2.13 エンジン音
 
@@ -237,9 +242,9 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $q$ | 音源（排気弁の質量流量の時間微分） | kg/s² | $q = \omega\dfrac{d\dot m_{\text{ex}}}{d\theta}$ | SPEC-21 |
 | $\psi$，$f_s$ | 再生の位相（表の添字，$[0, 1440)$），サンプリング周波数 | –，Hz | 1 サンプルごとに $\Delta\psi = \dfrac{1440\,\bar N_a}{120\,f_s}$ | SPEC-21 |
 | $c$，$f_n$ | 排気中の音速，排気管の共鳴周波数 | m/s，Hz | $c = \sqrt{\gamma_b(T_X)\,R\,T_X}$，$f_n = \dfrac{(2n - 1)\,c}{4L}$ | SPEC-21 |
-| $\rho_o$ | 排気管の出口の反射率（音の合成） | – | 設定（既定 $0.6$） | SPEC-21 |
+| $g_c$ | 共鳴器の出力から圧縮器の入力への係数 | – | $g_c = 0.064$ | SPEC-21 |
 | $\ell$ | 負荷の目安（演出の音） | – | $\ell = \text{clamp}\left(\dfrac{p_{\text{in}}/p_{\text{atm}} - 0.3}{0.6},\ 0,\ 1\right)$ | SPEC-21 |
-| $q_{\text{ref}}$ | 演出の音の音量の基準 | kg/s² | 全開・$3500\ \text{rpm}$ の単気筒の音源の実効値 $16.01$（第26版の既定のモデルで測り直した．第25版は $14.59$） | SPEC-21 |
+| $q_{\text{ref}}$ | 演出の音の音量の基準 | kg/s² | 全開・$3500\ \text{rpm}$ の単気筒の音源の実効値 $20.64$（既定の機関を変えるたびに測り直す．経緯は仕様書 SPEC-21 C） | SPEC-21 |
 
 ---
 
@@ -306,7 +311,23 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | アンチワインドアップ | 操作量が上下限に張り付いていて，偏差がそれを深める向きのとき，積分を止めること |
 | 張り付き | 操作量が上限または下限にあること（画面の `全開`，`全閉`，`下限`，`上限`） |
 | `OVERLOAD`，`UNDERPOWER` | $f_{\text{cmd}} = 1$ のまま回転が目標より $100\ \text{rpm}$ 以上高い状態，$f_{\text{cmd}} = 0$ のまま $100\ \text{rpm}$ 以上低い状態が $2\ \text{s}$ 続いたときの表示 |
-| 回転数の固定 | $\dfrac{d\omega}{dt} = 0$ とするモード．性能曲線の計測と一部のテストで使う |
+| 回転数の固定 | $\dfrac{d\omega}{dt} = 0$ とするモード．性能曲線の計測，最適化の評価，熱効率の内訳の計算と一部のテストで使う |
+| gain scheduling | 制御対象の感度の変化に合わせて，制御のゲインを運転条件で変えること．動力計制御では，充水率に対する吸収トルクの感度が $T_{\text{rated}}(N/N_{\text{rated}})^2$ に比例するので，ゲインに $\sigma$ を掛ける（SPEC-11 の 3） |
+
+### 3.3a 最適化と熱効率の内訳（SPEC-32，SPEC-33）
+
+| 用語 | 定義 |
+| :--- | :--- |
+| モンテカルロ法 | 乱数で選んだ点で目的の値を調べ，大域の様子をつかむ方法．ここでは探索の前の弁時期を中心とする正規乱数の 32 点 |
+| 有限差分の勾配 | $g_k = \dfrac{J(\mathbf x + h\mathbf e_k) - J(\mathbf x - h\mathbf e_k)}{2h}$（中心差分）．目的の値が弁時期について滑らかであることを使い，増える向きを求める |
+| $1^\circ$ 単位の局所最大 | 4 成分のそれぞれを $\pm 1^\circ$ ずらした 8 点のどれでも目的の値が大きくならない点 |
+| 周期定常の判定 | 直近 3 サイクルの軸トルク，点火時期，体積効率，流量，吸気管圧の幅が許容以下であること（SPEC-26，SPEC-32 B の 3） |
+| 損失の内訳（損失分析） | 理論サイクルの熱効率から，条件を 1 つずつ実際に近づけた計算の熱効率の差を，その条件による損失とする分け方．和は理論と実際の熱効率の差に等しい |
+| 時間損失 | 燃焼に時間がかかり，熱が上死点から離れた（大きい）容積で出ることによる損失．ここでは「燃焼の遅れ（等容度）」と呼ぶ |
+| 等容度 | 熱の出る時期の分布が，上死点での等容の加熱にどれだけ近いかを表す値（$\eta_{glh}$．$1$ が等容） |
+| 冷却損失 | 壁への熱伝達で失う仕事．壁へ逃げた熱 $Q_w$ のうち，仕事に変わり得た分だけが損失になる |
+| ポンピング損失 | 吸気と排気の行程の仕事（負）．$\eta_{ig} - \eta_i$ |
+| 吹き出し損失 | 排気弁が下死点より前に開くことで失う膨張の仕事 |
 
 ### 3.4 画面と検証
 
