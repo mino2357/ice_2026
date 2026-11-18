@@ -11,6 +11,7 @@
 | `bitcheck.js` | 熱物性 γ(T) の経路が第25版（commit `1ef8ff1`）とビット単位で一致するか．`--chromium` でブラウザでも比べる | git，（Playwright） |
 | `node_core.js` | `src/core.js` を Node.js で読み込む（`require('./node_core').load()`）．`sub` でソースを書き換えて感度を調べられる | Node.js |
 | `phi_sweep.js` | 当量比に対する全開の軸トルク，IVC の筒内温度，空気量，点火の時点の当量比．`--hfg 305e3` で気化潜熱を変える | Node.js |
+| `valves4.js` | 4 弁（吸気 2・排気 2）にしたときの全開の性能の試算．弁の数・径・リフトを JSON で渡す（`docs/review_v26.md` の 11.2 節） | Node.js |
 | `bench_core.js` | 全開・3000 rpm 固定の 1 サイクルあたりの計算時間とステップ数（熱物性・噴射方式ごと） | Node.js |
 | `idle.js` | 始動からのアイドルの回転数の偏差（設定の上書きを JSON で渡す） | Node.js |
 
