@@ -134,13 +134,13 @@ function vmStart(){if(OP.vm&&!OP.vm.done){vmStop();return}if(!optReady()){$('vpr
 /* 中止：計算中の評価を待たずに止める（それまでに埋まった格子と詰めた点は残す） */
 function vmStop(){const m=OP.vm;if(!m||m.done)return;m.stop=true;m.done=true;vmText()}
 function vmTick(ms){const m=OP.vm;if(!m||m.done)return;const t=performance.now();if(m.run(ms)){if(m.opt.T)OP.vsel={x:m.opt.T.x.slice(),src:'T'};vmText()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}
-const vmBe=e=>3.6e9/(e*K.Hu);
+const vmBe=e=>e>0?3.6e9/(e*K.Hu):NaN;
 /* 選んだ点の値：★ ◆ は計算した値，それ以外は補間の値 */
 function vmVal(sel){const m=OP.vm;if(!m||!sel)return null;if(sel.src==='T'||sel.src==='B'){const o=m.opt[sel.src];return{tb:o.tb,be:vmBe(o.eb),ip:false}}const Gd=vmGrid(m);if(!Gd)return null;return{tb:bil2(Gd.T,Gd.xs,Gd.xs,...sel.x),be:bil2(Gd.be,Gd.xs,Gd.xs,...sel.x),ip:true}}
 function vmText(){if(!$('vst'))return;const m=OP.vm,run=m&&!m.done;$('vrn').textContent=run?'中止':'計算';$('vap').disabled=!OP.vsel||run;$('vun').disabled=!U.undo;
  $('vst').textContent=optReady()?`運転状態：N̄ ${(m?m.E.N0:live.s.Nb).toFixed(0)} rpm，開度 ${((m?m.E.al0:live.s.al)/D).toFixed(1)}°（固定して評価．作用角は固定）`:'運転タブで START してください';
  if(m)$('vpr').textContent=`${run?m.stage:m.stop?'中止':'終了'}：評価 ${m.ne} 回，${(m.t/1e3).toFixed(1)} s`;else if(!$('vpr').textContent.includes('START'))$('vpr').textContent='';
- const f=(x,v)=>`(${x[0]}, ${x[1]})：${v.tb.toFixed(2)} N·m，${v.be.toFixed(0)} g/kWh`;if(m){const o=m.opt;$('vrd').innerHTML=`<span style="color:#ff8a4c">★ 軸トルク最大</span> ${o.T?f(o.T.x,{tb:o.T.tb,be:vmBe(o.T.eb)}):'–'}`;$('vrd2').innerHTML=`<span style="color:#4dabf7">◆ 燃料消費率最小</span> ${o.B?f(o.B.x,{tb:o.B.tb,be:vmBe(o.B.eb)}):'–'}`;const v=vmVal(OP.vsel);$('vrd3').textContent=OP.vsel&&v?`＋ 選んだ点 ${f(OP.vsel.x,v)}${v.ip?'（補間）':''}`:'マップをタップすると，その点の値が出ます'}else{$('vrd').textContent='';$('vrd2').textContent='';$('vrd3').textContent=''}}
+ const f=(x,v)=>`(${x[0]}, ${x[1]})：${v.tb.toFixed(2)} N·m，${v.be===v.be?v.be.toFixed(0)+' g/kWh':'出力なし'}`;if(m){const o=m.opt;$('vrd').innerHTML=`<span style="color:#ff8a4c">★ 軸トルク最大</span> ${o.T?f(o.T.x,{tb:o.T.tb,be:vmBe(o.T.eb)}):'–'}`;$('vrd2').innerHTML=`<span style="color:#4dabf7">◆ 燃料消費率最小</span> ${o.B?f(o.B.x,{tb:o.B.tb,be:vmBe(o.B.eb)}):m.done&&!m.stop?'正の軸トルクの点が無い':'–'}`;const v=vmVal(OP.vsel);$('vrd3').textContent=OP.vsel&&v?`＋ 選んだ点 ${f(OP.vsel.x,v)}${v.ip?'（補間）':''}`:'マップをタップすると，その点の値が出ます'}else{$('vrd').textContent='';$('vrd2').textContent='';$('vrd3').textContent=''}}
 function drawVMT(){const q=prep($('vmc'));if(!q)return null;const m=OP.vm,Gd=m?vmGrid(m):null,d=$('vmc').width/q.W;let C=null;if(Gd){const key=`${q.W}|${q.H}|${d}|${Gd.L}|${m.done?1:0}`;if(key!==OP.vkey||OP.vcM!==m){OP.vcM=m;OP.vcv=OP.vcv||document.createElement('canvas');OP.vc=vmBuild(Gd,q.W,q.H,d,OP.vcv);OP.vkey=key}C=OP.vc}
  return drawVM(q.g,q.W,q.H,{M:m,Gd,C,p0:m?m.p0:[Math.round(LP.phin/D),Math.round(LP.phex/D)],sel:OP.vsel,msg:!optReady()?'運転タブで START してください':m&&!m.done?`計算中（${m.stage}）`:'[計算] でマップを作ります'},COL)}
 /* タップ：★ ◆ の印から 12 px 以内ならその点，それ以外は 1° に丸めた点（範囲の外は端に寄せる） */

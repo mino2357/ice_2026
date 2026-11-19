@@ -312,29 +312,38 @@ function drawLoss(g,W,H,r,col,msg){g.font='12px system-ui,sans-serif';g.textBase
   g.fillStyle=col.fg;if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}g.textAlign='left';g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${pc(q.hi,1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)});
  g.fillStyle=col.mu;g.textAlign='left';g.fillText(`等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}° ATDC，壁への熱 Q_w/Q_f ${pc(r.qw,1)} %`,4,H-22);g.fillText(`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°（回転数を固定した直前のサイクル）`,4,H-7);return S}
 /* ===== VVT マップ（SPEC-34 A） ===== */
-/* 双一次補間：G[j][i] は (xs[i], ys[j]) の値．範囲の外は端に寄せる */
+/* 双一次補間：G[j][i] は (xs[i], ys[j]) の値．範囲の外は端に寄せる．4 隅のどれかが未定義（NaN）なら未定義 */
 function bil2(G,xs,ys,a,b){const n=xs.length,m=ys.length,fx=Math.min(n-1,Math.max(0,(a-xs[0])/(xs[n-1]-xs[0])*(n-1))),fy=Math.min(m-1,Math.max(0,(b-ys[0])/(ys[m-1]-ys[0])*(m-1))),i=Math.min(n-2,Math.floor(fx)),j=Math.min(m-2,Math.floor(fy)),u=fx-i,v=fy-j;return(G[j][i]*(1-u)+G[j][i+1]*u)*(1-v)+(G[j+1][i]*(1-u)+G[j+1][i+1]*u)*v}
 /* 等高線（marching squares）：場 F を [x0,x1]×[y0,y1] の m×m の小区画に分け，F = L の線分 [[a1,b1],[a2,b2]] を返す */
 function contourSeg(F,x0,x1,y0,y1,m,L){const sx=(x1-x0)/m,sy=(y1-y0)/m,out=[],v=[];for(let j=0;j<=m;j++){v.push([]);for(let i=0;i<=m;i++)v[j].push(F(x0+i*sx,y0+j*sy))}
- for(let j=0;j<m;j++)for(let i=0;i<m;i++){const c=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]],pts=[];for(let e=0;e<4;e++){const[pi,pj]=c[e],[qi,qj]=c[(e+1)%4],f1=v[pj][pi],f2=v[qj][qi];if((f1-L)*(f2-L)<0){const t=(L-f1)/(f2-f1);pts.push([x0+(pi+t*(qi-pi))*sx,y0+(pj+t*(qj-pj))*sy])}}if(pts.length===2)out.push(pts);else if(pts.length===4){out.push([pts[0],pts[1]],[pts[2],pts[3]])}}return out}
-/* 表示に使う格子：埋まっている最も細かい段階の部分格子．VALVE HIT の点は隣の平均で埋める */
-function vmGrid(M){const L=M.level();if(!L)return null;const st=[4,2,1][L-1],ph=VVM.ph,id=[];for(let i=0;i<ph.length;i+=st)id.push(i);const xs=id.map(i=>ph[i]),sub=G=>{const S=id.map(j=>id.map(i=>G[j][i]));for(let r=0;r<2;r++)S.forEach((row,j)=>row.forEach((v,i)=>{if(v!==v){let s=0,n=0;for(const[di,dj]of[[1,0],[-1,0],[0,1],[0,-1]]){const q=S[j+dj]&&S[j+dj][i+di];if(q===q&&q!==undefined){s+=q;n++}}if(n)row[i]=s/n}}));return S};
- const T=sub(M.T),be=sub(M.B.map(r=>r.map(e=>3.6e9/(e*K.Hu))));return{L,xs,T,be,H:id.map(j=>id.map(i=>M.H[j][i]))}}
+ for(let j=0;j<m;j++)for(let i=0;i<m;i++){const c=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]],pts=[];if(c.some(([a,b])=>!(v[b][a]===v[b][a])))continue;for(let e=0;e<4;e++){const[pi,pj]=c[e],[qi,qj]=c[(e+1)%4],f1=v[pj][pi],f2=v[qj][qi];if((f1-L)*(f2-L)<0){const t=(L-f1)/(f2-f1);pts.push([x0+(pi+t*(qi-pi))*sx,y0+(pj+t*(qj-pj))*sy])}}if(pts.length===2)out.push(pts);else if(pts.length===4){out.push([pts[0],pts[1]],[pts[2],pts[3]])}}return out}
+/* 表示に使う格子：埋まっている最も細かい段階の部分格子．軸トルクの VALVE HIT の点は隣の平均で埋める．燃料消費率は η_b > 0 の点だけ（埋めない） */
+function vmGrid(M){const L=M.level();if(!L)return null;const st=[4,2,1][L-1],ph=VVM.ph,id=[];for(let i=0;i<ph.length;i+=st)id.push(i);const xs=id.map(i=>ph[i]),raw=G=>id.map(j=>id.map(i=>G[j][i])),sub=G=>{const S=id.map(j=>id.map(i=>G[j][i]));for(let r=0;r<2;r++)S.forEach((row,j)=>row.forEach((v,i)=>{if(v!==v){let s=0,n=0;for(const[di,dj]of[[1,0],[-1,0],[0,1],[0,-1]]){const q=S[j+dj]&&S[j+dj][i+di];if(q===q&&q!==undefined){s+=q;n++}}if(n)row[i]=s/n}}));return S};
+ const T=sub(M.T),be=raw(M.B.map(r=>r.map(e=>e>0?3.6e9/(e*K.Hu):NaN)));return{L,xs,T,be,H:id.map(j=>id.map(i=>M.H[j][i]))}}
 /* マップの領域：正方形で，横に余れば中央に寄せる */
 const vmLayout=(W,H)=>{const s=Math.max(40,Math.min(W-92,H-40));return{x:40+Math.max(0,(W-92-s)/2),y:6,w:s,h:s}};
-const vmNice=(lo,hi)=>{const s=[.1,.2,.25,.5,1,2,2.5,5,10,20].find(s=>(hi-lo)/s<=8)||20,l=[];for(let v=Math.ceil(lo/s)*s;v<hi-1e-9;v+=s)if(v>lo+1e-9)l.push(+v.toFixed(3));return l};
+/* 等高線の値：刻み {1, 2, 2.5, 5} × 10^k のうち (lo, hi) の中の本数が 8 以下になる最小の刻みの倍数（SPEC-34 A の 4） */
+const vmNice=(lo,hi)=>{if(!(hi>lo))return[];const r=hi-lo;let s=Infinity;for(let k=Math.floor(Math.log10(r/8))-1;k<=Math.floor(Math.log10(r))+1&&s===Infinity;k++)for(const m of[1,2,2.5,5]){const q=m*10**k;if(Math.floor(hi/q)-Math.ceil(lo/q)+1<=8){s=q;break}}const l=[];for(let n=Math.ceil(lo/s);n*s<hi;n++){const v=+(n*s).toPrecision(12);if(v>lo&&v<hi)l.push(v)}return l};
+/* 燃料消費率の等高線の範囲：[b_min, min(b_max, 2 b_min)] */
+const vmLev=(blo,bhi)=>vmNice(blo,Math.min(bhi,2*blo));
 /* 色の画像と等高線を作る（値が変わったときだけ．cache に保存） */
 /* 色の画像は一辺 240 画素まで（描くときに拡大する） */
 function vmBuild(Gd,W,H,d,cv){const pl=vmLayout(W,H),r=Math.min(240,Math.round(pl.w*d));cv.width=Math.max(1,r);cv.height=Math.max(1,r);const g=cv.getContext('2d'),im=g.createImageData(cv.width,cv.height),xs=Gd.xs,a0=xs[0],a1=xs[xs.length-1],tv=Gd.T.flat().filter(v=>v===v),lo=Math.min(...tv),hi=Math.max(...tv);
  for(let py=0;py<cv.height;py++)for(let px=0;px<cv.width;px++){const a=a0+(px+.5)/cv.width*(a1-a0),b=a1-(py+.5)/cv.height*(a1-a0),c=vir((bil2(Gd.T,xs,xs,a,b)-lo)/Math.max(1e-12,hi-lo)),k=4*(py*cv.width+px);im.data[k]=c[0];im.data[k+1]=c[1];im.data[k+2]=c[2];im.data[k+3]=255}g.putImageData(im,0,0);
- const bv=Gd.be.flat().filter(v=>v===v),blo=Math.min(...bv),bhi=Math.max(...bv),lev=vmNice(blo,bhi),F=(a,b)=>bil2(Gd.be,xs,xs,a,b),seg=lev.map(L=>({L,s:contourSeg(F,a0,a1,a0,a1,64,L)}));return{img:cv,lo,hi,seg,blo,bhi}}
+ const bv=Gd.be.flat().filter(v=>v===v),blo=bv.length?Math.min(...bv):NaN,bhi=bv.length?Math.max(...bv):NaN,lev=bv.length?vmLev(blo,bhi):[],F=(a,b)=>bil2(Gd.be,xs,xs,a,b),seg=lev.map(L=>({L,s:contourSeg(F,a0,a1,a0,a1,64,L)})).filter(q=>q.s.length);
+ /* T_b = 0 の線（場が 0 をまたぐとき） */
+ const z=lo<0&&hi>0?contourSeg((a,b)=>bil2(Gd.T,xs,xs,a,b),a0,a1,a0,a1,64,0):[];return{img:cv,lo,hi,seg,z,blo,bhi}}
 const vir=t=>{t=Math.max(0,Math.min(1,t));const c=[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],x=t*4,i=Math.min(3,Math.floor(x)),f=x-i;return c[i].map((v,k)=>Math.round(v+(c[i+1][k]-v)*f))};
 /* マップを描く．S：{M（VVTMap），Gd，C（vmBuild の結果），p0（現在の位相），sel（選んだ点）}．印の位置を返す */
 function drawVM(g,W,H,S,col){g.font='11px system-ui,sans-serif';g.textBaseline='middle';const pl=vmLayout(W,H),lo=VVM.lo,hi=VVM.hi,X=a=>pl.x+pl.w*(a-lo)/(hi-lo),Y=b=>pl.y+pl.h*(1-(b-lo)/(hi-lo));g.strokeStyle=col.ln;g.lineWidth=1;
  if(!S.Gd){g.strokeRect(pl.x,pl.y,pl.w,pl.h);g.fillStyle=col.mu;g.textAlign='center';g.fillText(S.msg||'',pl.x+pl.w/2,pl.y+pl.h/2);return{pl,mk:[]}}
  const C=S.C;g.drawImage(C.img,pl.x,pl.y,pl.w,pl.h);g.save();g.beginPath();g.rect(pl.x,pl.y,pl.w,pl.h);g.clip();g.strokeStyle='rgba(255,255,255,.85)';g.fillStyle='#ffffff';g.lineWidth=1;for(const q of C.seg){g.beginPath();for(const [p1,p2] of q.s){g.moveTo(X(p1[0]),Y(p1[1]));g.lineTo(X(p2[0]),Y(p2[1]))}g.stroke()}
- /* 等高線の値：各線の中で枠から最も遠い点に，縁取りをして書く */
- g.font='10px system-ui,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='rgba(20,24,31,.8)';for(const q of C.seg){const lab=q.s.reduce((b,s)=>{const m=[(s[0][0]+s[1][0])/2,(s[0][1]+s[1][1])/2],e=Math.min(m[0]-lo,hi-m[0],m[1]-lo,hi-m[1]);return!b||e>b[2]?[m[0],m[1],e]:b},null);if(lab){g.strokeText(String(q.L),X(lab[0]),Y(lab[1]));g.fillStyle='#ffffff';g.fillText(String(q.L),X(lab[0]),Y(lab[1]))}}g.lineWidth=1;
+ /* T_b = 0 の線（黒の破線） */
+ if(C.z&&C.z.length){g.strokeStyle='#000000';g.lineWidth=1.5;g.setLineDash([4,3]);g.beginPath();for(const [p1,p2] of C.z){g.moveTo(X(p1[0]),Y(p1[1]));g.lineTo(X(p2[0]),Y(p2[1]))}g.stroke();g.setLineDash([]);g.lineWidth=1}
+ /* 値の文字：各線の線分の中点を，枠から遠い順に候補とし，印と置いた文字に重ならない最初の位置に置く（置けなければ書かない） */
+ const mkp=[S.p0,S.M.opt.T&&S.M.opt.T.x,S.M.opt.B&&S.M.opt.B.x,S.sel&&S.sel.x].filter(Boolean).map(p=>({x:X(p[0])-8,y:Y(p[1])-8,w:16,h:16})),occ=mkp.slice(),hit=r=>occ.some(o=>r.x<o.x+o.w&&o.x<r.x+r.w&&r.y<o.y+o.h&&o.y<r.y+r.h);g.font='10px system-ui,sans-serif';
+ const place=(segs,t,fg,bg)=>{const w=g.measureText(t).width+4,cand=segs.filter((_,k)=>k%3===0).map(sg=>{const m=[(sg[0][0]+sg[1][0])/2,(sg[0][1]+sg[1][1])/2];return[m,Math.min(m[0]-lo,hi-m[0],m[1]-lo,hi-m[1])]}).sort((a,b)=>b[1]-a[1]);for(const [m] of cand){const r={x:X(m[0])-w/2,y:Y(m[1])-7,w,h:14};if(r.x<pl.x||r.x+r.w>pl.x+pl.w||r.y<pl.y||r.y+r.h>pl.y+pl.h||hit(r))continue;occ.push(r);g.textAlign='center';g.lineWidth=3;g.strokeStyle=bg;g.strokeText(t,X(m[0]),Y(m[1]));g.fillStyle=fg;g.fillText(t,X(m[0]),Y(m[1]));g.lineWidth=1;return r}return null};
+ if(C.z&&C.z.length)place(C.z,'T_b = 0','#000000','rgba(255,255,255,.85)');for(const q of C.seg)place(q.s,String(q.L),'#ffffff','rgba(20,24,31,.8)');
  /* VALVE HIT の点：周り 10° 四方を斜線 */
  const sp=VVM.ph[1]-VVM.ph[0];g.strokeStyle='rgba(255,80,80,.9)';VVM.ph.forEach((b,j)=>VVM.ph.forEach((a,i)=>{if(!S.M.H[j][i])return;const x0=X(a-sp/2),y0=Y(b+sp/2),w=X(a+sp/2)-x0,h=Y(b-sp/2)-y0;g.beginPath();for(let k=-h;k<w;k+=5){g.moveTo(x0+k,y0+h);g.lineTo(x0+k+h,y0)}g.stroke()}));g.restore();
  g.strokeStyle=col.ln;g.strokeRect(pl.x,pl.y,pl.w,pl.h);g.fillStyle=col.mu;g.font='11px system-ui,sans-serif';g.textAlign='center';for(const v of[-40,-20,0,20,40]){g.fillText(v,X(v),pl.y+pl.h+11);g.textAlign='right';g.fillText(v,pl.x-4,Y(v));g.textAlign='center'}

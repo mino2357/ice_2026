@@ -455,7 +455,8 @@ class VTEval{constructor(c0,obj,O,ks){O=O||OPT;this.O=O;this.obj=obj|0;this.ks=k
  feas(x){const P={...this.base.P};this.ks.forEach((k,i)=>P[k]=x[i]*D);return!valveHit(P,this.base.G)}
  /* warm：直前の評価の終わりの状態から始める（既定は細かい許容のとき） */
  start(x,cls,warm){const c=((warm??cls==='fine')&&this.cur?this.cur:this.base).clone();this.ks.forEach((k,i)=>c.P[k]=x[i]*D);c.P.alm=this.al0;c.s.al=this.al0;this.c=c;this.cls=cls;this.tol=this.O.tol[cls]||this.O.tol.fine;this.h=[];this.cy=c.s.cyc;this.J=null}
- val(M){return this.obj?M.eb:M.tb}
+ /* 正味熱効率は T_b ≤ 0 で未定義（NaN）なので，探索では最も悪い値とする */
+ val(M){return this.obj?(M.eb===M.eb?M.eb:-Infinity):M.tb}
  run(ms){const c=this.c,t0=performance.now();let k=0;for(;;){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;if(c.lastM)this.h.push(c.lastM);if(this.check())return true}if((++k&3)===0&&performance.now()-t0>ms)return false}}
  /* 周期定常の判定（SPEC-32 B の 3） */
  check(){const h=this.h,T=this.tol,O=this.O;if(h.length<O.cmin)return false;const a=h.slice(-3),tb=a.map(m=>m.tb),z=tb[2],rng=v=>Math.max(...v)-Math.min(...v),rel=v=>rng(v)/Math.max(1e-30,Math.abs(swM(v)));
