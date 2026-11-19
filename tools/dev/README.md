@@ -13,7 +13,7 @@
 | `phi_sweep.js` | 当量比に対する全開の軸トルク，IVC の筒内温度，空気量，点火の時点の当量比．`--hfg 305e3` で気化潜熱を変える | Node.js |
 | `valves4.js` | 弁の数・径・リフトと排気系（大気開放か，第42版までの消音器か）を変えたときの全開の性能の比較．JSON で渡す（`docs/review_v26.md` の 11.2，12 節） | Node.js |
 | `stiff.js` | 定常のサイクルに沿ったヤコビアンの固有値の絶対値の最大（系の硬さ）と，RK4 の安定の条件 $\lvert\lambda\rvert\Delta t \le 2.79$ との比較（仕様書 SPEC-13，TEST-13 項目 10 と同じ求め方） | Node.js |
-| `dyno_osc.js` | 動力計制御での回転数の振れの調査（定格・目標・ゲイン・遅れを変えた振れ幅と周期，平均化した系の Routh の条件との比較．`docs/review_v26.md` の 13.1 節） | Node.js |
+| `dyno_osc.js` | （水ブレーキ式の動力計のときの道具．電動式にした後は動かない．`docs/review_v26.md` の記録のため残す）動力計制御での回転数の振れの調査（定格・目標・ゲイン・遅れを変えた振れ幅と周期，平均化した系の Routh の条件との比較．`docs/review_v26.md` の 13.1 節） | Node.js |
 | `vtopt.js` | バルブタイミングの探索（SPEC-32）を Node.js で実行し，結果の 8 近傍を別の評価器で確かめる | Node.js |
 | `lossbk.js` | 熱効率の損失の内訳（SPEC-33）を Node.js で計算する | Node.js |
 | `bench_core.js` | 全開・3000 rpm 固定の 1 サイクルあたりの計算時間とステップ数（熱物性・噴射方式ごと） | Node.js |

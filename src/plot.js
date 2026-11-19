@@ -15,7 +15,7 @@ const mkAX=()=>({p:new AxS(5000,500,50000),T:new AxS(3000,3000,5000),dq:new AxS(
 const amax=(...A)=>{let m=0;for(const a of A)for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v}return m};
 const amm=(...A)=>{let lo=Infinity,hi=-Infinity;for(const a of A)for(let i=0;i<a.length;i++){const v=a[i];if(v===v){if(v<lo)lo=v;if(v>hi)hi=v}}return[lo,hi]};
 function axUpdate(c,AX,now){const t=c.tr,H=c.H;if(c.s.cyc!==AX.cyc&&c.s.cyc>0){AX.cyc=c.s.cyc;AX.p.up(amax(t.p),now);AX.T.up(amax(t.T),now);AX.dq.up(amax(t.dq),now);AX.mf.up(amax(t.mi,t.me),now);AX.m.up(amax(t.m),now);AX.mth.up(amax(t.mt),now);AX.tq.up(amax(t.Ti,t.Ts,t.Td,t.Tf),now);AX.vp.up(amax(t.vp),now);const[a,b]=amm(t.N);AX.N.up(a,b,now)}
-if(H.t.length){AX.Nt.up(amax(H.N,H.Nt),now);const[a,b]=amm(H.Tw);AX.Tw.up(a,b,now);const[c1,c2]=amm(H.tb,H.td);if(c2>=c1){AX.tb.sym=c1<0;AX.tb.up(Math.max(Math.abs(c1),Math.abs(c2)),now)}}}
+if(H.t.length){AX.Nt.up(amax(H.N,H.Nt),now);const[a,b]=amm(H.Tw);AX.Tw.up(a,b,now);const[c1,c2]=amm(H.tb,H.td,H.fc,H.fe);if(c2>=c1){AX.tb.sym=c1<0;AX.tb.up(Math.max(Math.abs(c1),Math.abs(c2)),now)}}}
 function axReset(AX){for(const k in AX)if(AX[k]&&AX[k].reset)AX[k].reset();AX.cyc=-1}
 /* ===== plot layout (pure geometry, testable) and drawing ===== */
 const tfmt=(v,d)=>{const n=Math.max(0,-Math.floor(Math.log10(d)+1e-9));return v.toFixed(Math.min(n,6))};
@@ -71,7 +71,7 @@ case 2:return[{xa:xtv,ya:fx(0,niceCeil(c.P.Lv*1e3),'リフト [mm]'),lg:[{n:'吸
 case 3:return[{xa:xth,ya:st(AX.m,'筒内質量 [mg]'),lg:[{n:'全体',c:CL.a},{n:'新気',c:CL.b}],ser:[S(TH0,t0.m,CL.a),S(TH0,t0.mu,CL.b)]},{xa:xth,ya:fx(0,120,'p_in [kPa]'),ser:[S(TH0,t0.pin,CL.b)]},{xa:xth,ya:st(AX.mth,'スロットル流量 [g/s]'),ser:[S(TH0,t0.mt,CL.k)]}];
 case 4:return[{xa:xth,ya:st(AX.tq,'トルク [N·m]'),lg:[{n:'図示',c:CL.a},{n:'始動',c:CL.k},{n:'摩擦',c:CL.v},{n:'動力計',c:CL.b}],ser:[S(TH0,t0.Ti,CL.a),S(TH0,t0.Ts,CL.k),S(TH0,t0.Tf,CL.v),S(TH0,t0.Td,CL.b)]},{xa:xth,ya:{a:AX.N.a,b:AX.N.b,name:'N [rpm]',hot:hot(AX.N)},ser:[S(TH0,t0.N,CL.b)]},{xa:xth,ya:st(AX.vp,'ピストン速度 [m/s]'),ser:[S(TH0,t0.vp,CL.k)]}];
 case 5:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:fx(0,90,'α [°]'),ser:[S(HX,H.al,CL.b)]},{xa:xt,ya:fx(0,120,'p_in [kPa]'),ser:[S(HX,H.pin,CL.a)]},{xa:xt,ya:{a:AX.Tw.a,b:AX.Tw.b,name:'T_w [K]',hot:hot(AX.Tw)},ser:[S(HX,H.Tw,CL.k)]}];
-default:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:st(AX.tb,'トルク [N·m]'),lg:[{n:'T_b',c:CL.a},{n:'T_dyno',c:CL.b}],ser:[S(HX,H.tb,CL.a),S(HX,H.td,CL.b)]},{xa:xt,ya:fx(0,1,'充水率 f [-]'),lg:[{n:'f_cmd',c:CL.a},{n:'f_eff',c:CL.b}],ser:[S(HX,H.fc,CL.a),S(HX,H.fe,CL.b)]}]}}
+default:return[{xa:xt,ya:st(AX.Nt,'N [rpm]'),lg:[{n:'N̄',c:CL.a},{n:'目標',c:CL.k}],ser:[S(HX,H.N,CL.a),S(HX,H.Nt,CL.k)]},{xa:xt,ya:st(AX.tb,'トルク [N·m]'),lg:[{n:'T_b',c:CL.a},{n:'T_dyno',c:CL.b}],ser:[S(HX,H.tb,CL.a),S(HX,H.td,CL.b)]},{xa:xt,ya:st(AX.tb,'動力計のトルク [N·m]'),lg:[{n:'指令 T_dc',c:CL.a},{n:'T_d',c:CL.b}],ser:[S(HX,H.fc,CL.a),S(HX,H.fe,CL.b)]}]}}
 const SWX={a:0,b:7000,name:'N [rpm]',tv:[0,1000,2000,3000,4000,5000,6000,7000]};
 const swCol=al=>`hsl(${Math.round(220-(al-10)/80*210)},75%,45%)`;
 function sweepSpec(cur,ref,sub){/* エンストした点（st）は描かない */const pk=q=>q.pts.filter(o=>!o.st),sets=[...(ref||[]).map(q=>({p:pk(q),c:CL.g,w:1,r:1})),...(cur||[]).map(q=>({p:pk(q),c:swCol(q.al),w:1.8,al:q.al}))],lg=[...(cur||[]).map(q=>({n:q.al+'°',c:swCol(q.al)})),...(ref&&ref.length?[{n:'基準',c:CL.g}]:[])],
@@ -83,11 +83,11 @@ if(ref){ser.push({X:TH,Y:mk(ref,refCam,0),c:CL.g,w:1.2},{X:TH,Y:mk(ref,refCam,1)
 ser.push({X:TH,Y:cl,c:CL.v,w:1.2},{X:TH,Y:mk(v,P.cam,0),c:CL.b},{X:TH,Y:mk(v,P.cam,1),c:CL.a});lg.push({n:'吸気',c:CL.b},{n:'排気',c:CL.a},{n:'ピストン余裕',c:CL.v});
 const Lm=Math.max(P.Lv,ref?ref.i.L:0)*1e3;return{xa:{a:360,b:1080,name:'θ [°CA]（720 = 吸気上死点）',tv:[360,540,720,900,1080]},ya:{a:0,b:niceCeil(Lm*1.05),name:'リフト [mm]'},lg,ser}}
 const camText=(P,G)=>{const v=valves(P,G),dg=a=>(a/D).toFixed(0),ov=(v.e.c-(v.i.o+P4))/D;return`4 弁  IVO ${dg(v.i.o)}° IVC ${dg(v.i.c)}° EVO ${dg(v.e.o)}° EVC ${dg(v.e.c)}°  オーバーラップ ${ov.toFixed(0)}°CA`};
-function ctlText(c){const s=c.s,P=c.P,R=(k,t)=>`<span class="r${k}">${t}</span>`,Nb=Math.round(s.Nb),sp=(P.sauto?R('a','自動'):R('f','固定'))+` 点火時期 ${s.spa.toFixed(1)}° BTDC`,TH=a=>`スロットル開度 α ${(a/D).toFixed(1)}°`,FF=f=>`動力計の充水率 f ${f.toFixed(2)}`;
+function ctlText(c){const s=c.s,P=c.P,R=(k,t)=>`<span class="r${k}">${t}</span>`,Nb=Math.round(s.Nb),sp=(P.sauto?R('a','自動'):R('f','固定'))+` 点火時期 ${s.spa.toFixed(1)}° BTDC`,TH=a=>`スロットル開度 α ${(a/D).toFixed(1)}°`,FF=(T,om)=>`動力計 ${T<0?'駆動':'吸収'} ${Math.abs(T).toFixed(1)} N·m（${(Math.abs(T*om)/1e3).toFixed(1)} kW）`;
 if(!s.fired&&!s.starter)return['停止中','START で始動','',''];const NT=`${R('c','制御量')} N̄ ${Nb} rpm`;
 if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} ${TH(s.al)}（始動開度）`,'',sp];
-if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':s.al<=almin(P)+1e-12?' 下限':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(P.fm)}`,sp]}
-const sat=s.fc>=1?' 上限':s.fc<=0?' 下限':'';return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc)}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
+if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':s.al<=almin(P)+1e-12?' 下限':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(s.fc,s.y[1])}`,sp]}
+const Tm=dynMax(P,s.y[1]),sat=s.fc>=Tm-1e-12?' 上限':s.fc<=-Tm+1e-12?' 上限':'';return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc,s.y[1])}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 /* SPEC-30 の 10：ページ「噴射」のパネルの文字 */
 function injText(c){const s=c.s,P=c.P,ph=s.phc===s.phc&&s.phc!=null?`φ_c ${s.phc.toFixed(3)}`:'φ_c –';if(P.gam!==2)return'ポート噴射（予混合気．熱物性が「化学平衡」のときだけ噴射方式を選べます）';if(P.inj!==1)return`ポート噴射（予混合気）  ${ph}`;const J=s.inj;if(!(J.m>0))return`直噴  噴射なし  ${ph}`;const a=md4(J.th0)/D,b=a+J.dth/D;return`噴射 ${a.toFixed(0)}°〜${b.toFixed(1)}°（幅 ${(J.dth/D).toFixed(1)}°${J.dth>=300*D-1e-9?'．幅が上限：インジェクタ流量を超える率':''}）  ${(J.m*1e6).toFixed(2)} mg  ${ph}`}
 /* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
@@ -131,10 +131,11 @@ const sa=P4/2-s.spa*D;if(s.C.on&&s.fuel&&tt>sa&&tt<sa+.25){g.strokeStyle='#ffe44
 g.strokeStyle=col.fg;g.lineWidth=1.5;g.beginPath();ln(-(b+wt),-hh,b+wt,-hh);ln(-(b+wt),-hh,-(b+wt),yb);ln(b+wt,-hh,b+wt,yb);ln(-b,0,-b,yb);ln(b,0,b,yb);g.stroke();
 if(nt)return q; /* 全体図（SPEC-31 B の 2）は文字を描かない */
 const ph=['吸気','圧縮','膨張','排気'][Math.floor(tt/PI)%4];g.textBaseline='alphabetic';g.textAlign='left';g.fillStyle=col.fg;g.font='bold 13px system-ui,sans-serif';g.fillText((s.fired?'RUN':s.starter?'CRANK':'STOP')+'  '+(s.y[1]*30/PI|0)+' rpm',8,18);
-g.font='12px system-ui,sans-serif';const fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':'');[s.mode?'動力計制御':'スロットル制御',`θ ${(tt/D).toFixed(0)}°CA ${ph}`,`p ${(s.y[2]/1e3).toFixed(0)} kPa`,`T ${T.toFixed(0)} K`,`吸気弁 ${(Li*1e3).toFixed(1)} mm`,`排気弁 ${(Le*1e3).toFixed(1)} mm`,`B×S ${(q.B*1e3).toFixed(0)}×${(c.G.S*1e3).toFixed(0)}`,`l/r ${(q.l/r).toFixed(2)}`,`ε ${c.G.eps.toFixed(1)}`].forEach((t,i)=>{g.fillStyle=col.mu;g.fillText(t,8,36+i*15)});
-g.fillStyle=col.ng;g.font='bold 12px system-ui,sans-serif';if(fl)g.fillText(fl.trim(),8,36+9*15);if(c.vhit)g.fillText('VALVE HIT',8,36+10*15);return q}
+g.font='12px system-ui,sans-serif';const fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':'');[s.mode?'動力計制御':'スロットル制御',`θ ${(tt/D).toFixed(0)}°CA ${ph}`,`p ${(s.y[2]/1e3).toFixed(0)} kPa`,`T ${T.toFixed(0)} K`,`吸気弁 ${(Li*1e3).toFixed(1)} mm`,`排気弁 ${(Le*1e3).toFixed(1)} mm`,`B×S ${(q.B*1e3).toFixed(0)}×${(c.G.S*1e3).toFixed(0)}`,`l/r ${(q.l/r).toFixed(2)}`,`ε ${c.G.eps.toFixed(1)}`].filter((t,i,A)=>{const nw=(fl?1:0)+(c.vhit?1:0),nl=Math.max(0,Math.floor((Hh-40)/15)+1);return 9+nw+(c.vhit&&!fl?1:0)<=nl||i<nl-nw}).forEach((t,i)=>{g.fillStyle=col.mu;g.fillText(t,8,36+i*15)});
+/* 帯の上端（Hh）より下に文字を描かない．入り切らないときは警告を残し，状態の行を下から省く（SPEC-19 の 6） */
+{const nw=(fl?1:0)+(c.vhit?1:0),nl=Math.max(0,Math.floor((Hh-40)/15)+1),full=9+nw+(c.vhit&&!fl?1:0)<=nl,y0=full?9:Math.max(0,nl-nw);g.fillStyle=col.ng;g.font='bold 12px system-ui,sans-serif';if(fl)g.fillText(fl.trim(),8,36+y0*15);if(c.vhit)g.fillText('VALVE HIT',8,36+(full?10:y0+(fl?1:0))*15)}return q}
 /* ===== 全体図（SPEC-31）．設計座標 400×620 を一様な縮尺 k で置く．sysSpec が場面の記述（要素，位置，寸法，文字），drawSys が描画 ===== */
-const SYW=400,SYH=620,SYC={in:'#5b8fd8',inl:'#a9c9f5',ex:'#e0773a',exl:'#f5b48c',air:'#a9c9f5',fuel:'#69db7c',bur:'#b197fc',sig:'#c9a227',wat:'#3d8bd9',met:'#9aa3ad',dk:'#0b0e13'};
+const SYW=400,SYH=620,SYC={in:'#5b8fd8',inl:'#a9c9f5',ex:'#e0773a',exl:'#f5b48c',air:'#a9c9f5',fuel:'#69db7c',bur:'#b197fc',sig:'#c9a227',abs:'#ff8a4c',mot:'#69db7c',met:'#9aa3ad',dk:'#0b0e13'};
 /* 圧力の色（SPEC-31 A の 4）．kPa → [r,g,b] */
 function pcol(kPa){const u=Math.max(0,Math.min(1,Math.log10(Math.max(kPa,1e-9)/10)/Math.log10(500))),S=[[0,[60,110,210]],[.38,[150,160,175]],[1,[220,70,50]]],i=u<=.38?0:1,a=S[i],b=S[i+1],t=(u-a[0])/(b[0]-a[0]);return a[1].map((v,j)=>v+(b[1][j]-v)*t)}
 const pcs=kPa=>`rgb(${pcol(kPa).map(Math.round)})`;
@@ -174,7 +175,8 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
   if(EX){el.exPipe={pts:[PE,[X(341),PE[1]],[X(341),Y(yI)],[X(386),Y(yI)]],w:pw(P.dex)};el.out={x:X(386),y:Y(yI)}}
   else el.back={pts:[PE,[X(330),PE[1]]],w:pw(P.dex),dp:P.dpx};
   const Rd=40*k,dx=X(344);el.shaft={x0:CC[0],x1:dx-Rd,y:CC[1]};el.fly={x:X(268),y:CC[1],h:52*k};
-  el.dyno={x:dx,y:CC[1],R:Rd,f:Math.max(0,Math.min(1,s.fe)),th:y[0],lvl:2*Rd*Math.max(0,Math.min(1,s.fe))};
+  /* 電動式動力計（SPEC-31 A の 3）：外周の弧の角度 = 2π|T_e|/T_max，色は吸収と駆動で変える */
+  {const Tm=dynMax(P,y[1]),u=Math.max(-1,Math.min(1,s.fe/Tm));el.dyno={x:dx,y:CC[1],R:Rd,u,th:y[0],arc:2*PI*Math.abs(u),dir:s.fe<0?'駆動':'吸収'}}
   el.aux={x:X(110),y:CC[1]-30*k,r:11*k};el.st={x:X(110),y:CC[1]+24*k,r:14*k};
   el.ecu={x:X(8),y:Y(500),w:224*k};
   const sg=[];sg.push({to:'thr',pts:[[X(4),Y(500)],[X(4),Y(70)],[X(40),Y(70)],[X(40),el.thr.cy+el.thr.w/2]]});
@@ -195,7 +197,7 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
   if(EX)tag('exp',332,98,['排気管',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('d_e',(P.dex*1e3).toFixed(0),0,'mm'),Cl('p_pe',kPa(y[14]),T_.p,'kPa')],SYC.exl,'r');
   else tag('back',396,PE[1]/k-oy/k-36,['背圧',`Δp_ex ${(P.dpx/1e3).toFixed(1)} kPa`],SYC.exl,'r');
   if(EX)tag('out',396,2,['出口（大気開放）',Cl('A_e',(PI/4*P.dex*P.dex*1e6).toFixed(0),0,'mm²'),Cl('ṁ_e',gs(Xc.mep||0),T_.m,'g/s')],SYC.exl,'r');
-  {const o=tag('dyno',396,(CC[1]-oy)/k+46,['動力計',Cl('充水率 f',s.fe.toFixed(2),T_.f),Cl('T_d',(Xc.Td||0).toFixed(1),T_.Td,'N·m'),Cl('定格',P.Tr.toFixed(0),0,'N·m')],'#74c0fc','r');o.y=Math.min(o.y,Y(500)-4*k-o.h)}
+  {const o=tag('dyno',396,(CC[1]-oy)/k+46,['動力計（電動）',Cl(s.fe<0?'駆動':'吸収',Math.abs(s.fe).toFixed(1),T_.Td,'N·m'),Cl('P_d',(Math.abs(s.fe*y[1])/1e3).toFixed(2),T_.Pb,'kW'),Cl('定格',`${P.Tr.toFixed(0)} N·m，${(P.Pr/1e3).toFixed(0)}`,0,'kW')],'#74c0fc','r');o.y=Math.min(o.y,Y(500)-4*k-o.h)}
   tag('run2',396,500,['運転',Cl('N̄',s.Nb.toFixed(0),T_.N,'rpm'),Cl('T_b',num(M.tb||0,1),T_.Tb,'N·m'),Cl('P_b',num((M.pb||0)/1e3,2),T_.Pb,'kW'),Cl('IMEP',num((M.imep||0)/1e3,0),T_.im,'kPa')],'#ff8a4c','r');
   const ecu=['ECU',`回転数：${P.mode?'動力計':'スロットル'}の PI，目標 ${P.nt.toFixed(0)} rpm`,[`点火：${P.sauto?'自動最適化':'手動'} `,Nv(num(s.spa,1),T_.sa),'° BTDC'],[`噴射：${DI?'直噴':'ポート噴射'}，φ ${P.phi.toFixed(2)}，`,Nv((s.mfc*1e6).toFixed(1),T_.mf),' mg'],[`動力計：充水率 ${P.mode?'PI':'固定'} f `,Nv(s.fe.toFixed(2),T_.f)]];
   tag('ecu',8,500,ecu,SYC.sig);
@@ -224,7 +226,7 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
  if(EX){ed('ev','排気弁','orif',[cyl.px+cyl.r,cyl.py],[exl.px-exl.r,exl.py],Xc.me||0,SYC.exl,['排気弁',Cl('ṁ',gs(Xc.me||0),T_.m,'g/s')],'b',[cyl.px+cyl.rL,cyl.py],[exl.px-exl.r,exl.py]);/* 排気管は排気ポートから大気の線まで（開放端） */ed('exp','排気管','pipe',[exl.px,exl.py-exl.r],[exl.px,atmY],Xc.mep||0,SYC.exl,['排気管（大気開放）',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('d_e',(P.dex*1e3).toFixed(0),0,'mm'),Cl('ṁ',gs(Xc.mep||0),T_.m,'g/s')],'r')}
  else ed('ev','排気弁','orif',[cyl.px+cyl.r,cyl.py],[X(xE),Y(yA)],Xc.me||0,SYC.exl,['排気弁 → 背圧',Cl('Δp_ex',(P.dpx/1e3).toFixed(1),0,'kPa'),Cl('ṁ',gs(Xc.me||0),T_.m,'g/s')],'l',[cyl.px+cyl.rL,cyl.py],[X(xE),Y(yA)]);
  /* 回転系と ECU の枠を先に置き，辺の名前と節点の名前は，候補の位置のうち，置いた枠・節点の円・Canvas の端に重ならない最初の位置に置く（SPEC-31 C の 6） */
- const T4=v=>(v||0)/P4,TQ=[{id:'ti',name:'図示',v:T4(M.W),x:70,y:390,c:'#ff8a4c'},{id:'tf',name:'摩擦',v:-T4(M.Wf),x:70,y:462,c:'#9aa3b2'},{id:'td',name:['動力計（f ',Nv(s.fe.toFixed(2),T_.f),'）'],v:-T4(M.Wd),x:330,y:390,c:'#74c0fc'},{id:'ta',name:'補機',v:-T4(M.Wa),x:330,y:462,c:'#9aa3b2'}];
+ const T4=v=>(v||0)/P4,TQ=[{id:'ti',name:'図示',v:T4(M.W),x:70,y:390,c:'#ff8a4c'},{id:'tf',name:'摩擦',v:-T4(M.Wf),x:70,y:462,c:'#9aa3b2'},{id:'td',name:`動力計（${M.Wd<0?'駆動':'吸収'}）`,v:-T4(M.Wd),x:330,y:390,c:'#74c0fc'},{id:'ta',name:'補機',v:-T4(M.Wa),x:330,y:462,c:'#9aa3b2'}];
  const Ts=Xc.Ts||0;S.sum=TQ.reduce((a,o)=>a+o.v,0);S.om={x:X(200),y:Y(426),r:24*k};
  for(const o of TQ){const t=tag('t_'+o.id,0,0,[o.name,[Nv(`${o.v>=0?'+':'−'}${Math.abs(o.v).toFixed(2)}`,T_.tq),' N·m']],o.c);t.x=X(o.x)-t.w/2;t.y=Y(o.y)-t.h/2;o.tag=t}
  const ts=tag('t_st',0,0,['スターター（瞬時）',[Nv(Ts.toFixed(1),T_.Td),' N·m']],'#9aa3b2');ts.x=X(200)-ts.w/2;ts.y=Y(474);
@@ -267,7 +269,7 @@ function drawSys(g,c,W,H,col,m){const S=sysSpec(c,m,W,H,g),{k,f,X,Y,el}=S,fb=`60
   const ij=el.inj;g.save();g.translate(ij.x,ij.y);g.rotate(ij.at==='cyl'?.45:.9);g.fillStyle='#2f9e44';g.fillRect(-14*k,-3*k,16*k,6*k);g.restore();
   /* 動力計 */
   const dy=el.dyno;g.beginPath();g.arc(dy.x,dy.y,dy.R,0,7);g.fillStyle='#2a303a';g.fill();g.lineWidth=3;g.strokeStyle='#6b7480';g.stroke();
-  if(dy.lvl>0){g.save();g.beginPath();g.arc(dy.x,dy.y,dy.R-2,0,7);g.clip();g.fillStyle=SYC.wat;g.globalAlpha=.75;g.fillRect(dy.x-dy.R,dy.y+dy.R-dy.lvl,2*dy.R,dy.lvl);g.restore()}
+  if(dy.arc>0){g.beginPath();g.arc(dy.x,dy.y,dy.R-3*k,-PI/2,-PI/2+dy.arc);g.lineWidth=5*k;g.strokeStyle=dy.u<0?SYC.mot:SYC.abs;g.stroke()}
   g.lineWidth=3*k;g.strokeStyle=SYC.met;for(let i=0;i<6;i++){const a=dy.th+i*PI/3;g.beginPath();g.moveTo(dy.x,dy.y);g.lineTo(dy.x+(dy.R-8*k)*Math.cos(a),dy.y+(dy.R-8*k)*Math.sin(a));g.stroke()}g.beginPath();g.arc(dy.x,dy.y,7*k,0,7);g.fillStyle='#6b7480';g.fill();
   for(const [o,t] of [[el.aux,''],[el.st,'M']]){g.beginPath();g.arc(o.x,o.y,o.r,0,7);g.fillStyle='#3a4250';g.fill();g.lineWidth=1;g.strokeStyle='#6b7480';g.stroke();if(t)txt(t,o.x,o.y,'#e8ecf2',fb,'center')}
   txt(`補機 ${c.P.Ta.toFixed(1)} N·m`,el.aux.x,el.aux.y-el.aux.r-.7*f,'#9aa3b2',fn,'center');txt('スターター',el.st.x,el.st.y+el.st.r+.7*f,'#9aa3b2',fn,'center');

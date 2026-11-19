@@ -8,7 +8,7 @@
 const {execSync}=require('child_process'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const A=process.argv.slice(2),ref=A.includes('--ref')?A[A.indexOf('--ref')+1]:'1ef8ff1',root=path.resolve(__dirname,'../..');
 const cur=fs.readFileSync(path.join(root,'src/core.js'),'utf8'),old=execSync('git show '+ref+':src/core.js',{cwd:root,maxBuffer:1<<26}).toString();
-const body=`const {mkP,Core}=new Function(src+';return {mkP,Core}')();let c=new Core({...mkP(),cvar:0,gam:0,nv:1,dv:.038,dve:.038*.9375,Vm:3e-3,At:300e-6,dpx:4e3});c.start();let t1=c.s.t+5;while(c.s.t<t1)c.step();c=c.clone();t1=c.s.t+15;while(c.s.t<t1)c.step();return [c.lastM.imep,c.lastM.N,c.s.cyc,Array.from(c.s.y).slice(0,18).join()]`;
+const body=`const {mkP,Core}=new Function(src+';return {mkP,Core}')();let c=new Core({...mkP(),cvar:0,mode:0,gam:0,nv:1,dv:.038,dve:.038*.9375,Vm:3e-3,At:300e-6,dpx:4e3});c.start();let t1=c.s.t+5;while(c.s.t<t1)c.step();c=c.clone();t1=c.s.t+15;while(c.s.t<t1)c.step();return [c.lastM.imep,c.lastM.N,c.s.cyc,Array.from(c.s.y).slice(0,18).join()]`;
 const show=(nm,r)=>{const h=crypto.createHash('md5').update(r[3]).digest('hex');console.log('  '+nm.padEnd(10),'IMEP',r[0],'N',r[1],'サイクル',r[2],'状態の MD5',h);return r[0]+'|'+r[1]+'|'+r[2]+'|'+h};
 (async()=>{let bad=0;{console.log('Node.js '+process.version);const f=new Function('src',body);if(show('現在',f(cur))!==show(ref,f(old)))bad++}
 if(A.includes('--chromium')){const {chromium}=require('playwright'),b=await chromium.launch(),p=await b.newPage();console.log('Chromium '+b.version());const run=src=>p.evaluate(([src,body])=>new Function('src',body)(src),[src,body]);if(show('現在',await run(cur))!==show(ref,await run(old)))bad++;await b.close()}

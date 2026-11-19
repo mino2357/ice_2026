@@ -30,13 +30,17 @@ function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
 /* SPEC-30 の 9：熱物性が「化学平衡」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
-const CTLU={alm:['a',''],fm:['','a'],fb:['n','']},INJK={inj:1,soi:2,qinj:2,tev:2},ctlSt=k=>CTLU[k]?CTLU[k][LP.mode?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):'';
-const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(1):live.s.fc.toFixed(2);
+const CTLU={alm:['a',''],Tl:['','a']},INJK={inj:1,soi:2,qinj:2,tev:2},ctlSt=k=>CTLU[k]?CTLU[k][LP.mode?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):'';
+const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(1):Math.abs(live.s.fc).toFixed(1);
+/* 動力計のトルクの向き（SPEC-11 の 7）：正 = 吸収，負 = 駆動 */
+const dynDir=T=>T<0?'駆動':'吸収';
+const ctlLab=k=>k==='Tl'&&ctlSt(k)==='a'?`（${dynDir(live.s.fc)}）`:'（自動）';
 /* 自動の値の行を毎フレーム書き換える（設定タブの表示中に loop から呼ぶ） */
-function liveVals(){for(const k of['spb','alm','fm']){if(!(k==='spb'?LP.sauto:ctlSt(k)==='a'))continue;const e=$('Pg').querySelector(`b[data-v="${k}"]`);if(e)e.textContent=ctlVal(k)}}
-function rs(){const its=ITEMS.filter(i=>i.pg===U.pg),eng=U.pg===0;$('pt').textContent=`${PAGES[U.pg]}  ${U.pg+1}/${PAGES.length}`;
+function liveVals(){for(const k of['spb','alm','Tl']){if(!(k==='spb'?LP.sauto:ctlSt(k)==='a'))continue;const e=$('Pg').querySelector(`b[data-v="${k}"]`);if(e)e.textContent=ctlVal(k);const l=$('Pg').querySelector(`i[data-l="${k}"]`);if(l&&l.textContent!==ctlLab(k))l.textContent=ctlLab(k)}}
+function rs(){/* 設定の行のスライダをドラッグしている間は，行を作り直さずに値だけ書き換える（つまみの要素を保つ） */if(U.sld&&$('tsr')){const b=$('Pg').querySelector('b[data-v="alm"]');if(b)b.textContent=disp(IT.alm,LP.alm);$('un').disabled=!U.undo;thRender();return}
+const its=ITEMS.filter(i=>i.pg===U.pg),eng=U.pg===0;$('pt').textContent=`${PAGES[U.pg]}  ${U.pg+1}/${PAGES.length}`;
 $('Pg').innerHTML=its.map(it=>{const v=pval(it.k),pd=it.k in U.pend;if(it.ch){const na=ctlSt(it.k)==='n',cur=na?0:it.vals?it.vals.indexOf(v):v;return`<div class="r c"><span>${it.n}${na?'（不使用）':''}</span><div>${it.ch.map((n,i)=>`<button data-k="${it.k}" data-c="${i}" class="${i===cur?'on':''}"${na?' disabled':''}>${n}</button>`).join('')}</div></div>`}
-const n=gi(it,v),cs=ctlSt(it.k),au=it.k==='spb'&&LP.sauto||cs==='a',na=cs==='n',lk=au||na;return`<div class="r${pd?' p':''}"><span>${it.n}${au?'（自動）':na?'（不使用）':''}${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?ctlVal(it.k):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${lk||stepTo(it,n,-1,1)===n?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${lk||stepTo(it,n,1,1)===n?' disabled':''}>＋</button></div>`}).join('');
+const n=gi(it,v),cs=ctlSt(it.k),au=it.k==='spb'&&LP.sauto||cs==='a',na=cs==='n',lk=au||na;return`<div class="r${pd?' p':''}"><span>${it.n}<i data-l="${it.k}">${au?ctlLab(it.k):na?'（不使用）':''}</i>${it.u?' ['+it.u+']':''}</span><b data-v="${it.k}">${au?ctlVal(it.k):disp(it,v)}</b><button data-k="${it.k}" data-s="-1"${lk||stepTo(it,n,-1,1)===n?' disabled':''}>−</button><button data-k="${it.k}" data-s="1"${lk||stepTo(it,n,1,1)===n?' disabled':''}>＋</button></div>`+(it.k==='alm'&&!cs?'<div class="r rsl"><div class="ntr" id="tsr"><i></i><div class="ntk" id="tsk"><b></b></div></div></div>':'')}).join('');if($('tsr'))slBind($('tsr'),$('tsk'),thU,u=>thSet(u*THS.hi));thRender();
 $('x10').textContent=U.x10?'刻み×10':'刻み×1';$('x10').className=U.x10?'on':'';$('un').disabled=!U.undo;
 $('bs').style.display=eng?'none':'';$('ap').style.display=$('ds').style.display=eng?'':'none';$('act').style.gridTemplateColumns=`repeat(${eng?5:4},1fr)`;
 const hasP=Object.keys(U.pend).length>0;$('ap').disabled=!hasP||!lamOK();$('ds').disabled=!hasP;
@@ -73,7 +77,9 @@ function drawPv0(){const q=prep($('pv0'));if(q)drawScreen(q.g,q.W,q.H,screenSpec
 function drawSysT(){const q=prep($('sys'));if(q)drawSys(q.g,live,q.W,q.H,COL,U.sys)}
 function sysB(){[...$('sysb').children].forEach(b=>b.className=+b.dataset.m===U.sys?'on':'')}
 function setSys(m){U.sys=m;sysB();drawSysT()}
-function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-NTB,COL);ntRender()}
+function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-bandH(),COL);ntRender();thRender()}
+/* 運転タブの帯の高さ：目標回転数の帯，動力計制御ではスロットル開度の帯を重ねる（SPEC-23 の 6） */
+const bandH=()=>NTB*(LP.mode===1?2:1);
 /* ===== target-rpm slider (REQ-23) ===== */
 const NTD={on:0,off:0,v:NaN,u:NaN};
 const ntW=()=>Math.max(1,$('ntr').clientWidth-44);
@@ -95,6 +101,21 @@ for(const k of VTK){const r=vtRow(k),kn=r.querySelector('.vtk'),tr=r.querySelect
  const mv=e=>{if(VTD.k!==k)return;e.preventDefault();const R=tr.getBoundingClientRect(),u=(e.clientX-VTD.off-R.left-22)/vtW(k);vtSet(k,Math.round(Math.max(0,Math.min(1,u))*gmax(it)),1)},up=e=>{if(VTD.k!==k)return;mv(e);VTD.k=null;kn.classList.remove('on')};
  kn.addEventListener('pointermove',mv);kn.addEventListener('pointerup',up);kn.addEventListener('pointercancel',()=>{VTD.k=null;kn.classList.remove('on')});
  for(const b of r.querySelectorAll('button'))tap(b,()=>{if(!b.disabled)vtSet(k,gi(it,LP[k])+(+b.dataset.d))})}}
+/* ===== スロットル開度のスライダ（SPEC-23 の 6，SPEC-18 B の 8）：動力計制御のときだけ．0〜90°，ドラッグは 1° に丸め，[−][＋] は ±1° ===== */
+const THS={hi:90,st:1},THD={sig:''};
+const thU=()=>Math.max(0,Math.min(1,LP.alm/D/THS.hi));
+function thSet(deg){const d=Math.max(0,Math.min(THS.hi,Math.round(deg/THS.st)*THS.st)),v=gv(IT.alm,Math.round((d-IT.alm.lo)/IT.alm.st));if(v!==LP.alm)setParam('alm',v);thRender()}
+function thStep(d){const g=LP.alm/D,n=d>0?Math.floor(g/THS.st+1e-9)+1:Math.ceil(g/THS.st-1e-9)-1;thSet(n*THS.st)}
+const slPos=(tr,kn,u)=>{const x=Math.round(u*Math.max(1,tr.clientWidth-44)*10)/10;kn.style.transform=`translateX(${x}px)`};
+/* つまみから始めたドラッグだけで値を変える（SPEC-23 の 3）．get：現在の位置 [0, 1]，set：位置 [0, 1] を値にする */
+function slBind(tr,kn,get,set){let on=0,off=0;const W=()=>Math.max(1,tr.clientWidth-44),end=()=>{on=0;U.sld=0;kn.classList.remove('on');if(tr.id==='tsr')rs()};
+ kn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();on=1;U.sld=1;const R=tr.getBoundingClientRect();off=e.clientX-(R.left+22+get()*W());try{kn.setPointerCapture(e.pointerId)}catch(x){}kn.classList.add('on')});
+ const mv=e=>{if(!on)return;e.preventDefault();const R=tr.getBoundingClientRect();set(Math.max(0,Math.min(1,(e.clientX-off-R.left-22)/W())))};
+ kn.addEventListener('pointermove',mv);kn.addEventListener('pointerup',e=>{if(!on)return;mv(e);end()});kn.addEventListener('pointercancel',()=>{if(on)end()})}
+function thRender(){const on=LP.mode===1,b=$('thb'),u=thU(),g=LP.alm/D;if(b.style.display!==(on?'':'none'))b.style.display=on?'':'none';
+ if(on){const sig=g.toFixed(1)+'|'+$('thr').clientWidth;if(sig!==THD.sig){THD.sig=sig;$('thv').innerHTML=`スロットル<b>${g.toFixed(1)}</b>°`;$('thm').disabled=g<=1e-9;$('thp').disabled=g>=THS.hi-1e-9;slPos($('thr'),$('thk'),u)}}
+ if($('tsr'))slPos($('tsr'),$('tsk'),u)}
+function initTH(){slBind($('thr'),$('thk'),thU,u=>thSet(u*THS.hi));tap($('thm'),()=>{if(!$('thm').disabled)thStep(-1)});tap($('thp'),()=>{if(!$('thp').disabled)thStep(1)});thRender()}
 function initNT(){const k=$('ntk'),r=$('ntr');
 k.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();NTD.on=1;const R=r.getBoundingClientRect();NTD.off=e.clientX-(R.left+22+ntU(LP.nt)*ntW());try{k.setPointerCapture(e.pointerId)}catch(x){}k.classList.add('on')});
 const mv=e=>{if(!NTD.on)return;e.preventDefault();const R=r.getBoundingClientRect(),u=(e.clientX-NTD.off-R.left-22)/ntW(),v=ntVal(u);if(v!==LP.nt)setParam('nt',v);ntRender()};
@@ -151,7 +172,7 @@ function vmApply(){if(!OP.vsel||(OP.vm&&!OP.vm.done))return;setParams({phin:OP.v
 function lossTick(ms){if(U.tab!==7||OP.m!==1||LP.gam!==2||!optReady()){OP.lb=null;return}const now=performance.now();if(!OP.lb&&now-OP.lt>=1000&&live.s.cyc!==OP.lcy){OP.lb=new LossBk(live);OP.lcy=live.s.cyc}if(OP.lb){const t=performance.now();if(OP.lb.run(ms)){const r=OP.lb.res;if(r&&r.ok)OP.lres=r;OP.lb=null;OP.lt=performance.now()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
-function initUI(){readCol();initNT();initVT();
+function initUI(){readCol();initNT();initTH();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('sysb'),e=>{const b=e.target.closest('button[data-m]');if(b)setSys(+b.dataset.m)});
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('vrn'),vmStart);tap($('vap'),vmApply);tap($('vun'),()=>{undo();vmText()});tap($('vmc'),e=>vmTap(e.clientX,e.clientY));tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);

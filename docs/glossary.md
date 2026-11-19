@@ -24,7 +24,7 @@
 
 ### 2.2 状態ベクトル $\mathbf{y} \in \mathbb{R}^{21}$
 
-$\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分する．$\mathbf{u}$ は入力（$\alpha$，$f_{\text{eff}}$，点火時期 $s$ など）で，積分の 1 ステップの間は一定．
+$\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分する．$\mathbf{u}$ は入力（$\alpha$，$T_{\text{dyno}}$，点火時期 $s$ など）で，積分の 1 ステップの間は一定．
 
 | # | 記号 | 名称 | 単位 | 支配する式 | 仕様 |
 | ---: | :--- | :--- | :--- | :--- | :--- |
@@ -192,8 +192,11 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | FMEP，$T_f$ | 摩擦平均有効圧，摩擦トルク | Pa，N·m | $\text{FMEP} = F_0 + F_1 p_{\max} + F_2 c_m$，$T_f = \dfrac{\text{FMEP}\cdot V_d}{4\pi}$ | SPEC-10 |
 | $T_{\text{aux}}$，AMEP | 補機の負荷トルク，その平均有効圧 | N·m，Pa | 設定，$\text{AMEP} = \dfrac{4\pi T_{\text{aux}}}{V_d}$ | SPEC-10 |
 | $T_{\text{st}}$ | スターターのトルク | N·m | $T_{\text{st}} = T_{\text{stall}}\max\left(0,\ 1 - \dfrac{\omega}{\omega_{nl}}\right)$（完爆前） | SPEC-10 |
-| $T_{\text{dyno}}$ | 動力計の吸収トルク | N·m | $T_{\text{dyno}} = f_{\text{eff}}\,k_w\,\omega^2$，$k_w = \dfrac{T_{\text{rated}}}{\omega_{\text{rated}}^2}$ | SPEC-11 |
-| $f_{\text{cmd}}$，$f_{\text{eff}}$ | 充水率の指令，実効充水率 | – | $\tau_d\dfrac{df_{\text{eff}}}{dt} = f_{\text{cmd}} - f_{\text{eff}}$ | SPEC-11 |
+| $T_{\text{dyno}}$，$T_c$ | 動力計のトルク（正：吸収，負：駆動），その指令 | N·m | $\tau_d\dfrac{dT_{\text{dyno}}}{dt} = T_c - T_{\text{dyno}}$ | SPEC-11 |
+| $T_{\max}$ | 動力計の容量 | N·m | $T_{\max}(\omega) = \min\left(T_{\text{rated}},\ \dfrac{P_{\text{rated}}}{\lvert\omega\rvert}\right)$，$\lvert T_c\rvert \le T_{\max}$ | SPEC-11 |
+| $T_{\text{rated}}$，$P_{\text{rated}}$ | 動力計の定格トルク，定格出力 | N·m，W | 設定（既定 $60\ \text{N·m}$，$40\ \text{kW}$） | SPEC-11 |
+| $\tau_d$ | 動力計のトルクの時定数 | s | 設定（既定 $10\ \text{ms}$） | SPEC-11 |
+| $P_{\text{dyno}}$ | 動力計の出力（向きによらない大きさ） | W | $P_{\text{dyno}} = \lvert T_{\text{dyno}}\,\omega\rvert$ | SPEC-11，14 |
 
 ### 2.10 制御
 
@@ -201,11 +204,11 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | :--- | :--- | :--- | :--- | :--- |
 | $N$，$\bar N$ | 瞬時の回転数，平均回転数 | rpm | $N = \dfrac{30}{\pi}\omega$，$\tau_N\dfrac{d\bar N}{dt} = N - \bar N$ | SPEC-12 |
 | $N_{\text{target}}$ | 目標回転数 | rpm | 設定 | SPEC-12 |
-| $\alpha_{\text{manual}}$，$f_{\text{manual}}$，$f_{\text{base}}$ | 固定開度（動力計制御で使う），固定充水率（スロットル制御で使う），基準充水率（動力計制御の PI の基準） | rad，–，– | 設定．使わない制御のときは設定画面で変更できない（SPEC-18 B.7） | SPEC-11，18 |
+| $\alpha_{\text{manual}}$，$T_{\text{load}}$ | スロットル開度（動力計制御で固定する開度），負荷トルク（スロットル制御での動力計のトルクの指令） | rad，N·m | 設定．使わない制御のときは設定画面で変更できない（SPEC-18 B.7） | SPEC-11，18 |
 | $e_N$，$e_d$ | 偏差 | rpm | $e_N = N_{\text{target}} - \bar N$，$e_d = \bar N - N_{\text{target}}$ | SPEC-11，12 |
 | $\alpha_{\text{ff}}$，$\alpha_{\min}$ | feedforward を加えた基準開度，開度の下限 | rad | $\alpha_{\text{ff}} = \alpha_{\text{base}} + k_T T_{\text{aux}}$，$\alpha_{\min} = \min(\alpha_{\max},\ \max(0,\ \alpha_{\text{ff}} - \delta_\alpha))$ | SPEC-12 |
-| $I_\alpha$，$I_f$ | スロットル制御・動力計制御の積分の状態 | rad，– | $\dfrac{dI_\alpha}{dt} = K_i e_N$，$\dfrac{dI_f}{dt} = \sigma K_{i,d}\,e_d$（張り付きを深める向きでは $0$） | SPEC-11，12 |
-| $\sigma$，$T_0$ | 動力計制御のゲインの規格化の係数，その基準のトルク | –，N·m | $\sigma = \dfrac{T_0}{T_{\text{rated}}}\left(\dfrac{N_{\text{rated}}}{N_{\text{target}}}\right)^2$，$T_0 = 35$ | SPEC-11 |
+| $I_\alpha$，$I_T$ | スロットル制御・動力計制御の積分の状態 | rad，N·m | $\dfrac{dI_\alpha}{dt} = K_i e_N$，$\dfrac{dI_T}{dt} = K_{i,d}\,e_d$（張り付きを深める向きでは $0$） | SPEC-11，12 |
+| $K_{p,d}$，$K_{i,d}$ | 動力計制御の比例・積分のゲイン | N·m/rpm，N·m/(rpm·s) | 設定（既定 $0.2$，$0.6$） | SPEC-11 |
 
 ### 2.11 数値積分
 
@@ -305,15 +308,16 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 
 | 用語 | 定義 |
 | :--- | :--- |
-| スロットル制御（モード A） | ECU がスロットル開度 $\alpha$ を PI 制御して $\bar N$ を $N_{\text{target}}$ に合わせる方式．動力計の充水率は一定 |
-| 動力計制御（モード B） | スロットル開度を一定にし，動力計の充水率を PI 制御して $\bar N$ を $N_{\text{target}}$ に保つ方式 |
-| 水ブレーキ式動力計 | 回転数の 2 乗と充水率に比例するトルク $T_{\text{dyno}} = f_{\text{eff}}k_w\omega^2$ を吸収する負荷装置（吸収専用） |
+| スロットル制御（モード A） | ECU がスロットル開度 $\alpha$ を PI 制御して $\bar N$ を $N_{\text{target}}$ に合わせる方式．動力計のトルクは負荷トルクの一定値 |
+| 動力計制御（モード B） | スロットル開度を一定にし，動力計のトルクを PI 制御して $\bar N$ を $N_{\text{target}}$ に保つ方式（既定）．機関の出力が足りなければ駆動する |
+| 電動式動力計 | トルクの指令に速く従い，吸収も駆動もできる負荷装置（交流の動力計を想定）．定格トルクと定格出力で頭打ちになる．第26版の途中までは水ブレーキ式（吸収専用，$T = f k_w\omega^2$）だった |
+| 吸収，駆動（モータリング） | 動力計が機関から仕事を取ること（$T_{\text{dyno}} > 0$），動力計が機関を回すこと（$T_{\text{dyno}} < 0$） |
 | feedforward | 補機の負荷 $T_{\text{aux}}$ に応じて基準の開度を上げること：$\alpha_{\text{ff}} = \alpha_{\text{base}} + k_T T_{\text{aux}}$ |
 | アンチワインドアップ | 操作量が上下限に張り付いていて，偏差がそれを深める向きのとき，積分を止めること |
 | 張り付き | 操作量が上限または下限にあること（画面の `全開`，`全閉`，`下限`，`上限`） |
-| `OVERLOAD`，`UNDERPOWER` | $f_{\text{cmd}} = 1$ のまま回転が目標より $100\ \text{rpm}$ 以上高い状態，$f_{\text{cmd}} = 0$ のまま $100\ \text{rpm}$ 以上低い状態が $2\ \text{s}$ 続いたときの表示 |
+| `OVERLOAD`，`UNDERPOWER` | 動力計制御で $T_c = T_{\max}$（吸収の上限）のまま回転が目標より $100\ \text{rpm}$ 以上高い状態，$T_c = -T_{\max}$（駆動の上限）のまま $100\ \text{rpm}$ 以上低い状態が $2\ \text{s}$ 続いたときの表示 |
 | 回転数の固定 | $\dfrac{d\omega}{dt} = 0$ とするモード．性能曲線の計測，最適化の評価，熱効率の内訳の計算と一部のテストで使う |
-| gain scheduling | 制御対象の感度の変化に合わせて，制御のゲインを運転条件で変えること．動力計制御では，充水率に対する吸収トルクの感度が $T_{\text{rated}}(N/N_{\text{rated}})^2$ に比例するので，ゲインに $\sigma$ を掛ける（SPEC-11 の 3） |
+| gain scheduling | 制御対象の感度の変化に合わせて，制御のゲインを運転条件で変えること．水ブレーキ式動力計では充水率に対する吸収トルクの感度が回転数の 2 乗に比例したので使った．電動式（第26版の途中から）ではトルクの指令がそのままトルクになるので使わない |
 
 ### 3.3a 最適化と熱効率の内訳（SPEC-32〜34）
 
