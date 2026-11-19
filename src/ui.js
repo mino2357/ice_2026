@@ -30,7 +30,7 @@ function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
 /* SPEC-30 の 9：熱物性が「化学平衡」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
-const CTLU={alm:['a',''],Tl:['','a']},INJK={inj:1,soi:2,qinj:2,tev:2},ctlSt=k=>CTLU[k]?CTLU[k][LP.mode?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):'';
+const CTLU={alm:['a',''],Tl:['','a']},INJK={inj:1,soi:2,qinj:2,tev:2},ctlSt=k=>k==='mode'?(LP.bench===1?'n':''):CTLU[k]?CTLU[k][dynOn(LP)?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):'';
 const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(1):Math.abs(live.s.fc).toFixed(1);
 /* 動力計のトルクの向き（SPEC-11 の 7）：正 = 吸収，負 = 駆動 */
 const dynDir=T=>T<0?'駆動':'吸収';
@@ -45,8 +45,8 @@ $('x10').textContent=U.x10?'刻み×10':'刻み×1';$('x10').className=U.x10?'on
 $('bs').style.display=eng?'none':'';$('ap').style.display=$('ds').style.display=eng?'':'none';$('act').style.gridTemplateColumns=`repeat(${eng?5:4},1fr)`;
 const hasP=Object.keys(U.pend).length>0;$('ap').disabled=!hasP||!lamOK();$('ds').disabled=!hasP;
 $('pv').style.display=$('pvt').style.display=eng?'none':'';$('drv').style.display=eng?'':'none';
-if(eng){const Pq={...LP,...U.pend},G=geo(Pq),ok=lamOK();$('drv').innerHTML=`<b>導出値${hasP?'（保留中の値で計算）':''}</b><br>連桿比 λ = r/l = ${G.lam.toFixed(3)} ${ok?'':'<b class="ng">（λ ≤ 0.5 を満たさないため適用不可）</b>'}<br>行程容積 V_d = ${(G.Vd*1e6).toFixed(1)} cm³<br>隙間容積 V_c = ${(G.Vc*1e6).toFixed(1)} cm³<br>クリアランス高さ h_c = ${(G.hc*1e3).toFixed(2)} mm<br>弁干渉：${valveHit(Pq,G)?'<b class="ng">VALVE HIT</b>':'なし'}<br><span style="color:var(--mu)">この4項目は「適用」で確定し，コールドリセットします．</span>`}swFresh()}
-function pvText(){if(camPg()){$('pvt').textContent=camText(LP,live.G);return}if(U.pg===PAGES.indexOf('噴射')&&live.last){$('pvt').textContent=injText(live);return}const l=live.last,r=Base.ref;if(!l){$('pvt').textContent='運転タブで START してください';return}const sg=x=>(x>=0?'+':'')+x.toFixed(0);
+if(eng){const Pq={...LP,...U.pend},G=geo(Pq),ok=lamOK();$('drv').innerHTML=`<b>導出値${hasP?'（保留中の値で計算）':''}</b><br>連桿比 λ = r/l = ${G.lam.toFixed(3)} ${ok?'':'<b class="ng">（λ ≤ 0.5 を満たさないため適用不可）</b>'}<br>行程容積 V_d = ${(G.Vd*1e6).toFixed(1)} cm³<br>隙間容積 V_c = ${(G.Vc*1e6).toFixed(1)} cm³<br>クリアランス高さ h_c = ${(G.hc*1e3).toFixed(2)} mm<br>弁干渉：${valveHit(Pq,G)?'<b class="ng">VALVE HIT</b>':'なし'}<br><span style="color:var(--mu)">この4項目は「適用」で確定し，コールドリセットします．</span>`}swFresh();if(vehPg())pvText()}
+function pvText(){if(vehPg()){$('pvt').textContent=vehText();return}if(camPg()){$('pvt').textContent=camText(LP,live.G);return}if(U.pg===PAGES.indexOf('噴射')&&live.last){$('pvt').textContent=injText(live);return}const l=live.last,r=Base.ref;if(!l){$('pvt').textContent='運転タブで START してください';return}const sg=x=>(x>=0?'+':'')+x.toFixed(0);
 $('pvt').textContent=`IMEP ${(l.imep/1e3).toFixed(0)} kPa${r?'（基準比 '+sg((l.imep-r.imep)/1e3)+'）':''}  p_max ${(l.pm/1e3).toFixed(0)} kPa${r?'（'+sg((l.pm-r.pm)/1e3)+'）':''}  N̄ ${live.s.Nb.toFixed(0)} rpm`}
 /* ===== canvases ===== */
 const dprc=()=>Math.min(devicePixelRatio||1,2.5);
@@ -68,7 +68,7 @@ function swCond(){const R=SW.run,P=R?R.P:LP,old=!R&&SW.cur&&SW.cur.sig!==swSig()
 $('swa').innerHTML=`<table><tr><th colspan="2">固定する条件</th></tr>${row('スロットル開度',`<b data-c="al">${SW.als.join('・')}</b>°（90° = 全開）`)}${row('回転数の保持','速度一定の理想動力計（dω/dt = 0）')}${row('点火・変動','MBT（CA50 = 10° ATDC），サイクル変動 OFF')}${row('壁温 T_w',`<b data-c="Tw">${SWC.Tw}</b> K 固定`)}
 <tr><th colspan="2">回転数の点</th></tr>${row('範囲・刻み',`<b data-c="st">${st}</b>, ${2*st}, …, ${SWC.N1} rpm（<b data-c="n">${n}</b> 点）`)}${row('手順',SWC.procs[SW.proc]+(SW.proc==='up'?'（前の点から継続）':SW.proc==='updown'?'（上りと下りの平均）':'（各点を単独に開始）'))}
 <tr><th colspan="2">収束の判定：${C.n}（直近 <b data-c="last">${SWC.last}</b> サイクルの幅）</th></tr>${row('T_b',`≤ <b data-c="tolR">${f(C.tolR*100,1)}</b>%·|T_b| + <b data-c="tolA">${C.tolA}</b> N·m`)}${row('MBT・流量',`≤ <b data-c="tolS">${C.tolS}</b>°，${SW.flow?`η_v・ṁ_th・p_in ≤ ${f(C.tolR*100,1)}%`:'流量・状態量は判定しない'}`)}${row('サイクル数',`最少 <b data-c="nmin">${SW.nmin}</b>，最多 <b data-c="nmax">${SW.nmax}</b>，最後の値を採る`)}
-<tr><th colspan="2">${R?'<span data-c="run">計測中の設定</span>':'現在の設定（次の計測に使う）'}${old?'<br><span data-c="old">表示中の曲線は変更前の設定で計測（再計測で更新）</span>':''}${pend?'<br><span data-c="pend">保留中の変更は [適用] の後に使う</span>':''}</th></tr>${row('大気圧・φ',`${f(P.pa/1e3,1)} kPa，${f(P.phi,2)}`)}${row('ε・B×S',`<b data-c="eps">${f(P.eps,1)}</b>，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('カム・リフト・弁径',`<b data-c="cam">${IT.cam.ch[P.cam]}</b>，<b data-c="Lv">${f(P.Lv*1e3,1)}</b> mm，${f(P.dv*1e3,0)} mm`)}${row('IVO・IVC・EVO・EVC',`<b data-c="ivo">${dg(V.i.o)}</b>・<b data-c="ivc">${dg(V.i.c)}</b>・${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('排気系',P.exs?`ON，V_m ${f(P.Vm*1e3,1)} L，A_t ${f(P.At*1e6,0)} mm²`:`OFF，圧損 ${f(P.dpx/1e3,1)} kPa`)}${row('補機負荷',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`}
+<tr><th colspan="2">${R?'<span data-c="run">計測中の設定</span>':'現在の設定（次の計測に使う）'}${old?'<br><span data-c="old">表示中の曲線は変更前の設定で計測（再計測で更新）</span>':''}${pend?'<br><span data-c="pend">保留中の変更は [適用] の後に使う</span>':''}</th></tr>${row('大気圧・φ',`${f(P.pa/1e3,1)} kPa，${f(P.phi,2)}`)}${row('ε・B×S',`<b data-c="eps">${f(P.eps,1)}</b>，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('カム・リフト・弁径',`<b data-c="cam">${IT.cam.ch[P.cam]}</b>，<b data-c="Lv">${f(P.Lv*1e3,1)}</b> mm，${f(P.dv*1e3,0)} mm`)}${row('IVO・IVC・EVO・EVC',`<b data-c="ivo">${dg(V.i.o)}</b>・<b data-c="ivc">${dg(V.i.c)}</b>・${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('排気系',P.exs?`ON，L_e ${f(P.Lex,2)} m，d_e ${f(P.dex*1e3,0)} mm`:`OFF，圧損 ${f(P.dpx/1e3,1)} kPa`)}${row('補機負荷',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`}
 function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){const S=R.S,m=R.o.proc==='indep'?R.sets[R.k].pts.length:S.pts.length,pass=R.o.proc==='updown'?(R.j?'（下り）':'（上り）'):'';a=`計測中 開度 ${R.als[R.k]}°（${R.k+1}/${R.als.length}）${pass} ${m}/${R.Ns.length}`}else if(SW.cur){const p=SW.cur.pts.filter(o=>!o.st),mt=p.reduce((m,o)=>o.tb>m.tb?o:m,p[0]),mp=p.reduce((m,o)=>o.pb>m.pb?o:m,p[0]),s0=SW.cur.sets[0],o=SW.cur.o||{};a=`完了 ${SW.cur.el.toFixed(1)} s（${SWC.procs[o.proc||'up']}，${(SWC.crit[o.crit||'strict']||{}).n}${o.flow?'＋流量':''}）`+(o.proc==='updown'?`　往復差 ${(100*s0.dT).toFixed(2)}%`:'');c=`${s0.al}° 最大 ${mt.tb.toFixed(1)} N·m @ ${mt.N}，${(mp.pb/1e3).toFixed(1)} kW @ ${mp.N} rpm`}else{a='計測開始で性能曲線を求めます';c=`開度 ${SW.als.join('・')}°，${SW.step} rpm 刻み（条件で変更）`}
 if(!R&&SW.cur&&SW.cur.sig!==swSig())b='設定が変わりました（再計測で更新）';else if(SW.ref)b='灰色：基準（前回の計測）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
 let SLAY=[];function drawSw(){const q=prep($('tc'));if(!q)return;const cur=SW.run?SW.run.sets.filter(x=>x.pts.length):SW.cur&&SW.cur.sets;SLAY=drawScreen(q.g,q.W,q.H,sweepSpec(cur,SW.ref&&SW.ref.sets,SW.sub),COL,null)}
@@ -79,7 +79,7 @@ function sysB(){[...$('sysb').children].forEach(b=>b.className=+b.dataset.m===U.
 function setSys(m){U.sys=m;sysB();drawSysT()}
 function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-bandH(),COL);ntRender();thRender()}
 /* 運転タブの帯の高さ：目標回転数の帯，動力計制御ではスロットル開度の帯を重ねる（SPEC-23 の 6） */
-const bandH=()=>NTB*(LP.mode===1?2:1);
+const bandH=()=>NTB*(dynOn(LP)?2:1);
 /* ===== target-rpm slider (REQ-23) ===== */
 const NTD={on:0,off:0,v:NaN,u:NaN};
 const ntW=()=>Math.max(1,$('ntr').clientWidth-44);
@@ -112,7 +112,7 @@ function slBind(tr,kn,get,set){let on=0,off=0;const W=()=>Math.max(1,tr.clientWi
  kn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();on=1;U.sld=1;const R=tr.getBoundingClientRect();off=e.clientX-(R.left+22+get()*W());try{kn.setPointerCapture(e.pointerId)}catch(x){}kn.classList.add('on')});
  const mv=e=>{if(!on)return;e.preventDefault();const R=tr.getBoundingClientRect();set(Math.max(0,Math.min(1,(e.clientX-off-R.left-22)/W())))};
  kn.addEventListener('pointermove',mv);kn.addEventListener('pointerup',e=>{if(!on)return;mv(e);end()});kn.addEventListener('pointercancel',()=>{if(on)end()})}
-function thRender(){const on=LP.mode===1,b=$('thb'),u=thU(),g=LP.alm/D;if(b.style.display!==(on?'':'none'))b.style.display=on?'':'none';
+function thRender(){const on=dynOn(LP),b=$('thb'),u=thU(),g=LP.alm/D;if(b.style.display!==(on?'':'none'))b.style.display=on?'':'none';
  if(on){const sig=g.toFixed(1)+'|'+$('thr').clientWidth;if(sig!==THD.sig){THD.sig=sig;$('thv').innerHTML=`スロットル<b>${g.toFixed(1)}</b>°`;$('thm').disabled=g<=1e-9;$('thp').disabled=g>=THS.hi-1e-9;slPos($('thr'),$('thk'),u)}}
  if($('tsr'))slPos($('tsr'),$('tsk'),u)}
 function initTH(){slBind($('thr'),$('thk'),thU,u=>thSet(u*THS.hi));tap($('thm'),()=>{if(!$('thm').disabled)thStep(-1)});tap($('thp'),()=>{if(!$('thp').disabled)thStep(1)});thRender()}
@@ -125,7 +125,13 @@ tap($('ntm'),()=>{if(LP.nt>NTS.lo)ntStep(-1)});tap($('ntp'),()=>ntStep(1));ntRen
 let LAY=[];function drawCh(){const q=prep($('ch'));if(!q)return;LAY=drawScreen(q.g,q.W,q.H,screenSpec(live,AX,U.sub,{now:NOW(),log:U.log,ref:U.sub===0||U.sub===7?Base.ref:null}),COL,U.sub===7?null:U.cross[U.sub]);if(U.sub===7)vtRender();
 const cr=U.cross[U.sub];if(cr!=null&&U.sub>0&&U.sub<7){const g=q.g,th=U.sub<5;g.font='11px system-ui,sans-serif';g.textBaseline='top';g.fillStyle=COL.ac;LAY.forEach(L=>{const sp=L.sp,xv=sp.xa.a+cr*(sp.xa.b-sp.xa.a),txt=sp.ser.map(s=>{let bi=0,bd=1e9;for(let i=0;i<s.X.length;i++){const dd=Math.abs(s.X[i]-xv);if(dd<bd){bd=dd;bi=i}}const v=s.Y[bi];return v==null||v!==v?'–':(+v).toPrecision(4)}).join(' / ');g.textAlign='right';g.fillText((th?'θ='+xv.toFixed(0)+'°: ':'t='+xv.toFixed(1)+'s: ')+txt,L.pl.x+L.pl.w,L.pl.y+2)})}}
 const camPg=()=>U.pg===1||U.pg===2;
-function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref,nt:1}),COL,null)}
+/* ===== 車両（SPEC-35 B，D）：全開の最大出力 P_max の自動の計測と，予測の文字 ===== */
+const VP={sig:'',run:null,Pmax:NaN,Nmax:NaN,maxMs:0},VPX=['bench','mv','Cd','Af','Crr','etd','nt','alm','Tl','mode','vol','fl','sm','cvar','sauto','spb'],VPN=()=>swN(500),vehPg=()=>U.pg===PAGES.indexOf('車両'),
+ vpSig=()=>JSON.stringify(ITEMS.filter(i=>!VPX.includes(i.k)).map(i=>LP[i.k])),vpOk=()=>VP.Pmax===VP.Pmax&&VP.sig===vpSig();
+function vpTick(ms){if(!(U.tab===2&&vehPg()))return;const sg=vpSig();if(VP.sig===sg&&!VP.run)return;if(!VP.run||VP.run.sig!==sg){VP.run=new Sweep({...LP},VPN(),90,{crit:'std',flow:false});VP.run.sig=sg}
+ const t0=performance.now(),done=VP.run.run(ms);VP.maxMs=Math.max(VP.maxMs,performance.now()-t0);if(done){let b=null;for(const p of VP.run.pts)if(!p.st&&p.pb===p.pb&&(!b||p.pb>b.pb))b=p;VP.Pmax=b?b.pb:0;VP.Nmax=b?b.N:0;VP.sig=sg;VP.run=null}pvText();if(done)drawPv()}
+function vehText(){if(!vpOk())return`計測中 ${VP.run?VP.run.pts.length:0}/${VPN().length}（全開の最大出力）`;const r=vehPerf(LP,VP.Pmax);return`0→100 km/h ${r.t100===r.t100?r.t100.toFixed(1)+' s':'届かない'}｜最高 ${(r.vmax*3.6).toFixed(0)} km/h｜${(VP.Pmax/1e3).toFixed(1)} kW@${VP.Nmax}`}
+function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,vehPg()?(vpOk()?[vehSpec(LP,VP.Pmax)]:[]):camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref,nt:1}),COL,null)}
 function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
@@ -191,7 +197,7 @@ buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
-if(!U.busy){advance(Sim,live,el,9);swTick(8);optTick(12);vmTick(12);lossTick(6)}axUpdate(live,AX,now);sndTick();
+if(!U.busy){advance(Sim,live,el,9);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
 if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText();if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}

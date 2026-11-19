@@ -1,5 +1,5 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0,mode:0}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;let TR={};const TST={},NT=34,UIT=[15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34],RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+const mkPT=()=>({...mkP(),cvar:0,mode:0}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;let TR={};const TST={},NT=35,UIT=[15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35],RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{const e=Math.abs(val-ref)/(Math.abs(ref)||1);(TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})};
 const chkB=(id,n,ok,val,ref)=>{(TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})};
@@ -178,10 +178,11 @@ const s1=yield*scen('S1');chkB(14,'S1 全期間：無効なメトリクスを表
 const pev=(el,type,x,y,w)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,width:w||20,height:w||20,pointerId:7,pointerType:'touch',isPrimary:true}));
 const ctr=el=>{const r=el.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2]};
 const tapEl=(el,w)=>{const[x,y]=ctr(el);pev(el,'pointerdown',x,y,w);pev(el,'pointerup',x,y,w)};
-function*allScreens(fn){for(const i of[0,6,1,2,3,5]){show(i);if(i===6){for(const m of[0,1]){setSys(m);fn(`全体${m+1}`)}setSys(0)}else if(i===0)for(const m of[0,1]){U.mpg=m;met();drawEng();fn(`運転${m+1}`)}
+function*allScreens(fn){for(const i of[0,6,1,5,7,2,3]){show(i);if(i===6){for(const m of[0,1]){setSys(m);fn(`全体${m+1}`)}setSys(0)}else if(i===0)for(const m of[0,1]){U.mpg=m;met();drawEng();fn(`運転${m+1}`)}
 else if(i===1){for(let s=0;s<8;s++){setSub(s);drawCh();fn(`線図${s+1}`)}setSub(0)}
 else if(i===2){for(let p=0;p<PAGES.length;p++){U.pg=p;rs();if(p)drawPv();fn(`設定:${PAGES[p]}`)}$('pl').className='on';fn('設定:一覧');$('pl').className=''}
-else if(i===5){for(let k=0;k<5;k++){swSub(k);if(k<4)drawSw();swText();fn(`性能曲線${k+1}`)}swSub(0)}
+else if(i===5){for(let k=0;k<6;k++){swSub(k);if(k<4)drawSw();swText();fn(`性能曲線${k+1}`)}swSub(0)}
+else if(i===7){for(const m of[0,2,1]){optSub(m);drawOpt();fn(`最適化${m+1}`)}optSub(0)}
 else{rchips();dtl();fn('検証')}yield}}
 const vis=el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(el).visibility!=='hidden'};
 function uiDefault(){Object.assign(LP,mkP());U.pend={};U.x10=0;U.undo=null;U.pg=0;U.log=0;U.mpg=0;U.cross=U.cross.map(()=>null);Sim.spd=.1;live.reset();Base.clear();axReset(AX);$('ts').textContent='';sp();rs()}
@@ -268,7 +269,7 @@ chkB(16,'文書の閲覧：切替のボタン 5 つ（44 px 以上，文字の�
 const hc=(ks,re)=>{const c={};ks.forEach(k=>heads[k].forEach(s=>{const m=s.match(re);if(m)c[m[1]]=(c[m[1]]||0)+1}));return Array.from({length:NT},(_,i)=>pad(i+1)).every(n=>c[n]===1)},okH=hc([1,3],/^REQ-(\d\d)：/)&&hc([2,3],/^SPEC-(\d\d)：/)&&hc([2,3],/^TEST-(\d\d)：/);
 const lng=k=>{const c=DOCS[DOCK[k]].chunks;let b=0;c.forEach((s,i)=>{if(s.length>c[b].length)b=i});return b},L2=lng(2),L3=lng(3);
 tapEl(sw[2]);docPage(2,L2);yield;S.scrollTop=300;tapEl(sw[3]);docPage(3,L3);yield;S.scrollTop=120;tapEl(sw[2]);yield;const p2=S.scrollTop,g2=DV.pg[2];tapEl(sw[3]);yield;const p3=S.scrollTop,g3=DV.pg[3];tapEl(sw[0]);yield;const back=E.offsetHeight>100&&$('dv2').offsetHeight===0&&E.querySelectorAll('h3[data-sec]').length===20;
-chkB(16,'文書の見出し：全ページを通して要件定義書と画面の文書を合わせて REQ-01〜34，仕様書と画面の文書を合わせて SPEC-01〜34 と TEST-01〜34 が 1 つずつ．[式の解説] で元の表示に戻り，文書ごとに表示中のページと縦スクロール位置を保つ',okH&&back&&Math.abs(p2-300)<=1&&Math.abs(p3-120)<=1&&g2===L2&&g3===L3,`見出し ${okH}，戻る ${back}，ページ ${g2===L2&&g3===L3}，位置 ${p2} / ${p3} px`,'300 / 120 ±1');
+chkB(16,'文書の見出し：全ページを通して要件定義書と画面の文書を合わせて REQ-01〜35，仕様書と画面の文書を合わせて SPEC-01〜35 と TEST-01〜35 が 1 つずつ．[式の解説] で元の表示に戻り，文書ごとに表示中のページと縦スクロール位置を保つ',okH&&back&&Math.abs(p2-300)<=1&&Math.abs(p3-120)<=1&&g2===L2&&g3===L3,`見出し ${okH}，戻る ${back}，ページ ${g2===L2&&g3===L3}，位置 ${p2} / ${p3} px`,'300 / 120 ±1');
 chkB(16,'ページ：画面にある断片は表示中の 1 ページだけ，[◀ 前] [次 ▶] で 1 ページずつ移動（端では無効，44 px 以上），1 ページの切り替え ≤ 100 ms',one&&navOk&&pmax<=100,`1 ページだけ ${one}，移動 ${navOk}，最長 ${pmax.toFixed(0)} ms`,'≤ 100 ms');for(const k of[1,2,3,4])docPage(k,pg0[k]);DV.top=tops0.slice();docShow(doc0)}
 S.scrollTop=0;DV.top[DV.cur]=0;
 {/* 項目 18：第三者の著作物を埋め込まない（C-8） */
@@ -542,7 +543,7 @@ tc('cr','std');r.push(SW.nmin===4);tc('cr','strict');r.push(SW.nmin===6);tc('nma
 const fb=fitB(O),sc2=sec.scrollHeight<=sec.clientHeight+1&&O.scrollHeight<=O.clientHeight+1;
 chkB(26,'条件画面：サイクル数の最少・最多（±で 1 刻み，3〜30・10〜200，最少 ≤ 最多，厳しさの選択で最少が初期値に，変更で古さ表示），ボタン 44 px・文字の余裕，スクロール無し',r.every(x=>x)&&!fb.length&&sc2,`${r.map(x=>x?1:0).join('')}，余裕不足 ${fb.join(' ')}，スクロール ${!sc2}`);swSub(0)}
 {swSub(5);const A=$('swa'),g=k=>{const e=A.querySelector(`[data-c="${k}"]`);return e?e.textContent:''},C=SWC.crit[SW.crit],okv=g('al')===SW.als.join('・')&&+g('Tw')===SWC.Tw&&+g('st')===SW.step&&+g('n')===swN(SW.step).length&&Math.abs(+g('tolR')-C.tolR*100)<1e-9&&+g('tolA')===C.tolA&&+g('tolS')===C.tolS&&+g('nmin')===SW.nmin&&+g('nmax')===SW.nmax&&+g('last')===SWC.last&&Math.abs(+g('Ta')-LP.Ta)<1e-9,th=A.querySelector('table').offsetHeight;
-chkB(26,'前提画面：数値が定数表・選択・設定に一致，表の高さ ≤ 95%',okv&&th<=.95*A.clientHeight&&sec.scrollHeight<=sec.clientHeight+1,`値 ${okv}，高さ ${th}/${A.clientHeight} px`);const s0=SW.step,lh=[];for(const v of SWC.steps){SW.step=v;swSub(5);const T=$('swa').querySelector('table'),hs=[...T.querySelectorAll('tr')].map(r=>r.offsetHeight).filter(h=>h>0);lh.push([v,T.querySelector('[data-c="st"]').closest('tr').offsetHeight,Math.min(...hs)])}SW.step=s0;swSub(5);chkB(26,'前提画面：回転数の点の行が 4 つの刻みのどれでも 1 行に収まる',lh.every(q=>q[1]<=q[2]+1),lh.map(q=>`${q[0]}：${q[1]}/${q[2]} px`).join('，'));swSub(0)}
+const exr=[...A.querySelectorAll('tr')].map(r=>r.textContent).find(t=>t.startsWith('排気系'))||'',okx=!/NaN|undefined/.test(A.textContent)&&exr.includes('L_e')&&exr.includes('d_e');chkB(26,'前提画面：数値が定数表・選択・設定に一致（NaN が無く，排気系の行に L_e と d_e），表の高さ ≤ 95%',okv&&okx&&th<=.95*A.clientHeight&&sec.scrollHeight<=sec.clientHeight+1,`値 ${okv}，排気系「${exr}」，高さ ${th}/${A.clientHeight} px`);const s0=SW.step,lh=[];for(const v of SWC.steps){SW.step=v;swSub(5);const T=$('swa').querySelector('table'),hs=[...T.querySelectorAll('tr')].map(r=>r.offsetHeight).filter(h=>h>0);lh.push([v,T.querySelector('[data-c="st"]').closest('tr').offsetHeight,Math.min(...hs)])}SW.step=s0;swSub(5);chkB(26,'前提画面：回転数の点の行が 4 つの刻みのどれでも 1 行に収まる',lh.every(q=>q[1]<=q[2]+1),lh.map(q=>`${q[0]}：${q[1]}/${q[2]} px`).join('，'));swSub(0)}
 {SW.cur={sets:[{al:90,pts:p}],pts:p,sig:swSig(),el:1,P:{...LP},step:SW.step,o:swO()};swSub(5);const A=$('swa'),g=k=>{const e=A.querySelector(`[data-c="${k}"]`);return e?e.textContent:''},q=k=>!!A.querySelector(`[data-c="${k}"]`),dg=r=>(r/D).toFixed(0)+'°',k0={cam:LP.cam,Lv:LP.Lv,ivc:LP.ivc,phin:LP.phin},e0=LP.eps,r=[];
 r.push(g('cam')===IT.cam.ch[LP.cam]&&!q('old')&&!q('pend')&&!q('run'));setParam('cam',2,1);r.push(g('cam')==='Aggr'&&q('old'));setParam('Lv',6e-3,1);r.push(g('Lv')==='6.0');setParam('ivc',230*D,1);r.push(g('ivc')==='230°');
 setParam('phin',20*D,1);{const V=valves(LP,geo(LP));r.push(g('ivo')===dg(V.i.o)&&g('ivc')===dg(V.i.c)&&g('ivc')!=='230°')}
@@ -775,11 +776,42 @@ if(!RUN.ui){const ph=VVM.ph,T=ph.map(b=>ph.map(a=>a<0?-1-(b+40)/20:.5+3*Math.exp
   ok=nanOk&&endOk&&levOk&&zOk&&nOk&&rd;info=`未定義の一致 ${nanOk}，端点 ${endOk}（${ends.length} 点），等高線 ${C.seg.length} 本（${C.seg.map(q=>q.L).join('，')}，b_min ${bmin.toFixed(0)}），T_b = 0 の線 ${(C.z||[]).length}，刻み ${nOk}，読み取り ${rd}`}catch(e){info='例外：'+e.message}
  chkB(34,'出力の無い点：燃料消費率は T_b > 0 の点だけ，等高線 ≤ 8 本で [b_min, 2 b_min]，端点が定義域，T_b = 0 の線，「出力なし」，刻みはどの範囲でも 1〜8 本',ok,info)}
 Object.assign(OP,o0);uiDefault();show(0)};
+/* ---- TEST-35 シャシーダイナモメーター（SPEC-35） ---- */
+TST[35]=function*(){uiDefault();const P0=mkPT(),kmh=3.6;
+if(!RUN.ui){
+/* 1：エンジンダイナモメーターへ影響しない */
+{const a=new Core(mkPT()),b=new Core({...mkPT(),mv:2000,Cd:1});a.start();b.start();yield*runC(a,5);yield*runC(b,5);chkB(35,'エンジンでは車両の設定が機関に影響しない：車重 2000 kg，C_d = 1 にして 5 s 計算した状態ベクトルが既定と完全に一致，車速 0',JSON.stringify(a.s.y)===JSON.stringify(b.s.y)&&b.s.V.v===0&&a.s.t===b.s.t,`t ${a.s.t.toFixed(3)} s，車速 ${b.s.V.v}`)}
+/* 2：走行抵抗 */
+{const rho=P0.pa/(R*TA),ref=.5*rho*P0.Cd*P0.Af*900+P0.Crr*P0.mv*VEH.g;chk(35,'走行抵抗 F_res(30 m/s) = ½ρ C_d A v² + C_rr m_v g [N]',ref,vehRes(P0,30),1e-12);chk(35,'F_res(0) = C_rr m_v g [N]',P0.Crr*P0.mv*VEH.g,vehRes(P0,0),1e-12)}
+/* 3：予測 */
+{const r=vehPerf(P0,25e3),e1=Math.abs(P0.etd*25e3/(vehRes(P0,r.vmax)*r.vmax)-1),Pz={...P0,Cd:0,Crr:0},z=vehPerf(Pz,25e3,1e9),v1=VEH.v100,e2=Math.abs(z.tTo(v1)/(Pz.mv*v1*v1/(2*Pz.etd*25e3))-1),w=vehPerf(P0,3e3);
+ chkB(35,'予測：η_d P_max = F_res(v_max) v_max（1e-9），抵抗と駆動力の上限なしで t = m_v v²/(2 η_d P_max)（1e-9），P_max = 3 kW では 0→100 km/h が届かない（v_max < 100 km/h）',e1<=1e-9&&e2<=1e-9&&!(w.t100===w.t100)&&w.vmax<v1,`${e1.toExponential(1)}，${e2.toExponential(1)}．25 kW：最高 ${(r.vmax*kmh).toFixed(1)} km/h，0→100 km/h ${r.t100.toFixed(2)} s．3 kW：最高 ${(w.vmax*kmh).toFixed(1)} km/h`)}
+/* 4：傾向 */
+{const t=[400,600,900].map(m=>vehPerf({...P0,mv:m},25e3).t100),v=[.25,.3,.45].map(c=>vehPerf({...P0,Cd:c},25e3).vmax*kmh);chkB(35,'傾向：車重 400 < 600 < 900 kg で 0→100 km/h が延びる，C_d 0.25 > 0.30 > 0.45 で最高速度が下がる（P_max = 25 kW）',t[0]<t[1]&&t[1]<t[2]&&v[0]>v[1]&&v[1]>v[2],`${t.map(x=>x.toFixed(1)).join(' < ')} s，${v.map(x=>x.toFixed(0)).join(' > ')} km/h`)}
+/* 5：実時間の走行 */
+{const c=new Core({...mkPT(),bench:1,nt:4000,alm:90*D,mv:200});c.start();let mn=1e9,mx=0;yield*runC(c,12,{tick(q){if(q.s.V.t100===q.s.V.t100){mn=Math.min(mn,q.s.Nb);mx=Math.max(mx,q.s.Nb)}}});const tm=c.s.V.t100,pr=vehPerf(c.P,c.lastM.pb).t100,vE=c.s.V.v*kmh;c.P.alm=0;yield*runC(c,8);
+ chkB(35,'実時間の走行（シャシー，全開，4000 rpm，車重 200 kg，12 s）：0→100 km/h の計測値が，その運転点の P_b からの予測と 5 % 以内，100 km/h の後の N̄ が 4000 ±25 rpm，全閉にして 8 s で停止',Math.abs(tm/pr-1)<=.05&&mn>=3975&&mx<=4025&&c.s.V.v===0,`計測 ${tm.toFixed(2)} s，予測 ${pr.toFixed(2)} s（P_b ${(c.lastM.pb/1e3).toFixed(1)} kW），N̄ ${mn.toFixed(0)}〜${mx.toFixed(0)} rpm，12 s の車速 ${vE.toFixed(1)} km/h，停止後 ${c.s.V.v}`)}
+}
+/* 6：設定ページ「車両」 */
+{const vp0={...VP};show(2);U.pg=PAGES.indexOf('車両');rs();yield 'frame';const sec=$('s2'),ks=ITEMS.filter(i=>i.pg===U.pg).map(i=>i.k),bt=k=>$('Pg').querySelector(`button[data-k="${k}"][data-s="1"]`),tx=()=>$('pvt').textContent,q=[];
+ q.push(ks.join()==='bench,mv,Cd,Af,Crr,etd'&&sec.scrollHeight<=sec.clientHeight+1&&document.documentElement.scrollHeight<=innerHeight+1);
+ VP.Pmax=25e3;VP.Nmax=5000;VP.sig=vpSig();VP.run=null;pvText();const t0=tx(),m0=/0→100 km\/h ([\d.]+) s｜最高 (\d+) km\/h/.exec(t0);tapEl(bt('mv'));const t1=tx(),m1=/0→100 km\/h ([\d.]+) s｜最高 (\d+) km\/h/.exec(t1);for(let i=0;i<10;i++)tapEl(bt('Cd'));const m2=/0→100 km\/h ([\d.]+) s｜最高 (\d+) km\/h/.exec(tx());
+ q.push(!!m0&&!!m1&&!!m2&&LP.mv===610&&+m1[1]>+m0[1]&&+m2[2]<+m1[2]&&$('pvt').scrollWidth<=$('pvt').clientWidth+1);
+ const sp=vehSpec(LP,25e3),cv=document.createElement('canvas');cv.width=340;cv.height=160;const L=layout(cv.getContext('2d'),2,2,336,158,sp);q.push(sp.xa.name==='車速 [km/h]'&&sp.ya.name==='力 [kN]'&&sp.lg.length===2&&sp.ser.length===2&&L.xt.length>=3&&L.yt.length>=3&&sp.ser.every(z=>z.Y.every(v=>v>=0&&v<=sp.ya.b)));
+ VP.sig='';VP.Pmax=NaN;VP.maxMs=0;pvText();const w0=tx().startsWith('計測中');let t=performance.now(),mx=0,n=0;const ts=t;while(!vpOk()&&performance.now()-ts<2e4){vpTick(8);yield 'frame';const t2=performance.now();mx=Math.max(mx,t2-t);t=t2;n++}const el=(performance.now()-ts)/1e3;q.push(w0&&vpOk()&&VP.Pmax>1e4&&/0→100 km\/h/.test(tx())&&mx<=250);
+ chkB(35,'設定ページ「車両」：6 項目・スクロールなし，車重の [+] で 0→100 km/h の文字が延び，C_d の [+]×10 で最高速度の文字が下がる（同じ操作の中で．文字が欠けない），図に単位付きの軸名・目盛・2 系列，P_max が無いと「計測中」で自動の計測が 20 s 以内に終わる（フレームの間隔 ≤ 250 ms）',q.every(x=>x),`${q.map(x=>x?1:0).join('')}，「${t0}」，計測 ${el.toFixed(1)} s（${n} フレーム，最長 ${mx.toFixed(0)} ms），P_max ${(VP.Pmax/1e3).toFixed(1)} kW @ ${VP.Nmax} rpm`);Object.assign(VP,vp0)}
+/* 7：運転タブ */
+{uiDefault();show(0);yield 'frame';const s=live.s,txt=()=>{ctlRender();return $('ctl').textContent},q=[];s.fired=1;s.starter=0;s.mode=1;s.Nb=3998.2;s.t=20;LP.nt=4000;LP.alm=90*D;s.al=90*D;s.V={v:87.3/3.6,x:0,t0:0,t100:12.3,F:1234};
+ const e0=txt();q.push(!e0.includes('シャシー')&&!e0.includes('車速'));LP.bench=1;const x=txt();q.push(['シャシー','目標 4000','車速 87.3 km/h','0→100 km/h 12.3 s','スロットル開度 α 90.0°','駆動 1.23 kN'].every(w=>x.includes(w)));
+ s.V={v:399.9/3.6,x:0,t0:0,t100:NaN,F:-9999};s.t=123.4;LP.nt=20000;s.Nb=12345.6;s.spa=-20;const y=txt(),rows=[...$('ctl').children],ov=rows.filter(r=>r.scrollWidth>r.clientWidth+1).length;q.push(y.includes('車速 399.9 km/h')&&y.includes('123.4 s…')&&y.includes('制動 10.00 kN')&&ov===0&&rows.length===4);
+ drawEng();const band=getComputedStyle($('thb')).display!=='none';show(2);U.pg=PAGES.indexOf('運転');rs();const mr=[...$('Pg').querySelectorAll('.r')].find(r=>r.querySelector('button[data-k="mode"]'));q.push(band&&!!mr&&mr.querySelector('span').textContent.includes('（不使用）')&&[...mr.querySelectorAll('button')].every(b=>b.disabled)&&!!$('tsr'));
+ chkB(35,'運転タブ：シャシーの制御状態の表示に「シャシー」・車速・0→100 km/h・駆動力 [kN]（エンジンでは無い），最長の表示でも 4 行が折り返さない，設定の「回転数の制御」が（不使用），スロットル開度の帯とスライダが出る',q.every(v=>v),`${q.map(v=>v?1:0).join('')}，「${x.slice(0,60)}」，はみ出し ${ov} 行`)}
+uiDefault();live.reset();show(3)};
 async function runAll(only,ui){if(U.busy)return;U.busy=1;U.cancel=0;U.uiDraw=0;RUN.ui=!!ui;if(ui)only=UIT;TR={};SC={};for(let i=1;i<=NT;i++)ST[i]='';const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();RUN.maxF=0;$('rt').textContent='中止';let lastF=performance.now();
-for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,31,32,33,34,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
+for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,20]){if(U.cancel)break;if(only&&!only.includes(id))continue;ST[id]='run';rchips(id);const it=TST[id]();let done=false,send;
 while(!done&&!U.cancel){await nextFrame();const n0=performance.now();if(n0-lastF>RUN.maxF){RUN.maxF=n0-lastF;RUN.maxId=id}lastF=n0;RUN.t0=n0;try{for(;;){const r=it.next(send);send=undefined;if(r.done){done=true;break}if(r.value&&typeof r.value.then==='function'){try{send=await r.value}catch(e){send={err:String(e)}}lastF=performance.now();break}if(r.value==='frame'||RUN.over())break}}catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}}
-if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31||id===32||id===33||id===34)restLive(snap);
-if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const tg=RUN.ui?UIT:Object.keys(TST).map(Number),un=tg.filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,RUN.ui?'画面のモード：[U] の項目を持つ TEST-'+UIT.filter(k=>k!==20).map(pad).join('，')+' がすべて実行され結果を持つ':'TEST-01〜19，21〜34 がすべて実行され結果を持つ',un.length===0||(!!only&&!RUN.ui),un.length?'未実行: '+un.join(','):`${tg.length-1} / ${tg.length-1}`);chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 300 s',RUN.total<=300,RUN.total.toFixed(1)+' s','≤ 300 s')}
+if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31||id===32||id===33||id===34||id===35)restLive(snap);
+if(done){if(id===20){chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);RUN.total=(performance.now()-tStart)/1e3;const tg=RUN.ui?UIT:Object.keys(TST).map(Number),un=tg.filter(k=>k!=20&&!(TR[k]&&TR[k].length));chkB(20,RUN.ui?'画面のモード：[U] の項目を持つ TEST-'+UIT.filter(k=>k!==20).map(pad).join('，')+' がすべて実行され結果を持つ':'TEST-01〜19，21〜35 がすべて実行され結果を持つ',un.length===0||(!!only&&!RUN.ui),un.length?'未実行: '+un.join(','):`${tg.length-1} / ${tg.length-1}`);chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');chkB(20,'総所要時間 ≤ 300 s',RUN.total<=300,RUN.total.toFixed(1)+' s','≤ 300 s')}
 ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'}else ST[id]=''}
 restLive(snap);U.busy=0;U.uiDraw=0;$('rt').textContent='全テスト実行';show(3);rchips();window.__done=1}
 function rchips(cur){const ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng'),np=ids.filter(k=>ST[k]==='ok').length,NR=RUN.ui?UIT.length:NT,ni=ids.reduce((s,k)=>s+TR[k].length,0),nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0);
@@ -788,4 +820,4 @@ $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="
 function dtl(){const r=TR[U.sel],n=pad(U.sel),st=ST[U.sel];[...$('cp').children].forEach((b,j)=>b.classList.toggle('sl',j+1===U.sel));
 if(!r||!r.length){$('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}<br>${st==='run'?'実行中':'未実行'}`;return}U.ix=Math.min(U.ix,r.length-1);const x=r[U.ix],nf=r.filter(q=>!q.ok).length;
 $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok?'ok':'ng'}">${x.ok?'PASS':'FAIL'}</b>`}
-const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性','化学種の熱物性と化学平衡','燃料の噴射と気化','全体図','最適化（バルブタイミング）','熱効率の損失の内訳','VVT マップ'];
+const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性','化学種の熱物性と化学平衡','燃料の噴射と気化','全体図','最適化（バルブタイミング）','熱効率の損失の内訳','VVT マップ','シャシーダイナモメーター'];

@@ -10,7 +10,7 @@ const V=process.argv.includes('-v');
 const req=rd('docs/requirements.md'),spec=rd('docs/specification.md'),gui=rd('docs/gui.md'),glo=rd('docs/glossary.md'),claude=rd('CLAUDE.md');
 const core=rd('src/core.js'),tests=rd('src/tests.js'),docjs=rd('src/doc.js'),uijs=rd('src/ui.js'),plotjs=rd('src/plot.js'),audiojs=rd('src/audio.js');
 const out=[];const bad=(k,m)=>out.push('['+k+'] '+m);
-const N=34,pad=i=>String(i).padStart(2,'0');
+const N=35,pad=i=>String(i).padStart(2,'0');
 const lines=s=>s.split('\n');
 const cut=(s,re)=>{const i=s.search(re);return i<0?s:s.slice(0,i)};
 /* 見出しの間の本文を取る */
@@ -80,10 +80,10 @@ const {ITEMS,PAGES,K,NY,SWC}=sb.__X;
 
 /* 6. 表記の規則と，古い記述の残り（改訂記録・履歴は除く） */
 const live={'docs/requirements.md':cut(req,/^## 7\. /m),'docs/specification.md':spec,'docs/gui.md':gui,'docs/glossary.md':glo,'CLAUDE.md':claude,'src/doc.js':docjs,'src/ui.js':uijs,'src/plot.js':plotjs,'src/core.js':core,'src/index.tpl.html':rd('src/index.tpl.html')};
-const STALE=[[/[、。]/,'句読点「、」「。」'],[/(?<![A-Za-z\\_{])bar(?![A-Za-z}])/,'圧力の単位 bar'],[/しても(よい|良い)が/,'「してもよいが」'],
+const STALE=[[/[、。]/,'句読点「、」「。」'],[/(?<![A-Za-z_])Nm(?![A-Za-z_])|\dN m\b|N・m|N･m|kgf/,'トルクの単位（N·m と書く）'],[/\d ?K[WN]\b|\d ?Kpa\b|\d ?KPa\b|\d ?Mm\b/,'SI 接頭辞の大文字と小文字'],[/(?<![A-Za-z\\_{])bar(?![A-Za-z}])/,'圧力の単位 bar'],[/しても(よい|良い)が/,'「してもよいが」'],
  [/「化学種」|化学種\s*→|→\s*化学種(?!の)/,'設定値の名「化学種」（「化学平衡」に改めた）'],[/1000\s*〜\s*7000\s*(\\ \\text\{)?rpm/,'性能曲線の範囲 1000〜7000 rpm'],[/≤\s*180\s*s|(?<!から緩めた[^|]{0,200})180\\ \\text\{s\}(?!\$? ?から緩めた)/,'所要時間 180 s'],
  [/比熱：γ\(T\)・γ一定/,'設定「比熱」（「熱物性」に改めた）'],[/7 画面|7 つの画面/,'線図の画面の数 7（8 に増えた）'],[/第25版）$/m,'題の版の番号']];
-for(const [f,s] of Object.entries(live))lines(s).forEach((l,i)=>{for(const [re,nm] of STALE){if(nm.startsWith('圧力')&&/`bar`|bar は使わない|\\bar|\\text\{bar\}\$ は使わない|toolbar|scrollbar|progressbar/.test(l))continue;if(nm.startsWith('句読点')&&f.startsWith('src/')&&/\/[^/]*[、。][^/]*\/|replace\(/.test(l))continue;if(re.test(l))bad('表記',f+':'+(i+1)+' '+nm+'：'+l.trim().slice(0,70))}});
+for(const [f,s] of Object.entries(live))lines(s).forEach((l,i)=>{for(const [re,nm] of STALE){if(nm.startsWith('トルクの単位')&&/は使わない/.test(l))continue;if(nm.startsWith('圧力')&&/`bar`|bar は使わない|\\bar|\\text\{bar\}\$ は使わない|toolbar|scrollbar|progressbar/.test(l))continue;if(nm.startsWith('句読点')&&f.startsWith('src/')&&/\/[^/]*[、。][^/]*\/|replace\(/.test(l))continue;if(re.test(l))bad('表記',f+':'+(i+1)+' '+nm+'：'+l.trim().slice(0,70))}});
 
 /* 6a. 句読点の重なり（コードの部分は除く）と，ファイルの末尾の改行 */
 for(const [f,s0] of [['docs/requirements.md',req],['docs/specification.md',spec],['docs/gui.md',gui],['docs/glossary.md',glo]]){lines(s0).forEach((l,i)=>{const t=l.replace(/`[^`]*`/g,'`…`');if(/，，|．．|，．|．，/.test(t))bad('表記',f+':'+(i+1)+' 句読点の重なり：'+(t.match(/.{0,20}(，，|．．|，．|．，).{0,10}/)||[''])[0])});if(!s0.endsWith('\n'))bad('表記',f+' の末尾に改行が無い')}

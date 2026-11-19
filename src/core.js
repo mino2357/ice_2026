@@ -3,7 +3,7 @@
 const R=287,TA=298.15,TI=298.15,TX=800,PI=Math.PI,D=PI/180,P4=4*PI;
 const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,g0:1.35,kT:.26,dal:1,Ct:6,wmin:20,dtR4:2e-5,Ti0:320};
 /* ===== item definition table (single source for settings, doc, tests) ===== */
-const PAGES=['機関','VVT・カム','弁タイミング','吸気','燃焼','運転','ECU','動力計','解法','音響','燃焼速度','吸気ランナ','排気系','噴射'];
+const PAGES=['機関','VVT・カム','弁タイミング','吸気','燃焼','運転','ECU','動力計','解法','音響','燃焼速度','吸気ランナ','排気系','噴射','車両'];
 const ITEMS=[
 {k:'B',n:'ボア B',u:'mm',f:1e-3,lo:40,hi:150,st:1,d:86,c:'r',pg:0},
 {k:'S',n:'ストローク S',u:'mm',f:1e-3,lo:40,hi:150,st:1,d:86,c:'r',pg:0},
@@ -49,6 +49,12 @@ const ITEMS=[
 {k:'Kp',n:'Kp',u:'°/rpm',f:D,lo:.001,hi:.2,st:.001,d:.008,c:'i',pg:6},
 {k:'Ki',n:'Ki',u:'°/(rpm·s)',f:D,lo:.002,hi:.5,st:.002,d:.004,c:'i',pg:6},
 {k:'amax',n:'最大開度',u:'°',f:D,lo:1,hi:90,st:1,d:90,c:'i',pg:6},
+{k:'bench',n:'試験の種類',u:'',ch:['エンジン','シャシー'],d:0,c:'i',pg:14},
+{k:'mv',n:'車重',u:'kg',f:1,lo:50,hi:3000,st:10,d:600,c:'i',pg:14},
+{k:'Cd',n:'C_d',u:'',f:1,lo:.1,hi:1.5,st:.01,d:.3,c:'i',pg:14},
+{k:'Af',n:'前面投影面積',u:'m²',f:1,lo:.2,hi:5,st:.1,d:2,c:'i',pg:14},
+{k:'Crr',n:'転がり抵抗係数',u:'',f:1,lo:0,hi:.05,st:.001,d:.012,c:'i',pg:14},
+{k:'etd',n:'駆動系の効率',u:'',f:1,lo:.5,hi:1,st:.01,d:.9,c:'i',pg:14},
 {k:'Tr',n:'定格トルク',u:'N·m',f:1,lo:5,hi:300,st:1,d:60,c:'i',pg:7},
 {k:'Pr',n:'定格出力',u:'kW',f:1e3,lo:1,hi:200,st:1,d:40,c:'i',pg:7},
 {k:'td',n:'トルクの時定数 τd',u:'ms',f:1e-3,lo:1,hi:200,st:1,d:10,c:'i',pg:7},
@@ -110,6 +116,18 @@ const psiC=(rp,q)=>rp>1-1e-3?(1-rp)/1e-3*q.s1:rp<=q.rc?q.ch:rp**q.ig*Math.sqrt(q
 function mdotC(p1,p2,T0,A,q){const pu=Math.max(p1,p2),pd=Math.min(p1,p2);if(pu===pd||A<=0)return 0;return Math.sign(p1-p2)*A*pu/Math.sqrt(R*T0)*psiC(pd/pu,q)}
 function mdot(p1,p2,T0,A,g){const pu=Math.max(p1,p2),pd=Math.min(p1,p2);if(pu===pd||A<=0)return 0;return Math.sign(p1-p2)*A*pu/Math.sqrt(R*T0)*psiF(pd/pu,g)}
 const Ath=(P,a)=>K.Cdt*PI/4*P.Dt*P.Dt*(1-Math.cos(a));
+/* ===== 車両（SPEC-35）：走行抵抗，駆動力，予測（最高速度と加速の時間） ===== */
+const VEH={g:9.80665,mut:.5,v0:.1,brk:.5,alb:.5*D,v100:100/3.6};
+const vehRho=P=>P.pa/(R*TA);
+const vehRes=(P,v)=>.5*vehRho(P)*P.Cd*P.Af*v*v+P.Crr*P.mv*VEH.g;
+/* 駆動力（SPEC-35 A の 4）．Pd：機関から変速機が受ける出力 [W]，mut：駆動力の上限の係数（省くと VEH.mut） */
+function vehDrv(P,v,Pd,mut){const Fm=(mut==null?VEH.mut:mut)*P.mv*VEH.g,vv=Math.max(v,VEH.v0);return Pd>=0?Math.min(Fm,P.etd*Pd/vv):v>0?Math.max(-Fm,Pd/(P.etd*vv)):0}
+/* 予測（SPEC-35 B）：vmax [m/s]，tTo(v1) [s]（届かなければ NaN） */
+function vehPerf(P,Pmax,mut){const Pw=P.etd*Pmax,Fm=(mut==null?VEH.mut:mut)*P.mv*VEH.g;let a=0,b=400;for(let i=0;i<100;i++){const m=(a+b)/2;if(Pw-vehRes(P,m)*m>0)a=m;else b=m}
+ const tTo=v1=>{const n=2000,h=v1/n;let t=0;for(let i=0;i<n;i++){const v=(i+.5)*h,F=Math.min(Fm,Pw/v)-vehRes(P,v);if(!(F>0))return NaN;t+=P.mv*h/F}return t};
+ return{vmax:(a+b)/2,tTo,t100:tTo(VEH.v100),Pmax}}
+/* 回転数を動力計（シャシーでは変速機）が決めるか */
+const dynOn=P=>P.bench===1||P.mode===1;
 /* 電動式動力計の容量（SPEC-11 の 1）：|T| ≤ min(T_rated, P_rated/ω) */
 const dynMax=(P,om)=>Math.min(P.Tr,P.Pr/Math.max(Math.abs(om),1e-9));
 /* REQ-12 2′：補機負荷の feedforward と開度の下限 */
@@ -235,7 +253,7 @@ const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m
 class Core{
 constructor(P){this.P=P;this.reset()}
 reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
-this.s={y:[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0)),exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null,spc:SPC,zs:GAS.phi2z(P.phi),inj:{on:0,th0:0,dth:1,m:0},mah:NaN,mtI:0,mfI:0,mfc:0,phc:NaN,pS:0,pSn:0};
+this.s={y:[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0)),exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,V:{v:0,x:0,t0:-1,t100:NaN,F:0},Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null,spc:SPC,zs:GAS.phi2z(P.phi),inj:{on:0,th0:0,dth:1,m:0},mah:NaN,mtI:0,mfI:0,mfc:0,phc:NaN,pS:0,pSn:0};
 this.s.a0=this.s.y.slice();this.rc();this.tr={};TRK.forEach(n=>this.tr[n]=new Float32Array(1440).fill(NaN));this.H={t:[],N:[],Nt:[],pin:[],al:[],Tw:[],tb:[],td:[],fc:[],fe:[]};this.last=null;this.X=null;this.sig=NaN;this.vhit=0;this.updV()}
 rc(){this.s.cw={ppn:1e12,ppx:-1e12};this.s.cx={pmax:0,pmS:0,Tmax:0,xr:this.s.cx?this.s.cx.xr:0}}
 updV(){const P=this.P,sg=P.ivo+P.phin*1.7+P.ivc*2.3+P.evo*3.1+P.evc*4.3+P.phex*5.9+P.Lv*71+P.dv*13+P.dve*17+P.cam+(P.nv===1?.5:0);if(sg!==this.sig){this.sig=sg;this.V=valves(P,this.G);this.vhit=valveHit(P,this.G)}}
@@ -379,13 +397,19 @@ s.a0=y.slice();s.tc0=s.t;s.ig=0;s.Mx=s.cf&&s.fired?M:null;s.Mh=s.Mx?(s.Mh||[]).c
 ecu(dt,om){const s=this.s,P=this.P;{const N=om*30/PI;s.Nb=N+(s.Nb-N)*Math.exp(-dt/P.tN)}
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
 if(s.fired&&s.Nb<150){s.fired=0;s.fuel=0;s.Mx=null}
-if(P.mode!==s.mode){if(s.fired){if(P.mode===1){P.alm=s.al;s.If=s.fc-P.Kpd*(s.Nb-P.nt)}else{P.Tl=Math.max(0,s.fc);s.Ip=s.al-alff(P)-P.Kp*(P.nt-s.Nb)}}s.mode=P.mode}
+const md=dynOn(P)?1:0;if(md!==s.mode){if(s.fired){if(md===1){P.alm=s.al;s.If=s.fc-P.Kpd*(s.Nb-P.nt)}else{P.Tl=Math.max(0,s.fc);s.Ip=s.al-alff(P)-P.Kp*(P.nt-s.Nb)}}s.mode=md}
 const e=P.nt-s.Nb,Tm=dynMax(P,om);
 if(!s.fired){s.al=P.alc;s.fc=0}
 else if(s.mode===0){const ab=alff(P),am=almin(P),u=ab+P.Kp*e+s.Ip;if(!((u>=P.amax&&e>0)||(u<=am&&e<0)))s.Ip+=P.Ki*e*dt;s.al=Math.min(P.amax,Math.max(am,ab+P.Kp*e+s.Ip));s.fc=Math.min(P.Tl,Tm)}
 else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd e_d + I_T を ±T_max で頭打ち．張り付いて偏差がそれを深める向きなら積分しない */const ed=-e,u=P.Kpd*ed+s.If;if(!((u>=Tm&&ed>0)||(u<=-Tm&&ed<0)))s.If+=P.Kid*ed*dt;s.al=P.alm;s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ed+s.If))}
 s.fe=s.fc+(s.fe-s.fc)*Math.exp(-dt/P.td);
-if(s.fired&&s.mode===1){s.ov=(s.fc>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(s.fc<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}}
+if(s.fired&&s.mode===1){s.ov=(s.fc>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(s.fc<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}
+this.veh(dt,om)}
+/* 車両（SPEC-35 C）：車速を陽的 Euler で進める．機関の計算には影響しない */
+veh(dt,om){const s=this.s,P=this.P,V=s.V;if(P.bench!==1){if(V.v!==0||V.t0>=0){V.v=0;V.x=0;V.t0=-1;V.t100=NaN;V.F=0}return}if(!s.fired){V.F=0;return}
+ const v0=V.v,Fd=vehDrv(P,v0,s.fe*om),Fb=s.al<VEH.alb?VEH.brk*P.mv*VEH.g:0,Fr=vehRes(P,v0),F=Fd-Fb;V.F=F;let v1=v0+(F-Fr)/P.mv*dt;if(v0<=0&&F<=Fr)v1=0;if(v1<0)v1=0;
+ if(v0<=0&&v1>0){V.t0=s.t-dt;V.t100=NaN}if(V.t0>=0&&!(V.t100===V.t100)&&v0<VEH.v100&&v1>=VEH.v100)V.t100=s.t-dt+dt*(VEH.v100-v0)/(v1-v0)-V.t0;if(v1<=0&&v0>0)V.t0=-1;
+ V.x+=.5*(v0+v1)*dt;V.v=v1}
 start(){this.s.fuel=1;if(!this.s.fired)this.s.starter=1}
 stop(){const s=this.s;s.fuel=0;s.starter=0;s.fired=0;s.C.on=0;s.C.Q=0;s.Mx=null;s.Mh=[]}
 clone(){const c=new Core({...this.P});c.s=structuredClone(this.s);c.G=geo(c.P);c.sig=NaN;c.updV();if(this.last)c.last={...this.last,p:Float32Array.from(this.last.p),V:Float32Array.from(this.last.V),me:Float32Array.from(this.last.me)};c.lastM=this.lastM;c.fixw=this.fixw;c.fixTw=this.fixTw;return c}
