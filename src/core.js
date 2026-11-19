@@ -55,8 +55,8 @@ const ITEMS=[
 {k:'Af',n:'前面投影面積',u:'m²',f:1,lo:.2,hi:5,st:.1,d:2,c:'i',pg:14},
 {k:'Crr',n:'転がり抵抗係数',u:'',f:1,lo:0,hi:.05,st:.001,d:.012,c:'i',pg:14},
 {k:'etd',n:'駆動系の効率',u:'',f:1,lo:.5,hi:1,st:.01,d:.9,c:'i',pg:14},
-{k:'Tr',n:'定格トルク',u:'N·m',f:1,lo:5,hi:300,st:1,d:60,c:'i',pg:7},
-{k:'Pr',n:'定格出力',u:'kW',f:1e3,lo:1,hi:200,st:1,d:40,c:'i',pg:7},
+{k:'Tr',n:'定格トルク',u:'N·m',f:1,lo:5,hi:500,st:1,d:100,c:'i',pg:7},
+{k:'Pr',n:'定格出力',u:'kW',f:1e3,lo:10,hi:2000,st:10,d:500,c:'i',pg:7},
 {k:'td',n:'トルクの時定数 τd',u:'ms',f:1e-3,lo:1,hi:200,st:1,d:10,c:'i',pg:7},
 {k:'Id',n:'I_dyno',u:'kg·m²',f:1,lo:.01,hi:.5,st:.01,d:.05,c:'i',pg:7},
 {k:'Kpd',n:'K_pd',u:'N·m/rpm',f:1,lo:.01,hi:2,st:.01,d:.2,c:'i',pg:7},
@@ -396,12 +396,12 @@ const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0
 s.a0=y.slice();s.tc0=s.t;s.ig=0;s.Mx=s.cf&&s.fired?M:null;s.Mh=s.Mx?(s.Mh||[]).concat([M]).slice(-10):[];this.lastM=M;this.last={p:Float32Array.from(this.tr.p),V:Float32Array.from(this.tr.V),me:Float32Array.from(this.tr.me),imep,pm,N:M.N,ok:!!s.Mx};s.cf=s.fired;this.rc()}
 ecu(dt,om){const s=this.s,P=this.P;{const N=om*30/PI;s.Nb=N+(s.Nb-N)*Math.exp(-dt/P.tN)}
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
-if(s.fired&&s.Nb<150){s.fired=0;s.fuel=0;s.Mx=null}
-const md=dynOn(P)?1:0;if(md!==s.mode){if(s.fired){if(md===1){P.alm=s.al;s.If=s.fc-P.Kpd*(s.Nb-P.nt)}else{P.Tl=Math.max(0,s.fc);s.Ip=s.al-alff(P)-P.Kp*(P.nt-s.Nb)}}s.mode=md}
+if(s.fired&&s.Nb<150&&(!dynOn(P)||this.fixw)){s.fired=0;s.fuel=0;s.Mx=null}
+const md=dynOn(P)?1:0;if(md!==s.mode){if(s.fired){if(md===1){P.alm=s.al;s.If=s.fc-P.Kpd*(om*30/PI-P.nt)}else{P.Tl=Math.max(0,s.fc);s.Ip=s.al-alff(P)-P.Kp*(P.nt-s.Nb)}}s.mode=md}
 const e=P.nt-s.Nb,Tm=dynMax(P,om);
 if(!s.fired){s.al=P.alc;s.fc=0}
 else if(s.mode===0){const ab=alff(P),am=almin(P),u=ab+P.Kp*e+s.Ip;if(!((u>=P.amax&&e>0)||(u<=am&&e<0)))s.Ip+=P.Ki*e*dt;s.al=Math.min(P.amax,Math.max(am,ab+P.Kp*e+s.Ip));s.fc=Math.min(P.Tl,Tm)}
-else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd e_d + I_T を ±T_max で頭打ち．張り付いて偏差がそれを深める向きなら積分しない */const ed=-e,u=P.Kpd*ed+s.If;if(!((u>=Tm&&ed>0)||(u<=-Tm&&ed<0)))s.If+=P.Kid*ed*dt;s.al=P.alm;s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ed+s.If))}
+else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd (N − N_target) + I_T を ±T_max で頭打ち（比例は瞬時の回転数 N，積分は平均回転数 N̄ の偏差 e_d）．張り付いて偏差がそれを深める向きなら積分しない */const ed=-e,ei=om*30/PI-P.nt,u=P.Kpd*ei+s.If;if(!((u>=Tm&&ed>0)||(u<=-Tm&&ed<0)))s.If+=P.Kid*ed*dt;s.al=P.alm;s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ei+s.If))}
 s.fe=s.fc+(s.fe-s.fc)*Math.exp(-dt/P.td);
 if(s.fired&&s.mode===1){s.ov=(s.fc>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(s.fc<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}
 this.veh(dt,om)}
@@ -410,8 +410,9 @@ veh(dt,om){const s=this.s,P=this.P,V=s.V;if(P.bench!==1){if(V.v!==0||V.t0>=0){V.
  const v0=V.v,Fd=vehDrv(P,v0,s.fe*om),Fb=s.al<VEH.alb?VEH.brk*P.mv*VEH.g:0,Fr=vehRes(P,v0),F=Fd-Fb;V.F=F;let v1=v0+(F-Fr)/P.mv*dt;if(v0<=0&&F<=Fr)v1=0;if(v1<0)v1=0;
  if(v0<=0&&v1>0){V.t0=s.t-dt;V.t100=NaN}if(V.t0>=0&&!(V.t100===V.t100)&&v0<VEH.v100&&v1>=VEH.v100)V.t100=s.t-dt+dt*(VEH.v100-v0)/(v1-v0)-V.t0;if(v1<=0&&v0>0)V.t0=-1;
  V.x+=.5*(v0+v1)*dt;V.v=v1}
-start(){this.s.fuel=1;if(!this.s.fired)this.s.starter=1}
-stop(){const s=this.s;s.fuel=0;s.starter=0;s.fired=0;s.C.on=0;s.C.Q=0;s.Mx=null;s.Mh=[]}
+/* SPEC-11 の 9：動力計制御（とシャシー）では動力計が回して始動し，FUEL CUT は燃料だけを止める（モータリング）．もう一度で停止 */
+start(){const s=this.s;s.fuel=1;if(!s.fired){if(dynOn(this.P)){const P=this.P,Tm=dynMax(P,s.y[1]);s.fired=1;s.starter=0;s.Ip=0;s.If=0;s.mode=1;/* 始動の最初のステップから駆動する（トルクの一次遅れを待つと，止まった機関が逆に回ろうとして ω ≥ 0 の射影が働く） */s.fc=s.fe=Math.min(Tm,Math.max(-Tm,P.Kpd*(s.Nb-P.nt)))}else s.starter=1}}
+stop(){const s=this.s;if(dynOn(this.P)&&s.fired&&s.fuel){s.fuel=0;s.C.on=0;s.C.Q=0;return}s.fuel=0;s.starter=0;s.fired=0;s.C.on=0;s.C.Q=0;s.Mx=null;s.Mh=[]}
 clone(){const c=new Core({...this.P});c.s=structuredClone(this.s);c.G=geo(c.P);c.sig=NaN;c.updV();if(this.last)c.last={...this.last,p:Float32Array.from(this.last.p),V:Float32Array.from(this.last.V),me:Float32Array.from(this.last.me)};c.lastM=this.lastM;c.fixw=this.fixw;c.fixTw=this.fixTw;return c}
 run(T){const t1=this.s.t+T;while(this.s.t<t1)this.step()}
 }

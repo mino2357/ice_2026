@@ -83,8 +83,9 @@ const bandH=()=>NTB*(dynOn(LP)?2:1);
 /* ===== target-rpm slider (REQ-23) ===== */
 const NTD={on:0,off:0,v:NaN,u:NaN};
 const ntW=()=>Math.max(1,$('ntr').clientWidth-44);
-const ntU=v=>Math.max(0,Math.min(1,(v-NTS.lo)/(NTS.hi-NTS.lo)));
-const ntVal=u=>NTS.lo+Math.round(Math.max(0,Math.min(1,u))*(NTS.hi-NTS.lo)/NTS.st)*NTS.st;
+/* SPEC-23 の 2：位置 u と値の対応（u ≤ 0.7 で 500〜8000 rpm，その右で 8000〜40000 rpm） */
+const ntU=v=>Math.max(0,Math.min(1,v<=NTS.mid?NTS.um*(v-NTS.lo)/(NTS.mid-NTS.lo):NTS.um+(1-NTS.um)*(v-NTS.mid)/(NTS.hi-NTS.mid)));
+const ntVal=u=>{u=Math.max(0,Math.min(1,u));return u<=NTS.um?NTS.lo+Math.round(u/NTS.um*(NTS.mid-NTS.lo)/NTS.st)*NTS.st:NTS.mid+Math.round((u-NTS.um)/(1-NTS.um)*(NTS.hi-NTS.mid)/NTS.st2)*NTS.st2};
 function ntRender(){const v=LP.nt,u=ntU(v),w=ntW();if(v!==NTD.v){NTD.v=v;$('ntv').innerHTML=`目標<b>${v}</b>rpm`;$('ntm').disabled=v<=NTS.lo}const x=Math.round(u*w*10)/10;if(x!==NTD.u){NTD.u=x;$('ntk').style.transform=`translateX(${x}px)`}}
 function ntStep(d){const it=IT.nt,v=gv(it,Math.max(gmin(it),gi(it,LP.nt)+d));if(v!==LP.nt)setParam('nt',v);ntRender()}
 /* ===== バルブタイミングの操作の列（SPEC-15 I）：設定の IVO，IVC，EVO，EVC を，つまみのドラッグと [−][＋] で変える ===== */
@@ -132,7 +133,7 @@ function vpTick(ms){if(!(U.tab===2&&vehPg()))return;const sg=vpSig();if(VP.sig==
  const t0=performance.now(),done=VP.run.run(ms);VP.maxMs=Math.max(VP.maxMs,performance.now()-t0);if(done){let b=null;for(const p of VP.run.pts)if(!p.st&&p.pb===p.pb&&(!b||p.pb>b.pb))b=p;VP.Pmax=b?b.pb:0;VP.Nmax=b?b.N:0;VP.sig=sg;VP.run=null}pvText();if(done)drawPv()}
 function vehText(){if(!vpOk())return`計測中 ${VP.run?VP.run.pts.length:0}/${VPN().length}（全開の最大出力）`;const r=vehPerf(LP,VP.Pmax);return`0→100 km/h ${r.t100===r.t100?r.t100.toFixed(1)+' s':'届かない'}｜最高 ${(r.vmax*3.6).toFixed(0)} km/h｜${(VP.Pmax/1e3).toFixed(1)} kW@${VP.Nmax}`}
 function drawPv(){const q=prep($('pv'));if(!q)return;drawScreen(q.g,q.W,q.H,vehPg()?(vpOk()?[vehSpec(LP,VP.Pmax)]:[]):camPg()?[camSpec(LP,live.G,Base.cam,Base.camC)]:screenSpec(live,AX,0,{now:NOW(),last:1,ref:Base.ref,nt:1}),COL,null)}
-function ctlRender(){const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
+function ctlRender(){{const lb=dynOn(LP)&&live.s.fired&&!live.s.fuel?'STOP':'FUEL CUT',b=$('b2');if(b.textContent!==lb)b.textContent=lb}const t=ctlText(live);$('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')}
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */

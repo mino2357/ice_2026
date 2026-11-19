@@ -91,7 +91,7 @@ if(!s.fired&&!s.starter)return['停止中','START で始動','',''];const NT=`${
 if(!s.fired)return[`始動中｜${R('g','目標')} 完爆 N̄ > ${K.Nfire} → ${NT}`,`${R('f','固定')} ${TH(s.al)}（始動開度）`,'',sp];
 if(P.bench===1){const V=s.V,kmh=V.v*3.6,tm=V.t100===V.t100?V.t100.toFixed(1)+' s':V.t0>=0?(s.t-V.t0).toFixed(1)+' s…':'–';return[`シャシー｜${R('g','目標')} ${P.nt} → ${NT}`,`車速 ${kmh.toFixed(1)} km/h｜0→100 km/h ${tm}`,`${R('m','操作量')} ${TH(P.alm)}｜${V.F<0?'制動':'駆動'} ${(Math.abs(V.F)/1e3).toFixed(2)} kN`,sp]}
 if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':s.al<=almin(P)+1e-12?' 下限':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(s.fc,s.y[1])}`,sp]}
-const Tm=dynMax(P,s.y[1]),sat=s.fc>=Tm-1e-12?' 上限':s.fc<=-Tm+1e-12?' 上限':'';return[`動力計制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc,s.y[1])}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
+const Tm=dynMax(P,s.y[1]),sat=s.fc>=Tm-1e-12?' 上限':s.fc<=-Tm+1e-12?' 上限':'';return[`${s.fuel?'動力計制御':'モータリング'}｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc,s.y[1])}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 /* SPEC-30 の 10：ページ「噴射」のパネルの文字 */
 function injText(c){const s=c.s,P=c.P,ph=s.phc===s.phc&&s.phc!=null?`φ_c ${s.phc.toFixed(3)}`:'φ_c –';if(P.gam!==2)return'ポート噴射（予混合気．熱物性が「化学平衡」のときだけ噴射方式を選べます）';if(P.inj!==1)return`ポート噴射（予混合気）  ${ph}`;const J=s.inj;if(!(J.m>0))return`直噴  噴射なし  ${ph}`;const a=md4(J.th0)/D,b=a+J.dth/D;return`噴射 ${a.toFixed(0)}°〜${b.toFixed(1)}°（幅 ${(J.dth/D).toFixed(1)}°${J.dth>=300*D-1e-9?'．幅が上限：インジェクタ流量を超える率':''}）  ${(J.m*1e6).toFixed(2)} mg  ${ph}`}
 /* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
@@ -100,7 +100,7 @@ const plotCells=(n,W,H)=>{const nc=plotCols(n,W,H),nr=Math.ceil(n/nc),cw=W/nc,ch
 function drawScreen(g,w,h,specs,col,cross){const cells=plotCells(specs.length,w,h),Ls=[];specs.forEach((sp,i)=>{const c=cells[i],L=layout(g,c.x+2,c.y+2,c.w-4,c.h-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
 /* ===== engine scene (pure geometry) ===== */
 const gasHue=T=>215+165*Math.min(1,Math.max(0,(T-300)/1700));
-const NTB=48,NTS={lo:500,hi:8000,st:50};
+const NTB=48,NTS={lo:500,hi:40000,st:50,um:.7,mid:8000,st2:500};
 function scene(c,W,Hh){const G=c.G,P=c.P,s=c.s,th=s.y[0],tt=md4(th),k=kin(G,th),B=G.B,b=B/2,wt=.012,r=G.r,l=G.l,hc=G.hc,pp=.32*B,hp=.62*B,V=c.V,hh=.062,
 yc=hc+k.x,yC=hc+pp+r+l,top=-.1,bot=yC+1.7*r+.006,xo=b+wt+.045,sc=Math.min(W*.6/(2*xo+.02),(Hh-8)/(bot-top)),ox=W*.6,oy=(Hh-(bot-top)*sc)/2,X=x=>ox+x*sc,Y=y=>oy+(y-top)*sc,
 xi=-.26*B,xe=.26*B,di=V.i.d,de=V.e.d,Li=lift(V.i,tt,P.cam),Le=lift(V.e,tt,P.cam),yb=hc+G.S+.45*B;
@@ -134,7 +134,7 @@ g.fillStyle='#e8e2d0';rect(-.004,-.095,.004,-.05);g.fillStyle=mt;rect(-.009,-.07
 const sa=P4/2-s.spa*D;if(s.C.on&&s.fuel&&tt>sa&&tt<sa+.25){g.strokeStyle='#ffe44d';g.lineWidth=2;g.beginPath();ln(0,.002,-.004,.005);ln(-.004,.005,.003,.007);g.stroke();g.fillStyle='rgba(255,230,90,.5)';g.beginPath();g.arc(X(0),Y(.005),.01*sc,0,7);g.fill()}
 g.strokeStyle=col.fg;g.lineWidth=1.5;g.beginPath();ln(-(b+wt),-hh,b+wt,-hh);ln(-(b+wt),-hh,-(b+wt),yb);ln(b+wt,-hh,b+wt,yb);ln(-b,0,-b,yb);ln(b,0,b,yb);g.stroke();
 if(nt)return q; /* 全体図（SPEC-31 B の 2）は文字を描かない */
-const ph=['吸気','圧縮','膨張','排気'][Math.floor(tt/PI)%4];g.textBaseline='alphabetic';g.textAlign='left';g.fillStyle=col.fg;g.font='bold 13px system-ui,sans-serif';g.fillText((s.fired?'RUN':s.starter?'CRANK':'STOP')+'  '+(s.y[1]*30/PI|0)+' rpm',8,18);
+const ph=['吸気','圧縮','膨張','排気'][Math.floor(tt/PI)%4];g.textBaseline='alphabetic';g.textAlign='left';g.fillStyle=col.fg;g.font='bold 13px system-ui,sans-serif';g.fillText((s.fired?(s.fuel?'RUN':'MOTOR'):s.starter?'CRANK':'STOP')+'  '+(s.y[1]*30/PI|0)+' rpm',8,18);
 g.font='12px system-ui,sans-serif';const fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':'');[P.bench===1?'シャシー':s.mode?'動力計制御':'スロットル制御',`θ ${(tt/D).toFixed(0)}°CA ${ph}`,`p ${(s.y[2]/1e3).toFixed(0)} kPa`,`T ${T.toFixed(0)} K`,`吸気弁 ${(Li*1e3).toFixed(1)} mm`,`排気弁 ${(Le*1e3).toFixed(1)} mm`,`B×S ${(q.B*1e3).toFixed(0)}×${(c.G.S*1e3).toFixed(0)}`,`l/r ${(q.l/r).toFixed(2)}`,`ε ${c.G.eps.toFixed(1)}`].filter((t,i,A)=>{const nw=(fl?1:0)+(c.vhit?1:0),nl=Math.max(0,Math.floor((Hh-40)/15)+1);return 9+nw+(c.vhit&&!fl?1:0)<=nl||i<nl-nw}).forEach((t,i)=>{g.fillStyle=col.mu;g.fillText(t,8,36+i*15)});
 /* 帯の上端（Hh）より下に文字を描かない．入り切らないときは警告を残し，状態の行を下から省く（SPEC-19 の 6） */
 {const nw=(fl?1:0)+(c.vhit?1:0),nl=Math.max(0,Math.floor((Hh-40)/15)+1),full=9+nw+(c.vhit&&!fl?1:0)<=nl,y0=full?9:Math.max(0,nl-nw);g.fillStyle=col.ng;g.font='bold 12px system-ui,sans-serif';if(fl)g.fillText(fl.trim(),8,36+y0*15);if(c.vhit)g.fillText('VALVE HIT',8,36+(full?10:y0+(fl?1:0))*15)}return q}

@@ -217,7 +217,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $N$，$\bar N$ | 瞬時の回転数，平均回転数 | rpm | $N = \dfrac{30}{\pi}\omega$，$\tau_N\dfrac{d\bar N}{dt} = N - \bar N$ | SPEC-12 |
 | $N_{\text{target}}$ | 目標回転数 | rpm | 設定 | SPEC-12 |
 | $\alpha_{\text{manual}}$，$T_{\text{load}}$ | スロットル開度（動力計制御で固定する開度），負荷トルク（スロットル制御での動力計のトルクの指令） | rad，N·m | 設定．使わない制御のときは設定画面で変更できない（SPEC-18 B.7） | SPEC-11，18 |
-| $e_N$，$e_d$ | 偏差 | rpm | $e_N = N_{\text{target}} - \bar N$，$e_d = \bar N - N_{\text{target}}$ | SPEC-11，12 |
+| $e_N$，$e_d$，$e_N'$ | 偏差 | rpm | $e_N = N_{\text{target}} - \bar N$，$e_d = \bar N - N_{\text{target}}$，$e_N' = N - N_{\text{target}}$（瞬時の回転数の偏差．動力計制御の比例の項） | SPEC-11，12 |
 | $\alpha_{\text{ff}}$，$\alpha_{\min}$ | feedforward を加えた基準開度，開度の下限 | rad | $\alpha_{\text{ff}} = \alpha_{\text{base}} + k_T T_{\text{aux}}$，$\alpha_{\min} = \min(\alpha_{\max},\ \max(0,\ \alpha_{\text{ff}} - \delta_\alpha))$ | SPEC-12 |
 | $I_\alpha$，$I_T$ | スロットル制御・動力計制御の積分の状態 | rad，N·m | $\dfrac{dI_\alpha}{dt} = K_i e_N$，$\dfrac{dI_T}{dt} = K_{i,d}\,e_d$（張り付きを深める向きでは $0$） | SPEC-11，12 |
 | $K_{p,d}$，$K_{i,d}$ | 動力計制御の比例・積分のゲイン | N·m/rpm，N·m/(rpm·s) | 設定（既定 $0.2$，$0.6$） | SPEC-11 |
