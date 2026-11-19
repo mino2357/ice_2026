@@ -12,6 +12,7 @@ const core=rd('src/core.js'),tests=rd('src/tests.js'),docjs=rd('src/doc.js'),uij
 const out=[];const bad=(k,m)=>out.push('['+k+'] '+m);
 const N=34,pad=i=>String(i).padStart(2,'0');
 const lines=s=>s.split('\n');
+const cut=(s,re)=>{const i=s.search(re);return i<0?s:s.slice(0,i)};
 /* 見出しの間の本文を取る */
 const sect=(src,re)=>{const L=lines(src),r={};let cur=null;for(const l of L){const m=l.match(re);if(m){cur=m[1];r[cur]={title:m[2],body:[]}}else if(/^## /.test(l))cur=null;else if(/^### /.test(l)&&!re.test(l))cur=null;else if(cur)r[cur].body.push(l)}return r};
 const REQ=sect(req,/^### REQ-(\d\d)：(.*)$/),SPEC=sect(spec,/^### SPEC-(\d\d)：(.*)$/),TEST=sect(spec,/^### TEST-(\d\d)：(.*)$/);
@@ -68,10 +69,13 @@ const {ITEMS,PAGES,K,NY,SWC}=sb.__X;
  for(const [re,s,nm,v] of want)for(const m of s.matchAll(re))if(+m[1]!==v)bad('数',nm+'「'+m[0]+'」（'+v+' のはず）');
  const nt=(tests.match(/NT=(\d+)/)||[])[1];if(+nt!==N)bad('数','tests.js の NT='+nt);
  for(let i=1;i<=N;i++)if(!new RegExp('TST\\['+i+'\\]=').test(tests))bad('数','tests.js に TST['+i+'] が無い');
+ /* 画面のモード（SPEC-20 B の 9）：tests.js の UIT が，仕様書で [U] の項目を持つ TEST の集合と一致する */
+ {const ut=(tests.match(/UIT=\[([\d,]+)\]/)||[])[1],want=Object.keys(TEST).filter(k=>TEST[k].body.some(l=>/^\d+\. \[U\]/.test(l))).map(Number).sort((a,b)=>a-b).join();if(ut!==want)bad('数','tests.js の UIT='+ut+'（[U] の項目を持つ TEST は '+want+'）')}
+ /* 「n/n PASS」の数 */
+ for(const [nm,s] of [['要件定義書',cut(req,/^## 7\. /m)],['仕様書',spec],['CLAUDE.md',claude]])for(const m of s.matchAll(/(\d+)\/(\d+) PASS/g))if(+m[1]!==N||+m[2]!==N)bad('数',nm+'「'+m[0]+'」（'+N+' のはず）');
  for(const m of spec.matchAll(/(\d+) ページ/g))if(+m[1]>=10&&+m[1]<=20&&+m[1]!==PAGES.length)bad('数','仕様書「'+m[0]+'」（設定のページは '+PAGES.length+'）')}
 
 /* 6. 表記の規則と，古い記述の残り（改訂記録・履歴は除く） */
-const cut=(s,re)=>{const i=s.search(re);return i<0?s:s.slice(0,i)};
 const live={'docs/requirements.md':cut(req,/^## 7\. /m),'docs/specification.md':spec,'docs/glossary.md':glo,'CLAUDE.md':claude,'src/doc.js':docjs,'src/ui.js':uijs,'src/plot.js':plotjs,'src/core.js':core,'src/index.tpl.html':rd('src/index.tpl.html')};
 const STALE=[[/[、。]/,'句読点「、」「。」'],[/(?<![A-Za-z\\_{])bar(?![A-Za-z}])/,'圧力の単位 bar'],[/しても(よい|良い)が/,'「してもよいが」'],
  [/「化学種」|化学種\s*→|→\s*化学種(?!の)/,'設定値の名「化学種」（「化学平衡」に改めた）'],[/1000\s*〜\s*7000\s*(\\ \\text\{)?rpm/,'性能曲線の範囲 1000〜7000 rpm'],[/≤\s*180\s*s|(?<!から緩めた[^|]{0,200})180\\ \\text\{s\}(?!\$? ?から緩めた)/,'所要時間 180 s'],

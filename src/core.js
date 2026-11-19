@@ -34,7 +34,7 @@ const ITEMS=[
 {k:'tev',n:'気化の時定数',u:'ms',f:1e-3,lo:0,hi:10,st:.1,d:1.5,c:'i',pg:13},
 {k:'spb',n:'点火時期',u:'°BTDC',f:1,lo:null,hi:null,st:1,d:18,c:'i',pg:4},
 {k:'sauto',n:'点火の自動最適化',u:'',ch:['OFF','ON'],d:1,c:'i',pg:4},
-{k:'cvar',n:'サイクル変動',u:'',ch:['OFF','ON'],d:1,c:'i',pg:4},
+{k:'cvar',n:'サイクル変動',u:'',ch:['OFF','ON'],d:0,c:'i',pg:4},
 {k:'phi',n:'当量比 φ',u:'',f:1,lo:.6,hi:1.4,st:.01,d:1,c:'i',pg:4},
 {k:'cw',n:'Woschni係数',u:'',f:1,lo:0,hi:2,st:.05,d:1,c:'i',pg:4},
 {k:'gam',n:'熱物性',u:'',ch:['γ(T)','γ一定','化学平衡'],d:2,c:'i',pg:4},

@@ -6,6 +6,7 @@
      --names  すべての検査の名前と結果を表示（省くと FAIL だけ）
      --time   テストごとの所要時間を表示
      --off    MathJax を遮断（オフラインに相当）
+     --ui     画面のモード（[U] の項目だけ．npm test の 5 通りと同じ．SPEC-20 B の 9）
      --file   成果物の代わりに実行する HTML（前の版との比較に使う）
      --json   検査の一覧を JSON で保存（tools/dev/coverage.js の入力）
      --md     すべての検査の名前・基準・実測を Markdown の表で保存（docs/measured_v26.md を作る） */
@@ -17,10 +18,10 @@ const URL='file://'+path.resolve(typeof opt('file')==='string'?opt('file'):path.
 (async()=>{const b=await chromium.launch(),c=await b.newContext({viewport:{width:W,height:H},hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
 await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!opt('off')&&u.startsWith(MJ)){const f=path.join(MJD,u.slice(MJ.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript'})}return rt.abort()});
 p.on('pageerror',e=>errs.push(e.message));await p.goto(URL);await p.waitForTimeout(300);
-await p.evaluate(only=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{d=v}});
+await p.evaluate(([only,ui])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{d=v}});
   /* テストごとの所要時間：ST[i] が 'run' になった時刻の差 */
   const tm=setInterval(()=>{for(let i=1;i<=NT;i++)if(ST[i]==='run'&&cur!==i){const now=performance.now();if(cur)window.__t[cur]=(window.__t[cur]||0)+now-last;cur=i;last=now}if(d===1){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;clearInterval(tm)}},20);
-  show(3);only?runAll(only):runAll()},only);
+  show(3);runAll(only||null,ui)},[only,!!opt('ui')]);
 await p.waitForFunction(()=>window.__done===1,null,{timeout:900000});
 const r=await p.evaluate(()=>({sum:document.getElementById('sm').textContent,maxF:RUN.maxF,maxId:RUN.maxId,total:RUN.total,t:window.__t,TR}));
 console.log(W+'x'+H,r.sum,'最長フレーム間隔',Math.round(r.maxF),'ms（TEST-'+r.maxId+'）');
