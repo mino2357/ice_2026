@@ -57,7 +57,7 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する（画面の�
 npm install && npx playwright install chromium   # 初回のみ
 npm run build      # dist/engine.html を生成（pandoc が必要）
 npm run check      # 文書とコードの整合の点検（番号，参照，設定の表，古い記述）と，使っていない名前の点検
-npm test           # 整合の点検 → ビルド → テスト（7 通り．全項目 2 通り＋画面のモード 5 通り，約 13 分．MathJax は vendor/ のものを使い，1 通りは遮断）
+npm test           # 整合の点検 → ビルド → テスト（7 通り．全項目 2 通り＋画面のモード 5 通り，約 11 分．MathJax は vendor/ のものを使い，1 通りは遮断）
 npm run test:one -- --ui --vp 820x1180     # 画面のモードを 1 ビューポートで
 npm run test:one -- --only 17,30 --names   # 1 ビューポートで一部のテストだけ（tools/dev/run.js）
 npm run wav        # 試聴用 WAV を dist/ に生成
