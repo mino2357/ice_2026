@@ -197,6 +197,11 @@ const GAS=(()=>{
  const z2phi=z=>AF*z/(1-z),phi2z=ph=>ph/(AF+ph);
  /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0.50〜1.50（0.0125 刻み．量論の折れ目 φ_r = 1 を節点に置く），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
  const G={f0:.5,df:.0125,nf:81,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},tab=new Array(G.nf).fill(null),iF=Math.round((Tfr-G.T0)/G.dT);
+ /* 解離の無い既燃ガス（SPEC-33 A の段 F）：組成を T_nd = 1000 K の平衡（完全燃焼の生成物）に固定し，比熱だけ温度で変える．ND が真の間，burned はこの表を使う */
+ const tabN=[],TND=1000;let ND=0;
+ function nodeN(i){if(tabN[i])return tabN[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT),Q=new Float64Array(G.np*G.nT);
+  for(let ip=0;ip<G.np;ip++){const n0=eq(TND,Math.exp(G.lp0+G.dlp*ip),z,ec).n,r0=bR(n0,z,ec);for(let it=0;it<G.nT;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(n0,T,z,ec);R[k]=r0;c[k]=bCv(n0,T,z,ec)}}
+  return tabN[i]={e,c,R,Q}}
  function node(i){if(tab[i])return tab[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT),Q=new Float64Array(G.np*G.nT),df=(a,k,it,L,h)=>it-2>=iF&&it+2<=L?(-a[k+2]+8*a[k+1]-8*a[k-1]+a[k-2])/(12*h):it===iF?(-3*a[k]+4*a[k+1]-a[k+2])/(2*h):it===L?(3*a[k]-4*a[k-1]+a[k-2])/(2*h):(a[k+1]-a[k-1])/(2*h);
   for(let ip=0;ip<G.np;ip++){const p=Math.exp(G.lp0+G.dlp*ip);let w=null,nf=null;
    for(let it=iF;it<G.nT;it++){const T=G.T0+G.dT*it,q=eq(T,p,z,ec,w),k=ip*G.nT+it;w=q.n;if(it===iF)nf=q.n.slice();e[k]=bE(q.n,T,z,ec);R[k]=bR(q.n,z,ec)}
@@ -208,7 +213,7 @@ const GAS=(()=>{
  const cl=(x,a,b)=>x<a?a:x>b?b:x,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
  /* ホットパス：オブジェクトと配列を作らない．o に e, R と偏微分 eT, ep, ez, RT, Rp, Rz を書く */
  function burned(T,p,z,o){const ph=cl(K.etac*AF*z/(1-z),G.f0,FMX),xf=(ph-G.f0)/G.df,jf=Math.min(G.nf-2,Math.floor(xf)),wf=xf-jf,Tc=cl(T,G.T0,TMX),xT=(Tc-G.T0)/G.dT,jt=Math.min(G.nT-2,Math.floor(xT)),s=xT-jt,
-   xp=cl((Math.log(p)-G.lp0)/G.dlp,0,G.np-1),jp=Math.min(G.np-2,Math.floor(xp)),wp=xp-jp,t0=tab[jf]||node(jf),t1=tab[jf+1]||node(jf+1),k=jp*G.nT+jt,k2=k+G.nT,h=G.dT,s2=s*s,s3=s2*s,
+   xp=cl((Math.log(p)-G.lp0)/G.dlp,0,G.np-1),jp=Math.min(G.np-2,Math.floor(xp)),wp=xp-jp,t0=ND?tabN[jf]||nodeN(jf):tab[jf]||node(jf),t1=ND?tabN[jf+1]||nodeN(jf+1):tab[jf+1]||node(jf+1),k=jp*G.nT+jt,k2=k+G.nT,h=G.dT,s2=s*s,s3=s2*s,
    a0=2*s3-3*s2+1,a1=(s3-2*s2+s)*h,a2=-2*s3+3*s2,a3=(s3-s2)*h,b0=(6*s2-6*s)/h,b1=3*s2-4*s+1,b3=3*s2-2*s,
    E0=t0.e,C0=t0.c,R0=t0.R,Q0=t0.Q,E1=t1.e,C1=t1.c,R1=t1.R,Q1=t1.Q,
    e00=a0*E0[k]+a1*C0[k]+a2*E0[k+1]+a3*C0[k+1],e01=a0*E0[k2]+a1*C0[k2]+a2*E0[k2+1]+a3*C0[k2+1],e10=a0*E1[k]+a1*C1[k]+a2*E1[k+1]+a3*C1[k+1],e11=a0*E1[k2]+a1*C1[k2]+a2*E1[k2+1]+a3*C1[k2+1],
@@ -221,7 +226,7 @@ const GAS=(()=>{
   o.ep=inP?((e01-e00)*(1-wf)+(e11-e10)*wf)*ip:0;o.Rp=inP?((r01-r00)*(1-wf)+(r11-r10)*wf)*ip:0;o.ez=inF?(eB-eA)*dzf:0;o.Rz=inF?(rB-rA)*dzf:0;return o}
  /* 平衡を直接解いた既燃ガスの物性（表を使わない．検証用） */
  function direct(T,p,z,ec=K.etac,frz=true){if(frz&&T<Tfr){const q=eq(Tfr,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N}}const q=eq(T,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N,q}}
- return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab}})();
+ return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab,TND,nd:v=>{ND=v?1:0}}})();
 /* SPEC-29：温度が固定の場所（吸気 TI，外気 TA，液体の燃料）の物性の定数と，気体定数を引数に取るオリフィスの式 */
 const GC={cvaI:GAS.cva(TI),cpaI:GAS.cva(TI)+GAS.Ra,haI:GAS.ha(TI),cvfI:GAS.cvf(TI),cpfI:GAS.cvf(TI)+GAS.Rf,hfI:GAS.hf(TI),cvaA:GAS.cva(TA),cvfA:GAS.cvf(TA),gA:1+GAS.Ra/GAS.cva(TA),kA:psiK(1+GAS.Ra/GAS.cva(TA)),hl:GAS.hf(GAS.Tl)-GAS.hfg};
 /* ECU の空気量の見積もり m̂_a（SPEC-30 の 4）．mah，mtI：前の IVC の筒内の未燃の空気と全質量．pS，pS0：噴射の開始の時点の吸気管圧（今回，前回）．最初の IVC の前（mah が NaN）は p V_d/(R_a T_in)，前のサイクルの噴射が無いとき（pS0 = 0）は π_S = 1 */
@@ -502,16 +507,20 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
  *gen(){const c=this.c,s=c.s;let k=0;const st=()=>{c.step();return(++k&3)===0};
   let cy=s.cyc;while(s.cyc===cy){if(st())yield}
   /* 実際のサイクル */
-  cy=s.cyc;const z0=s.y[19];let rep=null,zI=0,pE=NaN,ivc=null;
-  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]}}if(s.evn[3]!==n3)pE=s.y[2];if((++k&3)===0)yield}
+  cy=s.cyc;const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31];let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN;
+  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];bI=bf(c);ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]}}if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c)}if((++k&3)===0)yield}
   const M=c.lastM,C={...s.C},G=c.G;if(!rep||!M||!(M.ei>0)||!C.on)return{ok:false,why:'燃焼したサイクルが得られない'};
-  const Qf=M.W/M.ei,W180=zI-z0;
+  const Qf=M.W/M.ei,W180=zI-z0,xi=d=>SPC?K.etac*d*K.Hu/Qf:d/Qf; /* 燃えた燃料の熱の割合 ξ（SPEC-33 A）：化学平衡では既燃の側へ移った燃料 × η_c，ほかは発熱の積分 */
   /* 再計算（弁を閉じ，点火の処理をしない） */
-  const R={};for(const [nm,cw,inst] of[['FA',0,1],['t',0,0],['h',1,0]]){const q=rep.clone();q.P.Lv=0;if(!cw)q.P.cw=0;q.s.ig=1;q.s.C={...C};if(inst){q.s.C.th0=LBK.th0*D;q.s.C.db=LBK.db*D}const zs=q.s.y[19];let pe=NaN;
-   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){const n3=q.s.evn[3];q.step();if(q.s.evn[3]!==n3)pe=q.s.y[2];if((++k&3)===0)yield}R[nm]={W:q.s.y[19]-zs,pe}}
-  const eO=1-Math.pow(G.eps,1-LBK.g),eA=(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,Qf))/Qf,eFA=(W180+R.FA.W)/Qf,et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
-  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['作動ガスの物性（比熱・解離）',eA-eFA],['燃焼の遅れ（等容度）',eFA-et],['冷却損失',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
-  return{ok:true,eO,eA,eFA,et,eh,eig,ei,L,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei}}}
+  const R={};for(const [nm,cw,inst,nd] of[['F',0,1,1],['FA',0,1,0],['t',0,0,0],['h',1,0,0]]){if(nd&&!SPC){R[nm]=null;continue}const q=rep.clone();q.P.Lv=0;if(!cw)q.P.cw=0;q.s.ig=1;q.s.C={...C};if(inst){q.s.C.th0=LBK.th0*D;q.s.C.db=LBK.db*D}const zs=q.s.y[19],b0=bf(q);let pe=NaN;
+   /* 段 F の間だけ，既燃ガスの表を解離の無いものに替える（1 ステップごとに戻す．運転中の機関と交互に進むため） */
+   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){const n3=q.s.evn[3];if(nd)GAS.nd(1);try{q.step()}finally{if(nd)GAS.nd(0)}if(q.s.evn[3]!==n3)pe=q.s.y[2];if((++k&3)===0)yield}R[nm]={W:q.s.y[19]-zs,pe,xi:xi(bf(q)-b0)}}
+  if(!R.F)R.F=R.FA;
+  const aw=x=>(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,x*Qf))/Qf,xiT=xi(bE_-bI);if(!(xiT>.05)||!(R.F.xi>.05)||!(R.FA.xi>.05))return{ok:false,why:'燃えた燃料が少なすぎる'};
+  /* 瞬時燃焼の段は，燃えた燃料の量が実際と違う（気化の途中で燃やす）ので，同じ熱の空気標準との比で換算する（SPEC-33 A） */
+  const eO=1-Math.pow(G.eps,1-LBK.g),eA=aw(1),eU=aw(xiT),eF=eU*((W180+R.F.W)/Qf)/aw(R.F.xi),eFA=eU*((W180+R.FA.W)/Qf)/aw(R.FA.xi),et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
+  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['燃焼の遅れ（等容度）',eFA-et],['冷却損失',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
+  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei}}}
 /* ===== VVT マップ（SPEC-34） ===== */
 const VVM={ph:[-40,-30,-20,-10,0,10,20,30,40],lo:-40,hi:40};
 /* 格子の順序（SPEC-34 B の 2）：段階 1（添字 0，4，8），段階 2（偶数），段階 3（残り）．各段階の中は行ごとに向きを変える．[i（φin の添字），j（φex の添字），段階] */
