@@ -97,7 +97,8 @@ const Tm=dynMax(P,s.y[1]),sat=s.fc>=Tm-1e-12?' 上限':s.fc<=-Tm+1e-12?' 上限'
 /* SPEC-30 の 10：ページ「噴射」のパネルの文字 */
 function injText(c){const s=c.s,P=c.P,ph=s.phc===s.phc&&s.phc!=null?`φ_c ${s.phc.toFixed(3)}`:'φ_c –';if(P.gam!==2)return'ポート噴射（予混合気．熱物性が「化学平衡」のときだけ噴射方式を選べます）';if(P.inj!==1)return`ポート噴射（予混合気）  ${ph}`;const J=s.inj;if(!(J.m>0))return`直噴  噴射なし  ${ph}`;const a=md4(J.th0)/D,b=a+J.dth/D;return`噴射 ${a.toFixed(0)}°〜${b.toFixed(1)}°（幅 ${(J.dth/D).toFixed(1)}°${J.dth>=300*D-1e-9?'．幅が上限：インジェクタ流量を超える率':''}）  ${(J.m*1e6).toFixed(2)} mg  ${ph}`}
 /* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
-const plotCols=(n,W,H)=>W>1.25*H?Math.max(1,Math.min(n,Math.floor(W/320))):1;
+/* 列数（GUI SPEC-15 G の 4）：横長は幅 320 px ごとに 1 列．どちらでも，1 つのグラフの高さが 100 px 以上になるように列を増やす（1 列の幅 160 px 以上の範囲で） */
+const plotCols=(n,W,H)=>Math.max(1,Math.min(n,Math.max(W>1.25*H?Math.floor(W/320):1,Math.ceil(n/Math.max(1,Math.floor(H/100)))),Math.floor(W/160)));
 const plotCells=(n,W,H)=>{const nc=plotCols(n,W,H),nr=Math.ceil(n/nc),cw=W/nc,ch=H/nr;return Array.from({length:n},(_,i)=>({x:(i%nc)*cw,y:Math.floor(i/nc)*ch,w:cw,h:ch}))};
 function drawScreen(g,w,h,specs,col,cross){const cells=plotCells(specs.length,w,h),Ls=[];specs.forEach((sp,i)=>{const c=cells[i],L=layout(g,c.x+2,c.y+2,c.w-4,c.h-2,sp);drawPlot(g,L,sp.ser,col,cross);Ls.push(L)});return Ls}
 /* ===== engine scene (pure geometry) ===== */
