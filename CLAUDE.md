@@ -4,8 +4,8 @@
 
 | 文書 | 役割 |
 | :--- | :--- |
-| `docs/requirements.md`（要件定義書） | 何ができることを求めるか（REQ-01〜33）と，数式・数値で書いた受入基準．制約，納品条件，改訂の記録 |
-| `docs/specification.md`（仕様書） | 要件を満たすための具体的な定め（SPEC-01〜33）：状態変数，支配方程式と導出，定数，数値解法，制御則，画面，音．テスト項目（TEST-01〜33） |
+| `docs/requirements.md`（要件定義書） | 何ができることを求めるか（REQ-01〜34）と，数式・数値で書いた受入基準．制約，納品条件，改訂の記録 |
+| `docs/specification.md`（仕様書） | 要件を満たすための具体的な定め（SPEC-01〜34）：状態変数，支配方程式と導出，定数，数値解法，制御則，画面，音．テスト項目（TEST-01〜34） |
 | `docs/glossary.md`（用語の定義集） | 記号（単位と定義式）と用語の定義 |
 
 REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
@@ -39,7 +39,7 @@ REQ-nn，SPEC-nn，TEST-nn は同じ番号どうしが対応する．
 | `src/audio.js` | エンジン音の合成器 `Synth`（AudioWorklet と共用，DOM 非依存） |
 | `src/plot.js` | グラフの軸・自動レンジ・レイアウト，機関断面図の場面記述と描画，全体図（系統図と状態のネットワーク）の場面記述 `sysSpec` と描画 `drawSys`，制御状態の文言 |
 | `src/doc.js` | 解説タブ（TeX 生成器 `mp`，記号表 `SYM`），埋め込んだ 3 文書の表示，MathJax の読み込みと TeX の表示 |
-| `src/tests.js` | アプリ内テスト TEST-01〜33 とシナリオ |
+| `src/tests.js` | アプリ内テスト TEST-01〜34 とシナリオ |
 | `src/ui.js` | 画面・入力・ループ |
 | `src/style.css`，`src/index.tpl.html` | 見た目とひな形 |
 | `vendor/mathjax-3.2.2/` | 開発時検証で CDN の MathJax の代わりに読ませる `tex-svg.js`（Apache License 2.0．成果物には含めない） |

@@ -71,3 +71,4 @@ section{max-width:1400px;padding:8px 12px;gap:6px}#s3,#s4{max-width:900px}
 /* 最適化タブ（SPEC-32，33） */
 .opv{display:none;flex:1;min-height:0;flex-direction:column;gap:4px}.opv.on{display:flex}
 #otb{flex:none;width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}#otb th,#otb td{padding:1px 4px;text-align:right;border-bottom:1px solid var(--ln);white-space:nowrap}#otb th{color:var(--ac);font-weight:600}#otb td:first-child,#otb th:first-child{text-align:left}
+#opb button{font-size:12px;padding:0 2px}

@@ -427,10 +427,10 @@ const VTK4=['ivo','ivc','evo','evc'];
 function mb32(seed){let s=seed>>>0;return()=>{let t=(s=(s+0x6D2B79F5)>>>0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
 /* 作用角の制約（1〜719°） */
 const vtOk=x=>{const di=x[1]-x[0],de=x[3]-x[2];return di>=1&&di<=719&&de>=1&&de<=719};
-/* 探索器（SPEC-32 C）．generator：yield {x, cls} で評価を求め，next(J) で値を受け取る．feas(x)：作用角以外の制約（VALVE HIT）．
+/* 探索器（SPEC-32 C．VVT マップの最適点では 2 変数，モンテカルロなし，O.dur = false で作用角の制約なし．SPEC-34 B の 3）．generator：yield {x, cls} で評価を求め，next(J) で値を受け取る．feas(x)：作用角以外の制約（VALVE HIT）．
    cls は評価の許容の種類（'mc'：粗い，'fine'：細かい）．値は種類ごとに覚え，同じ点を 2 度評価しない */
 function* vtSearch(x0,feas,O){O=O||OPT;const rnd=mb32(O.seed),gau=()=>{let u=0;while(u===0)u=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*PI*rnd())},memo=new Map,R={x0:x0.slice(),hist:[],ne:0,stop:false,stage:''};
- const ok=x=>vtOk(x)&&feas(x),ev=function*(x,cls){const k=cls+':'+x.join(',');if(memo.has(k))return memo.get(k);let J=-Infinity;if(ok(x)){if(R.ne>=O.nmax){R.stop=true;return-Infinity}R.ne++;J=yield{x:x.slice(),cls};R.hist.push({x:x.slice(),J,stage:R.stage})}memo.set(k,J);return J};
+ const nd=x0.length,ok=x=>(O.dur===false||vtOk(x))&&feas(x),ev=function*(x,cls){const k=cls+':'+x.join(',');if(memo.has(k))return memo.get(k);let J=-Infinity;if(ok(x)){if(R.ne>=O.nmax){R.stop=true;return-Infinity}R.ne++;J=yield{x:x.slice(),cls};R.hist.push({x:x.slice(),J,stage:R.stage})}memo.set(k,J);return J};
  /* 1．始点と 2．モンテカルロ（粗い許容） */
  R.stage='mc';const pts=[{x:x0.slice(),J:yield*ev(x0,'mc')}];
  for(let g=0;g<O.nmc.length&&!R.stop;g++)for(let i=0;i<O.nmc[g]&&!R.stop;i++){let x,n=0;do{x=x0.map(v=>Math.round(v+O.sd[g]*gau()));n++}while((!ok(x)||memo.has('mc:'+x.join(',')))&&n<200);if(n<200)pts.push({x,J:yield*ev(x,'mc')})}
@@ -439,21 +439,22 @@ function* vtSearch(x0,feas,O){O=O||OPT;const rnd=mb32(O.seed),gau=()=>{let u=0;w
  /* 4．勾配（中心差分．制約で片側が無ければ片側差分）と直線探索（細かい許容） */
  R.stage='grad';let best=null;
  for(const s0 of st){if(R.stop)break;let x=s0.x.slice(),J=yield*ev(x,'fine'),h=O.h0,tp=O.t0;
-  for(let it=0;it<O.nit&&!R.stop;it++){const g=[];for(let i=0;i<4;i++){const xp=x.slice(),xm=x.slice();xp[i]+=h;xm[i]-=h;const Jp=yield*ev(xp,'fine'),Jm=yield*ev(xm,'fine');g.push(Jp>-Infinity&&Jm>-Infinity?(Jp-Jm)/(2*h):Jp>-Infinity?(Jp-J)/h:Jm>-Infinity?(J-Jm)/h:0)}
+  for(let it=0;it<O.nit&&!R.stop;it++){const g=[];for(let i=0;i<nd;i++){const xp=x.slice(),xm=x.slice();xp[i]+=h;xm[i]-=h;const Jp=yield*ev(xp,'fine'),Jm=yield*ev(xm,'fine');g.push(Jp>-Infinity&&Jm>-Infinity?(Jp-Jm)/(2*h):Jp>-Infinity?(Jp-J)/h:Jm>-Infinity?(J-Jm)/h:0)}
    const gm=Math.max(...g.map(Math.abs));let mv=false;
    if(gm>0){const d=g.map(v=>v/gm);for(const t of O.ts.filter(t=>t<=Math.min(16,2*tp))){const xn=x.map((v,i)=>Math.round(v+t*d[i]));if(xn.every((v,i)=>v===x[i]))continue;const Jn=yield*ev(xn,'fine');if(Jn>J){x=xn;J=Jn;tp=t;mv=true;break}}}
    if(!mv){if(h>O.hmin)h/=2;else break}}
   if(!best||J>best.J)best={x,J}}
  if(!best){const p=st[0]||pts[0];best={x:p.x.slice(),J:yield*ev(p.x,'fine')}}
  /* 5．1° の仕上げ：8 近傍で最も増える点へ，増えなくなるまで */
- R.stage='fine';let {x,J}=best;for(let more=true;more&&!R.stop;){more=false;let bx=null,bJ=J;for(let i=0;i<4;i++)for(const sg of[1,-1]){const xn=x.slice();xn[i]+=sg;const Jn=yield*ev(xn,'fine');if(Jn>bJ){bJ=Jn;bx=xn}}if(bx){x=bx;J=bJ;more=true}}
+ R.stage='fine';let {x,J}=best;for(let more=true;more&&!R.stop;){more=false;let bx=null,bJ=J;for(let i=0;i<nd;i++)for(const sg of[1,-1]){const xn=x.slice();xn[i]+=sg;const Jn=yield*ev(xn,'fine');if(Jn>bJ){bJ=Jn;bx=xn}}if(bx){x=bx;J=bJ;more=true}}
  /* 探索の前の点も細かい許容で評価して並べる */
  R.stage='x0';const J0=yield*ev(x0,'fine');
  return Object.assign(R,{x,J,J0,local:!R.stop})}
 /* 評価器（SPEC-32 B）：運転中の機関を複製し，回転数・開度・壁温を固定して，弁時期 x の周期定常の値を求める．run(ms) は値が出たら true */
-class VTEval{constructor(c0,obj,O){O=O||OPT;this.O=O;this.obj=obj|0;const c=this.base=c0.clone();c.P.cvar=0;c.P.sauto=1;this.N0=c0.s.Nb;this.al0=c0.s.al;c.P.alm=this.al0;c.P.mode=1;c.s.mode=1;c.fixw=1;c.fixTw=1;c.s.y[1]=this.N0*PI/30;c.s.fired=1;c.s.starter=0;this.cur=null;this.c=null;this.n=0;this.nu=0}
- feas(x){const P={...this.base.P};VTK4.forEach((k,i)=>P[k]=x[i]*D);return!valveHit(P,this.base.G)}
- start(x,cls){const c=(cls==='fine'&&this.cur?this.cur:this.base).clone();VTK4.forEach((k,i)=>c.P[k]=x[i]*D);c.P.alm=this.al0;c.s.al=this.al0;this.c=c;this.cls=cls;this.tol=this.O.tol[cls]||this.O.tol.fine;this.h=[];this.cy=c.s.cyc;this.J=null}
+class VTEval{constructor(c0,obj,O,ks){O=O||OPT;this.O=O;this.obj=obj|0;this.ks=ks||VTK4;const c=this.base=c0.clone();c.P.cvar=0;c.P.sauto=1;this.N0=c0.s.Nb;this.al0=c0.s.al;c.P.alm=this.al0;c.P.mode=1;c.s.mode=1;c.fixw=1;c.fixTw=1;c.s.y[1]=this.N0*PI/30;c.s.fired=1;c.s.starter=0;this.cur=null;this.c=null;this.n=0;this.nu=0}
+ feas(x){const P={...this.base.P};this.ks.forEach((k,i)=>P[k]=x[i]*D);return!valveHit(P,this.base.G)}
+ /* warm：直前の評価の終わりの状態から始める（既定は細かい許容のとき） */
+ start(x,cls,warm){const c=((warm??cls==='fine')&&this.cur?this.cur:this.base).clone();this.ks.forEach((k,i)=>c.P[k]=x[i]*D);c.P.alm=this.al0;c.s.al=this.al0;this.c=c;this.cls=cls;this.tol=this.O.tol[cls]||this.O.tol.fine;this.h=[];this.cy=c.s.cyc;this.J=null}
  val(M){return this.obj?M.eb:M.tb}
  run(ms){const c=this.c,t0=performance.now();let k=0;for(;;){c.step();if(c.s.cyc!==this.cy){this.cy=c.s.cyc;if(c.lastM)this.h.push(c.lastM);if(this.check())return true}if((++k&3)===0&&performance.now()-t0>ms)return false}}
  /* 周期定常の判定（SPEC-32 B の 3） */
@@ -487,3 +488,20 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
   const eO=1-Math.pow(G.eps,1-LBK.g),eA=(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,Qf))/Qf,eFA=(W180+R.FA.W)/Qf,et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
   const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['作動ガスの物性（比熱・解離）',eA-eFA],['燃焼の遅れ（等容度）',eFA-et],['冷却損失',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
   return{ok:true,eO,eA,eFA,et,eh,eig,ei,L,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei}}}
+/* ===== VVT マップ（SPEC-34） ===== */
+const VVM={ph:[-40,-30,-20,-10,0,10,20,30,40],lo:-40,hi:40};
+/* 格子の順序（SPEC-34 B の 2）：段階 1（添字 0，4，8），段階 2（偶数），段階 3（残り）．各段階の中は行ごとに向きを変える．[i（φin の添字），j（φex の添字），段階] */
+function vvOrder(){const n=VVM.ph.length,lv=[[0,4,8],[0,2,4,6,8],[...Array(n).keys()]],seen=new Set,o=[];lv.forEach((L,k)=>{let r=0;for(const j of L){const row=r++%2?[...L].reverse():L;for(const i of row){const q=i+','+j;if(!seen.has(q)){seen.add(q);o.push([i,j,k+1])}}}});return o}
+/* マップの計算：運転中の機関を複製した評価器（変える項目は φin，φex）で格子を埋め，T_b 最大と η_b 最大の点を 1° まで詰める．run(ms) は終われば true */
+class VVTMap{constructor(c0,O){this.O=O||OPT;const n=VVM.ph.length,E=this.E=new VTEval(c0,0,this.O,['phin','phex']);this.p0=[Math.round(c0.P.phin/D),Math.round(c0.P.phex/D)];this.ord=vvOrder();this.T=[...Array(n)].map(()=>Array(n).fill(NaN));this.B=[...Array(n)].map(()=>Array(n).fill(NaN));this.H=[...Array(n)].map(()=>Array(n).fill(0));this.k=0;this.ne=0;this.ver=0;this.opt={};this.stage='格子 1/3';this.done=false;this.t=0;this.stop=false;this.ms=10;this.g=this.gen()}
+ inR(x){return x.every(v=>v>=VVM.lo&&v<=VVM.hi)}
+ *ev(x,cls,warm){const E=this.E;E.start(x,cls,warm);while(!E.run(this.ms))yield;this.ne++;return E.M}
+ *gen(){const E=this.E,ph=VVM.ph;let first=true;
+  for(const [i,j,lv] of this.ord){this.stage=`格子 ${lv}/3`;const x=[ph[i],ph[j]];if(!E.feas(x)){this.H[j][i]=1}else{const M=yield*this.ev(x,'mc',!first);first=false;this.T[j][i]=M.tb;this.B[j][i]=M.eb}this.k++;this.ver++;if(this.stop)return}
+  for(const [nm,o,G] of[['T',0,this.T],['B',1,this.B]]){this.stage=nm==='T'?'軸トルク最大を詰める':'燃料消費率最小を詰める';let b=null;G.forEach((r,j)=>r.forEach((v,i)=>{if(v===v&&(!b||v>b[0]))b=[v,[ph[i],ph[j]]]}));if(!b)continue;E.obj=o;
+   const g=vtSearch(b[1],x=>this.inR(x)&&E.feas(x),{...this.O,nmc:[],ns:1,dur:false});let r=g.next();while(!r.done){E.start(r.value.x,r.value.cls);while(!E.run(this.ms))yield;this.ne++;if(this.stop)return;r=g.next(E.J)}
+   const R=r.value,M=yield*this.ev(R.x,'fine');this.opt[nm]={x:R.x,tb:M.tb,eb:M.eb,local:R.local,gmax:b[0]};this.ver++}
+  this.stage='終了'}
+ run(ms){if(this.done)return true;const t0=performance.now();this.ms=Math.max(1,ms);while(performance.now()-t0<ms){const r=this.g.next();if(r.done){this.done=true;break}}this.t+=performance.now()-t0;return this.done}
+ /* 埋まっている最も細かい段階（0：なし） */
+ level(){let L=0;for(const lv of[1,2,3]){if(this.ord.every(([i,j,l])=>l>lv||this.H[j][i]||this.T[j][i]===this.T[j][i]))L=lv;else break}return L}}

@@ -113,8 +113,8 @@ function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N'
 function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';$('vt').className=n===7?'vt on':'vt';pvo();vtRender()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 /* ===== 最適化タブ（SPEC-32，33） ===== */
-const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0};
-function optSub(m){OP.m=m;[...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');$('o0').className=m===0?'opv on':'opv';$('o1').className=m===1?'opv on':'opv';if(m===1)OP.lt=-1e9}
+const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
+function optSub(m){OP.m=m;[...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');for(const k of[0,1,2])$('o'+k).className=m===k?'opv on':'opv';if(m===1)OP.lt=-1e9;if(m===2)vmText()}
 function optObj(o){if(OP.run)return;OP.obj=o;[...$('oob').children].forEach(b=>b.className=+b.dataset.o===o?'on':'');optText()}
 const optReady=()=>live.s.fired&&live.s.Nb>=300;
 function optStart(){if(OP.run){optStop();return}if(!optReady()){$('opr').textContent='運転タブで START してください';return}OP.run=new VTOpt(live,OP.obj);OP.h=OP.run.h;OP.res=null;OP.t0=NOW();optText()}
@@ -128,14 +128,32 @@ function optText(){if(!$('s7'))return;$('orn').textContent=OP.run?'中止':'探�
  const q=OP.res,cur=VTK4.map(k=>Math.round(LP[k]/D)),x0=q?q.x0:cur,x=q?q.x:null,dur=v=>[v[1]-v[0],v[3]-v[2],v[3]-(v[0]+720)],row=(n,a,b)=>`<tr><td>${n}</td><td>${a}</td><td>${b??'–'}</td><td>${b!=null&&typeof a==='number'?(b-a>0?'+':b-a<0?'−':'')+Math.abs(b-a):''}</td></tr>`;
  let h=`<tr><th>${q?'':'現在'}</th><th>探索の前</th><th>結果</th><th>差</th></tr>`;['IVO','IVC','EVO','EVC'].forEach((n,i)=>h+=row(n+' °',x0[i],x?x[i]:null));const d0=dur(x0),d1=x?dur(x):null;['吸気の作用角 °','排気の作用角 °','オーバーラップ °'].forEach((n,i)=>h+=row(n,d0[i],d1?d1[i]:null));
  const o=q?q.obj:OP.obj;h+=`<tr><td>${o?'正味熱効率':'軸トルク'}</td><td>${q?optFmt(o,q.J0):'–'}</td><td>${q?optFmt(o,q.J):'–'}</td><td>${q&&q.J0===q.J0?(q.J>=q.J0?'+':'−')+(o?(Math.abs(q.J-q.J0)*100).toFixed(2)+' %pt':Math.abs(q.J-q.J0).toFixed(2)):''}</td></tr>`;if($('otb').innerHTML!==h)$('otb').innerHTML=h}
-function drawOpt(){if(OP.m===0){const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}else{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
+function drawOpt(){if(OP.m===2){drawVMT();return}if(OP.m===0){const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}else{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
+/* ===== VVT マップ（SPEC-34） ===== */
+function vmStart(){if(OP.vm&&!OP.vm.done){vmStop();return}if(!optReady()){$('vpr').textContent='運転タブで START してください';return}OP.vm=new VVTMap(live);OP.vp0=OP.vm.p0;OP.vsel=null;OP.vkey='';vmText()}
+/* 中止：計算中の評価を待たずに止める（それまでに埋まった格子と詰めた点は残す） */
+function vmStop(){const m=OP.vm;if(!m||m.done)return;m.stop=true;m.done=true;vmText()}
+function vmTick(ms){const m=OP.vm;if(!m||m.done)return;const t=performance.now();if(m.run(ms)){if(m.opt.T)OP.vsel={x:m.opt.T.x.slice(),src:'T'};vmText()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}
+const vmBe=e=>3.6e9/(e*K.Hu);
+/* 選んだ点の値：★ ◆ は計算した値，それ以外は補間の値 */
+function vmVal(sel){const m=OP.vm;if(!m||!sel)return null;if(sel.src==='T'||sel.src==='B'){const o=m.opt[sel.src];return{tb:o.tb,be:vmBe(o.eb),ip:false}}const Gd=vmGrid(m);if(!Gd)return null;return{tb:bil2(Gd.T,Gd.xs,Gd.xs,...sel.x),be:bil2(Gd.be,Gd.xs,Gd.xs,...sel.x),ip:true}}
+function vmText(){if(!$('vst'))return;const m=OP.vm,run=m&&!m.done;$('vrn').textContent=run?'中止':'計算';$('vap').disabled=!OP.vsel||run;$('vun').disabled=!U.undo;
+ $('vst').textContent=optReady()?`運転状態：N̄ ${(m?m.E.N0:live.s.Nb).toFixed(0)} rpm，開度 ${((m?m.E.al0:live.s.al)/D).toFixed(1)}°（固定して評価．作用角は固定）`:'運転タブで START してください';
+ if(m)$('vpr').textContent=`${run?m.stage:m.stop?'中止':'終了'}：評価 ${m.ne} 回，${(m.t/1e3).toFixed(1)} s`;else if(!$('vpr').textContent.includes('START'))$('vpr').textContent='';
+ const f=(x,v)=>`(${x[0]}, ${x[1]})：${v.tb.toFixed(2)} N·m，${v.be.toFixed(0)} g/kWh`;if(m){const o=m.opt;$('vrd').innerHTML=`<span style="color:#ff8a4c">★ 軸トルク最大</span> ${o.T?f(o.T.x,{tb:o.T.tb,be:vmBe(o.T.eb)}):'–'}`;$('vrd2').innerHTML=`<span style="color:#4dabf7">◆ 燃料消費率最小</span> ${o.B?f(o.B.x,{tb:o.B.tb,be:vmBe(o.B.eb)}):'–'}`;const v=vmVal(OP.vsel);$('vrd3').textContent=OP.vsel&&v?`＋ 選んだ点 ${f(OP.vsel.x,v)}${v.ip?'（補間）':''}`:'マップをタップすると，その点の値が出ます'}else{$('vrd').textContent='';$('vrd2').textContent='';$('vrd3').textContent=''}}
+function drawVMT(){const q=prep($('vmc'));if(!q)return null;const m=OP.vm,Gd=m?vmGrid(m):null,d=$('vmc').width/q.W;let C=null;if(Gd){const key=`${q.W}|${q.H}|${d}|${Gd.L}|${m.done?1:0}`;if(key!==OP.vkey||OP.vcM!==m){OP.vcM=m;OP.vcv=OP.vcv||document.createElement('canvas');OP.vc=vmBuild(Gd,q.W,q.H,d,OP.vcv);OP.vkey=key}C=OP.vc}
+ return drawVM(q.g,q.W,q.H,{M:m,Gd,C,p0:m?m.p0:[Math.round(LP.phin/D),Math.round(LP.phex/D)],sel:OP.vsel,msg:!optReady()?'運転タブで START してください':m&&!m.done?`計算中（${m.stage}）`:'[計算] でマップを作ります'},COL)}
+/* タップ：★ ◆ の印から 12 px 以内ならその点，それ以外は 1° に丸めた点（範囲の外は端に寄せる） */
+function vmTap(x,y){const m=OP.vm;if(!m||!vmGrid(m))return;const c=$('vmc'),r=c.getBoundingClientRect(),pl=vmLayout(c.clientWidth,c.clientHeight),px=x-r.left,py=y-r.top,lo=VVM.lo,hi=VVM.hi,X=a=>pl.x+pl.w*(a-lo)/(hi-lo),Y=b=>pl.y+pl.h*(1-(b-lo)/(hi-lo));
+ for(const k of['T','B']){const o=m.opt[k];if(o&&Math.hypot(X(o.x[0])-px,Y(o.x[1])-py)<=12){OP.vsel={x:o.x.slice(),src:k};vmText();return}}const cl=v=>Math.max(lo,Math.min(hi,Math.round(v)));OP.vsel={x:[cl(lo+(px-pl.x)/pl.w*(hi-lo)),cl(hi-(py-pl.y)/pl.h*(hi-lo))],src:'tap'};vmText()}
+function vmApply(){if(!OP.vsel||(OP.vm&&!OP.vm.done))return;setParams({phin:OP.vsel.x[0]*D,phex:OP.vsel.x[1]*D});vmText()}
 /* 熱効率の内訳の計算：表示中だけ，前の計算から 1 s 以上たってサイクルが進んでいれば始め，1 フレームに ms ずつ進める */
 function lossTick(ms){if(U.tab!==7||OP.m!==1||LP.gam!==2||!optReady()){OP.lb=null;return}const now=performance.now();if(!OP.lb&&now-OP.lt>=1000&&live.s.cyc!==OP.lcy){OP.lb=new LossBk(live);OP.lcy=live.s.cyc}if(OP.lb){const t=performance.now();if(OP.lb.run(ms)){const r=OP.lb.res;if(r&&r.ok)OP.lres=r;OP.lb=null;OP.lt=performance.now()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('sysb'),e=>{const b=e.target.closest('button[data-m]');if(b)setSys(+b.dataset.m)});
-tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
+tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('vrn'),vmStart);tap($('vap'),vmApply);tap($('vun'),()=>{undo();vmText()});tap($('vmc'),e=>vmTap(e.clientX,e.clientY));tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
 document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
@@ -152,7 +170,7 @@ buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
-if(!U.busy){advance(Sim,live,el,9);swTick(8);optTick(12);lossTick(6)}axUpdate(live,AX,now);sndTick();
+if(!U.busy){advance(Sim,live,el,9);swTick(8);optTick(12);vmTick(12);lossTick(6)}axUpdate(live,AX,now);sndTick();
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
-if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
+if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText();if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}
