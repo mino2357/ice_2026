@@ -157,7 +157,7 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $\omega_H$ | 吸気ランナの共鳴の角振動数（弁が閉じているとき） | rad/s | $\omega_H = \sqrt{\dfrac{A_r}{L_r}\left(\dfrac{\gamma_0 RT_{\text{in}}}{V_p} + \dfrac{RT_{\text{in}}}{V_{\text{in}}}\right)}$ | SPEC-25 |
 | $L_e$，$d_e$，$A_e$，$V_{pe}$ | 排気管の長さ，内径，断面積，排気ポート容積（管の弁側の半分） | m，m，m²，m³ | $A_e = \dfrac{\pi}{4}d_e^2$，$V_{pe} = \dfrac12 A_e L_e$ | SPEC-27 |
 | $T_X$，$\bar T_X$ | 排気ポートのガスの温度（排気温度），その 1 サイクルの質量平均 | K | 化学平衡のモデルでは状態（2.2 の 22），$\gamma$ のモデルと排気系 OFF では $800$ 一定．$\bar T_X = \dfrac{\Delta\Theta_x}{\Delta M_x^+}$ | SPEC-27 |
-| $m_X$，$e_X$，$R_X$，$\gamma_X$ | 排気ポートのガスの質量，内部エネルギー，気体定数，比熱比 | kg，J/kg，J/(kg·K)，– | $m_X = \dfrac{p_{pe}V_{pe}}{R_X T_X}$，$e_X = e_b(T_X, p_{pe}, \zeta^*)$，$R_X = R_b(T_X, p_{pe}, \zeta^*)$，$\gamma_X = 1 + \dfrac{R_X}{c_{v,X}}$ | SPEC-27 |
+| $m_X$，$e_X$，$R_X$，$\gamma_X$ | 排気ポートのガスの質量，内部エネルギー，気体定数，比熱比 | kg，J/kg，J/(kg·K)，– | $m_X = \dfrac{p_{pe}V_{pe}}{R_X T_X}$，$e_X = e_b(T_X, p^\circ, \zeta^*)$，$R_X = R_b(T_X, p^\circ, \zeta^*)$，$\gamma_X = 1 + \dfrac{R_X}{c_{v,X}}$ | SPEC-27 |
 | $T_{\text{ref}}$，$h_b^{\text{ref}}$ | 顕熱の基準温度，その温度の既燃ガスのエンタルピー | K，J/kg | $T_{\text{ref}} = T_{\text{amb}} = 298.15$，$h_b^{\text{ref}} = h_b(T_{\text{ref}}, p^\circ, \zeta^*)$ | SPEC-27 |
 | $h_X^s$，$h_c^s$ | 排気ポートのガスの顕熱，筒内のガスの顕熱（単位質量） | J/kg | $h_X^s = e_X + R_X T_X - h_b^{\text{ref}}$，$h_c^s = \sum_c Y_c\left[h_c(T) - h_c(T_{\text{ref}})\right]$ | SPEC-27 |
 | $\dot H_{xs}$，$\dot H_x$ | 排気弁から排気ポートへ入る顕熱，排気管へ出る顕熱 | W | $\dot m_{\text{ex}}h_c^s$（逆流は $\dot m_{\text{ex}}h_X^s$），$\dot m_e h_X^s$ | SPEC-27 |
