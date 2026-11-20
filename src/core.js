@@ -1,7 +1,7 @@
 'use strict';
 /* ===== constants (single source) ===== */
 const R=287,TA=298.15,TI=298.15,TX=800,PI=Math.PI,D=PI/180,P4=4*PI;
-const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,Cc:5600,dTth:12,I:.12,Tst:60,wnl:209,Nfire:550,g0:1.35,kT:.26,dal:1,Ct:6,wmin:20,dtR4:2e-5,Ti0:320};
+const K={Cdx:.8,fr:.02,ze:.2,gp:1.4,lk:.025,Ck:.4,wa:5,wm:2,Cdv:.6,Cdt:.8,cfA:13.7e3,cfB:.005,cfC:16.2e3,Hu:44e6,AFR:14.7,etac:.97,C1g:2.28,C1s:6.18,C2:3.24e-3,Cw0:3.26,Twc:360,Cw:1500,Gw:15,I:.12,Tst:60,wnl:209,Nfire:550,g0:1.35,kT:.26,dal:1,Ct:6,wmin:20,dtR4:2e-5,Ti0:320};
 /* ===== item definition table (single source for settings, doc, tests) ===== */
 const PAGES=['機関','VVT・カム','弁タイミング','吸気','燃焼','運転','ECU','動力計','解法','音響','燃焼速度','吸気ランナ','排気系','噴射','車両','冷却'];
 const ITEMS=[
@@ -72,10 +72,8 @@ const ITEMS=[
 {k:'cid',n:'着火遅れ係数 c_d',u:'',f:1,lo:.1,hi:10,st:.1,d:1,c:'i',pg:10},
 {k:'cbr',n:'燃焼速度係数 c_b',u:'',f:1,lo:.1,hi:10,st:.1,d:1,c:'i',pg:10},
 {k:'wm',n:'Wiebe 形状係数 m_w',u:'',f:1,lo:0,hi:6,st:.5,d:2,c:'i',pg:10},
-/* 冷却（SPEC-08 の B の 3．化学平衡のモデルだけ） */
-{k:'Tc0',n:'冷却水の初期温度',u:'K',f:1,lo:250,hi:380,st:1,d:360,c:'i',pg:15},
-{k:'Tth',n:'サーモスタットの開き始め',u:'K',f:1,lo:330,hi:380,st:1,d:358,c:'i',pg:15},
-{k:'UAr',n:'放熱器の熱通過率',u:'W/K',f:1,lo:0,hi:2000,st:10,d:500,c:'i',pg:15}];
+/* 冷却（SPEC-08 の B．化学平衡のモデルだけ） */
+{k:'Tw',n:'壁温 T_w',u:'K',f:1,lo:300,hi:600,st:5,d:360,c:'i',pg:15}];
 const IT={};ITEMS.forEach(i=>IT[i.k]=i);
 const dec=it=>{const s=String(it.st);return s.includes('.')?s.split('.')[1].length:0};
 const lo0=it=>it.lo??0,gmin=it=>it.lo==null?-Infinity:0;
@@ -247,7 +245,7 @@ const DPa=[[1/5],[3/40,9/40],[44/45,-56/15,32/9],[19372/6561,-25360/2187,64448/6
 DPb5=[35/384,0,500/1113,125/192,-2187/6784,11/84,0],DPb4=[5179/57600,0,7571/16695,393/640,-92097/339200,187/2100,1/40];
 /* Core 専用の DOPRI5(4)．dp45 と同じ演算順序で，作業配列を使い回す．結果は o.r5（新しい配列）と o.r4（作業配列）に置く． */
 /* 段の計算に要るのは右辺に効く成分（添字 0〜17 と 38〜42）だけ．補助積分は最後の 5 次の和だけ求める */
-const SIX=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,38,39,40,41,42,49,50],NSX=SIX.length;
+const SIX=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,38,39,40,41,42,49],NSX=SIX.length;
 function dp45c(o,y,h,k0){const N=y.length,n=NSX,X=SIX,B=o.kb||(o.kb=[1,2,3,4,5,6].map(()=>new Array(N).fill(0))),yy=o.yy||(o.yy=new Array(N).fill(0)),y4=o.r4||(o.r4=new Array(N).fill(0)),y5=new Array(N),A=DPa;
 {const a0=h*A[0][0];for(let q=0;q<n;q++){const i=X[q];yy[i]=y[i]+a0*k0[i]}}const k1=o.f(yy,B[0]);
 {const a0=h*A[1][0],a1=h*A[1][1];for(let q=0;q<n;q++){const i=X[q];yy[i]=y[i]+a0*k0[i]+a1*k1[i]}}const k2=o.f(yy,B[1]);
@@ -258,13 +256,13 @@ function dp45c(o,y,h,k0){const N=y.length,n=NSX,X=SIX,B=o.kb||(o.kb=[1,2,3,4,5,6
 const b0=h*DPb5[0],c0=h*DPb4[0],b1=h*DPb5[1],c1=h*DPb4[1],b2=h*DPb5[2],c2=h*DPb4[2],b3=h*DPb5[3],c3=h*DPb4[3],b4=h*DPb5[4],c4=h*DPb4[4],b5=h*DPb5[5],c5=h*DPb4[5],b6=h*DPb5[6],c6=h*DPb4[6];for(let i=0;i<N;i++)y5[i]=y[i]+b0*k0[i]+b1*k1[i]+b2*k2[i]+b3*k3[i]+b4*k4[i]+b5*k5[i]+b6*k6[i];for(let q=0;q<n;q++){const i=X[q];y4[i]=y[i]+c0*k0[i]+c1*k1[i]+c2*k2[i]+c3*k3[i]+c4*k4[i]+c5*k5[i]+c6*k6[i]}o.r5=y5}
 function dp45(f,y,h,k1){const k=[k1||f(y)];for(let s=0;s<6;s++){const yy=y.slice();for(let j=0;j<=s;j++){const a=DPa[s][j];if(a)for(let i=0;i<y.length;i++)yy[i]+=h*a*k[j][i]}k.push(f(yy))}
 const y5=y.slice(),y4=y.slice();for(let j=0;j<7;j++)for(let i=0;i<y.length;i++){y5[i]+=h*DPb5[j]*k[j][i];y4[i]+=h*DPb4[j]*k[j][i]}return{y5,y4}}
-const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6];for(let i=18;i<38;i++)ATOL[i]=1;ATOL.push(1e-10,1e-10,1e-10,1e-9,1e-9);for(let i=43;i<49;i++)ATOL[i]=1;ATOL.push(1e-3,1e-4);const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49,50];
+const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6];for(let i=18;i<38;i++)ATOL[i]=1;ATOL.push(1e-10,1e-10,1e-10,1e-9,1e-9);for(let i=43;i<49;i++)ATOL[i]=1;ATOL.push(1e-3);const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49];
 /* ===== EngineCore ===== */
 const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m','mu','dq','vp'];
 class Core{
 constructor(P){this.P=P;this.reset()}
 reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
-const y0=[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0));y0[49]=TA;y0[50]=P.Tc0??K.Twc; /* 排気ポートのガスの温度と冷却水温（2.2 の 22，23） */
+const y0=[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0));y0[49]=TA;if(SPC)y0[5]=P.Tw??K.Twc; /* 排気ポートのガスの温度（2.2 の 22）．化学平衡のモデルの壁温は設定の一定値（SPEC-08 の B） */
 this.s={y:y0,exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,V:{v:0,x:0,t0:-1,t100:NaN,F:0},Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null,spc:SPC,zs:GAS.phi2z(P.phi),inj:{on:0,th0:0,dth:1,m:0},mah:NaN,mtI:0,mfI:0,mfc:0,phc:NaN,pS:0,pSn:0,TE:NaN};
 this.s.a0=this.s.y.slice();this.rc();this.tr={};TRK.forEach(n=>this.tr[n]=new Float32Array(1440).fill(NaN));this.H={t:[],N:[],Nt:[],pin:[],al:[],Tw:[],tb:[],td:[],fc:[],fe:[]};this.last=null;this.X=null;this.sig=NaN;this.vhit=0;this.updV()}
 rc(){this.s.cw={ppn:1e12,ppx:-1e12};this.s.cx={pmax:0,pmS:0,Tmax:0,xr:this.s.cx?this.s.cx.xr:0}}
@@ -345,7 +343,7 @@ const Ts=s.starter&&!s.fired?K.Tst*Math.max(0,1-om/K.wnl):0,Ti=(p-P.pa)*kdV,Td=s
 let dom=(Ti+Ts-Tf-Ta-Td)/(K.I+P.Id),dth=om;if(this.fixw)dom=0;if(om<=0&&dom<0){dom=0;dth=0}
 /* 排気系（気体定数は既燃ガスの値） */
 /* 排気弁を通る顕熱と化学エネルギー（SPEC-27 の 9，SPEC-33 の E の 1）．筒内のガスの顕熱は T_ref = T_in の各成分のエンタルピーとの差 */
-let hbRz=Z.hbI;if(me>0&&hasB&&zt!==Z.z){const B3=this.bo3||(this.bo3={});A.burned(TI,1e5,zt,B3);hbRz=B3.e+B3.R*TI}
+let hbRz=Z.hbI;if(me>0&&hasB&&zt!==Z.z){const B3=this.bo3||(this.bo3={z:NaN,h:0});if(B3.z!==zt){A.burned(TI,1e5,zt,B3);B3.h=B3.e+B3.R*TI;B3.z=zt}hbRz=B3.h} /* T_ref の既燃ガスのエンタルピーは ζ だけで決まるので，ζ が変わったときだけ求める */
 const hXs=hbX-Z.hbI,Hxs=me>=0?me*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbRz)):me*(EX?hXs:Z.hbX-Z.hbI),Ech=me>=0?me*(Yf*LHVV+Yb*(hasB?chiB(hbRz,zt):0)):me*Z.chi;
 let e0=0,e1=0,e2=0,d49=0,Qpw=0,Hx=Hxs,Thx=me>0?me*T:0,Mxp=me>0?me:0,hp=0,ReX=0,mtl=me;if(EX){const Ax=PI/4*P.dex*P.dex,Vpe=.5*Ax*P.Lex,re=ppe/(RX*TXs),zx=K.fr*P.Lex/P.dex+K.ze;
  /* ポートの壁への熱伝達（SPEC-27 の 10．Dittus–Boelter，Re の下限 2300） */
@@ -353,21 +351,21 @@ let e0=0,e1=0,e2=0,d49=0,Qpw=0,Hx=Hxs,Thx=me>0?me*T:0,Mxp=me>0?me:0,hp=0,ReX=0,m
  /* 質量とエネルギーの式を ṗ_pe，Ṫ_X について解く（SPEC-27 の 9） */
  Hx=mep*hXs;Thx=mep>0?mep*TXs:0;Mxp=mep>0?mep:0;const mX=ppe*Vpe/(RX*TXs),dmX=me-mep,a11=Vpe-mX*TXs*XB.Rp,a12=-mX*(RX+TXs*XB.RT),b1=dmX*RX*TXs,a21=mX*XB.ep,a22=mX*cvX,b2=Hxs-Hx-Qpw-dmX*(XB.e-Z.hbI),dt=a11*a22-a12*a21;
  e1=(b1*a22-a12*b2)/dt;d49=(a11*b2-a21*b1)/dt;if(P.Vm!=null){mtl=pm>P.pa?mdRC(pm,P.pa,TX,K.Cdx*P.At,Z.kbX,Z.RbX):mdRC(pm,P.pa,TA,K.Cdx*P.At,GC.kA,A.Ra);e0=Ax/P.Lex*(ppe-pm)-zx*mep*Math.abs(mep)/(2*re*Ax*P.Lex);e2=Z.RbX*TX/P.Vm*(mep-mtl)}else{mtl=mep;e0=Ax/P.Lex*(ppe-P.pa)-(zx+1)*mep*Math.abs(mep)/(2*re*Ax*P.Lex)}}
-/* 壁と冷却水（SPEC-08 の B） */
-const Tc=y[50],Qcool=K.Gw*(Tw-Tc),xth=Math.min(1,Math.max(0,(Tc-P.Tth)/K.dTth)),Qrad=xth*P.UAr*(Tc-TA);
+
 /* 吸気弁の逆流が運ぶ余剰エンタルピー（筒内の成分で T と T_in の差）と，順流で戻る分 */
 let xo=0;if(mi<0){let hbI=0;if(hasB){const B2=this.bo2||(this.bo2={});A.burned(TI,p,zt,B2);hbI=B2.e+B2.R*TI}xo=-mi*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbI))}const xi=mi>0?mi*epp:0,xt=mt<0?-mt*epi:0;
-if(this.wx!==0)this.X={T,k:{x:xp,V:kV,dV:kdV,A:kA},mi,me,Ts,Ti,Td,Tf,Ta,tt,Yu,mt,Q,Qw,hc,Ybi,Ybp,mr:RO?mr:mi,pv,mep:EX?mep:me,mtl,pex,pm:EX?pm:pex,g,Tup,hj:hji,minj,mev,zt,Yf,TX:TXs,Qpw,Qcool,Qrad,xth,hp,ReX,Hxs,Hx,Ech};
+if(this.wx!==0)this.X={T,k:{x:xp,V:kV,dV:kdV,A:kA},mi,me,Ts,Ti,Td,Tf,Ta,tt,Yu,mt,Q,Qw,hc,Ybi,Ybp,mr:RO?mr:mi,pv,mep:EX?mep:me,mtl,pex,pm:EX?pm:pex,g,Tup,hj:hji,minj,mev,zt,Yf,TX:TXs,Qpw,hp,ReX,Hxs,Hx,Ech};
 /* 吸気側：スロットルと弁（ランナ）の流れを成分ごとに数える．スロットルの順流は，ポート噴射では当量比 φ の予混合気 */
 const ta=mt>=0?mt*(1-fph):mt*Yai,tf=mt>=0?mt*fph:mt*Yfi,tb=mt>=0?0:mt*Ybi;let d6,d7,d8,d9,d10,d16,d17,d41,d42;
 if(RO){const fw=mr>=0,ra=mr*(fw?Yai:Yap),rf=mr*(fw?Yfi:Yfp),rb=mr*(fw?Ybi:Ybp),er=fw?epi:epp;d6=TI/P.Vin*(A.Ra*(ta-ra)+A.Rf*(tf-rf)+Z.RbI*(tb-rb));d7=tb-rb;d41=tf-rf;d8=Ar/P.Lr*(pin-pp)-(K.fr*P.Lr/P.dr+K.ze)*mr*Math.abs(mr)/(2*min_/P.Vin*Ar*P.Lr);d9=K.gp*TI/Vp*(A.Ra*(ra-ia)+A.Rf*(rf-if_)+Z.RbI*(rb-ib));d10=rb-ib;d42=rf-if_;d16=-mr*er-xt;d17=mr*er-xi+xo}
 else{d6=TI/P.Vin*(A.Ra*(ta-ia)+A.Rf*(tf-if_)+Z.RbI*(tb-ib));d7=tb-ib;d41=tf-if_;d8=0;d9=0;d10=0;d42=0;d16=-xi+xo-xt;d17=0}
-const d5=this.fixTw?0:(Qw+Qpw-Qcool)/K.Cw,His=(mi>0?mi*hji:0)+(me<0?-me*hbX:0),Hos=(mi<0?-mi*hc0:0)+(me>0?me*hc0:0);
+/* 壁温は設定の一定値（SPEC-08 の B） */
+const d5=0,His=(mi>0?mi*hji:0)+(me<0?-me*hbX:0),Hos=(mi<0?-mi*hc0:0)+(me>0?me*hc0:0);
 if(!out)out=new Array(NY);
 out[0]=dth;out[1]=dom;out[2]=dp;out[3]=dm;out[4]=dmu;out[5]=d5;out[6]=d6;out[7]=d7;out[8]=d8;out[9]=d9;out[10]=d10;out[11]=mi<0?-ib:0;out[12]=mi>=0?ib:0;out[13]=e0;out[14]=e1;out[15]=e2;out[16]=d16;out[17]=d17;
 out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?ppe:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;
 out[38]=dmf;out[39]=dmbf;out[40]=P.tev>0?minj-mev:0;out[41]=d41;out[42]=d42;out[43]=mev*GC.hl;out[44]=minj;out[45]=mev;out[46]=if_;out[47]=xf;out[48]=r*psi;
-out[49]=d49;out[50]=(Qcool-Qrad)/K.Cc;out[51]=Qpw;out[52]=Qcool;out[53]=Qrad;out[54]=Hxs;out[55]=Hx;out[56]=Ech+(DI&&mt<0?-mt*(Yfi*LHVV+Ybi*Z.chi):0);out[57]=Thx;out[58]=Mxp;return out}
+out[49]=d49;out[50]=0;out[51]=Qpw;out[52]=0;out[53]=0;out[54]=Hxs;out[55]=Hx;out[56]=Ech+(DI&&mt<0?-mt*(Yfi*LHVV+Ybi*Z.chi):0);out[57]=Thx;out[58]=Mxp;return out}
 /* 排気ポートのガスの質量と顕熱の内部エネルギー（SPEC-27 の 9．検査用） */
 xport(y){const P=this.P,Z=this.zc(),o={},T=y[49],p=y[14],Vpe=.5*PI/4*P.dex*P.dex*P.Lex;GAS.burned(T,p,Z.z,o);const m=p*Vpe/(o.R*T);return{T,p,m,e:o.e,R:o.R,cv:o.eT,U:m*(o.e-Z.hbI)}}
 
@@ -385,10 +383,10 @@ if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3];s.TE=T;if(SPC&&cy.mb>1e-9)s.zs=cy.z}
 if(near(md4(2*PI-s.spa*D))&&!s.ig){n[5]++;this.ign(T,Yu,y1[2],cy)}
 if(near(P4)){n[0]++;this.cycleEnd();y1[0]-=P4}}
 /* 運転中にランナ・排気系を ON にしたときの初期化（REQ-25 6，REQ-27 7） */
-syncSw(){const s=this.s,P=this.P;if((P.gam===2)!==!!s.spc)this.swThermo();if(!!P.exs!==!!s.exOn){s.exOn=P.exs;if(P.exs){const y=s.y;y[13]=0;y[14]=y[15]=P.pa+P.dpx;y[49]=TX}}if(!!P.run!==!!s.runOn){s.runOn=P.run;if(P.run){const y=s.y,pin=y[6],mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI);y[8]=0;y[9]=pin;y[10]=Math.min(1,Math.max(0,y[7])/mi)*mp;y[17]=Math.max(0,y[16])/mi*mp}}}
+syncSw(){const s=this.s,P=this.P;if((P.gam===2)!==!!s.spc)this.swThermo();if(P.gam===2&&!this.fixTw&&P.Tw!=null)s.y[5]=P.Tw;if(!!P.exs!==!!s.exOn){s.exOn=P.exs;if(P.exs){const y=s.y;y[13]=0;y[14]=y[15]=P.pa+P.dpx;y[49]=TX}}if(!!P.run!==!!s.runOn){s.runOn=P.run;if(P.run){const y=s.y,pin=y[6],mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI);y[8]=0;y[9]=pin;y[10]=Math.min(1,Math.max(0,y[7])/mi)*mp;y[17]=Math.max(0,y[16])/mi*mp}}}
 /* 熱物性のモデルを運転中に切り替えたとき：筒内の圧力・温度・未燃分率と，吸気側の圧力・既燃分率を保って質量を取り直す */
 swThermo(){const s=this.s,P=this.P,y=s.y,G=this.G,V=kinV(G,y[0]),A=GAS,fph=P.phi/(A.AF+P.phi) /* γ のモデルの未燃ガスは当量比 φ の予混合気 */,Vp=.5*PI/4*P.dr*P.dr*P.Lr;
- if(P.gam===2){const T=y[2]*V/(Math.max(y[3],1e-7)*R),Yu=Math.min(1,Math.max(0,y[4]/y[3])),o={};s.zs=A.phi2z(P.phi);this.Zc=null;const Z=this.zc();A.burned(T,y[2],s.zs,o);const Rm=Yu*((1-fph)*A.Ra+fph*A.Rf)+(1-Yu)*o.R,m=y[2]*V/(Rm*T);y[3]=m;y[4]=Yu*m;y[38]=fph*Yu*m;y[39]=s.zs*(1-Yu)*m;y[40]=0;y[49]=TX;if(!(y[50]>0))y[50]=P.Tc0??K.Twc;
+ if(P.gam===2){const T=y[2]*V/(Math.max(y[3],1e-7)*R),Yu=Math.min(1,Math.max(0,y[4]/y[3])),o={};s.zs=A.phi2z(P.phi);this.Zc=null;const Z=this.zc();A.burned(T,y[2],s.zs,o);const Rm=Yu*((1-fph)*A.Ra+fph*A.Rf)+(1-Yu)*o.R,m=y[2]*V/(Rm*T);y[3]=m;y[4]=Yu*m;y[38]=fph*Yu*m;y[39]=s.zs*(1-Yu)*m;y[40]=0;y[49]=TX;
   const cv=(pk,Vk,mb)=>{const m0=pk*Vk/(R*TI),Yb=Math.min(1,Math.max(0,mb)/m0),Ru=(1-fph)*A.Ra+fph*A.Rf,mn=pk*Vk/(TI*(Yb*Z.RbI+(1-Yb)*Ru));return[Yb*mn,fph*(1-Yb)*mn]};{const q=cv(y[6],P.Vin,y[7]);y[7]=q[0];y[41]=q[1]}{const q=cv(y[9],Vp,y[10]);y[10]=q[0];y[42]=q[1]}s.mah=NaN;s.inj.on=0}
  else{const c=this.cylOld(y,V);y[3]=c.m;y[4]=c.mu;const Z=this.zc(),bk=(pk,Vk,mb,mfk)=>{const ma=Math.max(0,(pk*Vk/TI-mb*Z.RbI-mfk*A.Rf)/A.Ra),tot=ma+mb+mfk;return tot>0?mb/tot*pk*Vk/(R*TI):0};y[7]=bk(y[6],P.Vin,Math.max(0,y[7]),Math.max(0,y[41]));y[10]=bk(y[9],Vp,Math.max(0,y[10]),Math.max(0,y[42]));y[38]=y[39]=y[40]=y[41]=y[42]=0}
  s.spc=P.gam===2;s.a0=y.slice();this.TC=null}
@@ -419,9 +417,9 @@ return dt}
 /* サイクルの終端：補助積分の増分から指標を求める（REQ-14） */
 cycleEnd(){const s=this.s,P=this.P,G=this.G,cw=s.cw,cx=s.cx,C=s.C,y=s.y,a=s.a0,d=k=>y[k]-a[k],W=d(18),tc=s.t-s.tc0,Wf=d(20),Wa=d(21),Wd=d(22);s.Wg=d(19);if(cx.pmax>0)s.pmx=cx.pmax;else if(cx.pmS>0)s.pmx=cx.pmS;s.cyc++;s.ca=C.on&&C.Q>0?ca50(C):NaN;if(P.sauto&&s.fired&&s.ca===s.ca)s.spa+=KS*(s.ca-CA50T);
 const SPC=P.gam===2,ma=SPC?(s.mah===s.mah?s.mah:0):C.mut/(1+P.phi/K.AFR),mf=SPC?(P.inj===1?s.mfc:s.mfI):P.phi*ma/K.AFR,mfd=mf/tc,imep=W/G.Vd,fmep=Wf/G.Vd,amep=Wa/G.Vd,bmep=imep-fmep-amep,Pb=bmep*G.Vd/tc,wb=P4/tc,pm=cx.pmax>0?cx.pmax:cx.pmS;
-const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/((SPC?GAS.Ra:R)*TA)*G.Vd),xr:cx.xr,pinE:y[6],mexv:d(26)/tc,mepp:d(27)/tc,mtl:d(28)/tc,dpex:d(29)/tc-P.pa,ppeR:cw.ppx-cw.ppn,mr:d(24)/tc,ybi:d(30)/tc,bo:d(11),bi:d(12),pm,pmS:cx.pmS,Tm:cx.Tmax,tb:bmep*G.Vd/P4,pb:Pb,bmep,fmep,amep,Wa,em:imep>0?bmep/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:Wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:Wd/tc,Pf:Wf/tc,mth:d(23)/tc,min:d(25)/tc,YuE:s.YuE,Qc:d(31),Qw:d(32),Hi:d(33),Ho:d(34),Xo:d(35),Xi:d(36),Xt:d(37),He:d(43),minj:d(44),mev:d(45),mfx:d(47),phc:s.phc,ma,mf,Tivc:s.I0.T,TE:s.TE,Tx:SPC?(d(58)>0?d(57)/d(58):NaN):TX,Tc:SPC?y[50]:K.Twc,Pcool:d(52)/tc,Prad:d(53)/tc,hb:null};
+const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/((SPC?GAS.Ra:R)*TA)*G.Vd),xr:cx.xr,pinE:y[6],mexv:d(26)/tc,mepp:d(27)/tc,mtl:d(28)/tc,dpex:d(29)/tc-P.pa,ppeR:cw.ppx-cw.ppn,mr:d(24)/tc,ybi:d(30)/tc,bo:d(11),bi:d(12),pm,pmS:cx.pmS,Tm:cx.Tmax,tb:bmep*G.Vd/P4,pb:Pb,bmep,fmep,amep,Wa,em:imep>0?bmep/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:Wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:Wd/tc,Pf:Wf/tc,mth:d(23)/tc,min:d(25)/tc,YuE:s.YuE,Qc:d(31),Qw:d(32),Hi:d(33),Ho:d(34),Xo:d(35),Xi:d(36),Xt:d(37),He:d(43),minj:d(44),mev:d(45),mfx:d(47),phc:s.phc,ma,mf,Tivc:s.I0.T,TE:s.TE,Tx:SPC?(d(58)>0?d(57)/d(58):NaN):TX,Pcool:(d(32)+d(51))/tc,hb:null};
 /* 熱勘定（SPEC-33 の E） */
-if(SPC&&mf>0){const qf=mf*K.Hu,h={qf,W,Wf,Wa,Qw:d(32),Qpw:d(51),wb:W-Wf-Wa,wfa:Wf+Wa,qc:d(52),dw:d(32)+d(51)-d(52),hx:d(55),ech:d(56)};h.oth=qf-(h.wb+h.wfa+h.qc+h.dw+h.hx+h.ech);M.hb=h}
+if(SPC&&mf>0){const qf=mf*K.Hu,h={qf,W,Wf,Wa,Qw:d(32),Qpw:d(51),wb:W-Wf-Wa,wfa:Wf+Wa,qc:d(32)+d(51),hx:d(55),ech:d(56)};h.oth=qf-(h.W+h.qc+h.hx+h.ech);M.hb=h}
 s.a0=y.slice();s.tc0=s.t;s.ig=0;s.Mx=s.cf&&s.fired?M:null;s.Mh=s.Mx?(s.Mh||[]).concat([M]).slice(-10):[];this.lastM=M;this.last={p:Float32Array.from(this.tr.p),V:Float32Array.from(this.tr.V),me:Float32Array.from(this.tr.me),imep,pm,N:M.N,ok:!!s.Mx};s.cf=s.fired;this.rc()}
 ecu(dt,om){const s=this.s,P=this.P;{const N=om*30/PI;s.Nb=N+(s.Nb-N)*Math.exp(-dt/P.tN)}
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
@@ -453,7 +451,7 @@ crit:{std:{n:'標準',tolR:.003,tolA:.02,tolS:.3,nmin:4},strict:{n:'厳格',tolR
 /* 回転数の点：刻みの 1 つ目から N1 まで（SPEC-26 の 5．N = 0 はサイクルが進まないので含めない） */const swN=st=>Array.from({length:Math.round(SWC.N1/st)},(_,i)=>st*(i+1)),SWN=swN(SWC.step),SWN7=swN(1000);
 const swOpt=o=>({crit:SWC.critD,flow:SWC.flowD,proc:SWC.procD,...(o||{})});
 const swR=a=>Math.max(...a)-Math.min(...a),swM=a=>a.reduce((x,v)=>x+v,0)/a.length;
-class Sweep{constructor(P0,Ns,al,opt){this.Ns=Ns||SWN;this.al=al??SWC.al;this.o=swOpt(opt);this.C=SWC.crit[this.o.crit];this.nmin=this.o.nmin??this.C.nmin;this.nmax=this.o.nmax??SWC.nmax;const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:this.al*D});c.fixw=1;c.fixTw=1;c.s.y[5]=SWC.Tw;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
+class Sweep{constructor(P0,Ns,al,opt){this.Ns=Ns||SWN;this.al=al??SWC.al;this.o=swOpt(opt);this.C=SWC.crit[this.o.crit];this.nmin=this.o.nmin??this.C.nmin;this.nmax=this.o.nmax??SWC.nmax;const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:this.al*D});c.fixw=1;c.fixTw=1;c.s.y[5]=c.P.gam===2&&c.P.Tw!=null?c.P.Tw:SWC.Tw;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
 begin(){const c=this.c,N=this.Ns[this.i];c.s.y[1]=N*PI/30;c.s.Nb=N;c.P.nt=N;if(!c.s.fuel)c.start();/* 計測の機関は初めから完爆済みとして扱う（SPEC-26 の 4） */c.s.fired=1;c.s.starter=0;this.h=[];this.cy=c.s.cyc;this.nc=0}
 run(ms){const c=this.c,t0=performance.now();let n=0;while(!this.done){c.step();/* エンスト（燃料 OFF）：点をエンストとして記録し，描かない（SPEC-26 の 4） */if(!c.s.fuel){this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length});this.i++;if(this.i>=this.Ns.length)this.done=true;else this.begin();continue}if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}if((++n&3)===0&&performance.now()-t0>ms)break}return this.done}
 check(){const h=this.h,C=this.C;let ok=false,r=null;if(h.length>=this.nmin){const a=h.slice(-SWC.last),T=a.map(m=>m.tb),z=a.length-1;r={T:swR(T),S:swR(a.map(m=>m.spa)),ev:swR(a.map(m=>m.ev))/swM(a.map(m=>m.ev)),mth:swR(a.map(m=>m.mth))/swM(a.map(m=>m.mth)),pin:swR(a.map(m=>m.pinE))/swM(a.map(m=>m.pinE))};
@@ -545,10 +543,10 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
   const aw=x=>(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,x*Qf))/Qf,xiT=xi(bE_-bI);if(!(xiT>.05)||!(R.F.xi>.05)||!(R.FA.xi>.05))return{ok:false,why:'燃えた燃料が少なすぎる'};
   /* 瞬時燃焼の段は，燃えた燃料の量が実際と違う（気化の途中で燃やす）ので，同じ熱の空気標準との比で換算する（SPEC-33 A） */
   const eO=1-Math.pow(G.eps,1-LBK.g),eA=aw(1),eU=aw(xiT),eF=eU*((W180+R.F.W)/Qf)/aw(R.F.xi),eFA=eU*((W180+R.FA.W)/Qf)/aw(R.FA.xi),et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
-  /* 効率の段（熱効率の差）と，1 サイクルあたりの熱量 [J] の段（SPEC-33 の B）．理想の充填 m_ref = ρ_a V_d の燃料の熱 Q_f,ref を基準にする */
-  const L=[['有効圧縮比（吸気弁の閉じる時期）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['時間損失（燃焼の遅れ）',eFA-et],['圧縮〜膨張の放熱（ガス → 壁）',et-eh],['吹き出し損失（排気弁の開く時期）',eh-eig],['ポンプ損失',eig-ei]];
-  const Vd=G.Vd,mref=c.P.pa/(GAS.Ra*TA)*Vd,Qref=c.P.phi/GAS.AF*mref*K.Hu,rR=maR/maI,PL=[['吸気の受熱（壁 → ガス）',eO*Qf*(rR-1)],['充填の不足（流れの抵抗・弁時期・残留ガス）',eO*(Qref-Qf*rR)],...L.map(q=>[q[0],q[1]*Qf])];
-  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei,hb:M.hb,Tx:M.Tx,Tc:M.Tc,PL,p0:eO*Qref,pI:M.W,Qref,mref,maI,maR,ev:maI/mref,qin:-(qwI-qw0),qout:qwE-qwI}}}
+  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['燃焼の遅れ（等容度）',eFA-et],['壁面熱伝達（失った仕事）',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
+  /* 熱勘定（SPEC-33 の E）：理想の充填 m_ref = ρ_a V_d の燃料の熱 Q_f,ref から正味仕事まで [J]．行は [名前, 種類（t：0 からの棒，l：段，h：壁との熱の段）, 値] */
+  const h=M.hb,mref=c.P.pa/(GAS.Ra*TA)*G.Vd,Qref=c.P.phi/GAS.AF*mref*K.Hu,rR=maR/maI,HB=h?[['理想の充填の燃料の熱','t',Qref],['吸気の受熱（充填の低下）','h',Qf*(rR-1)],['充填の不足（流れの抵抗・弁時期・残留ガス）','l',Qref-Qf*rR],['計：供給した燃料の熱','t',Qf],['未燃損失（化学エネルギー）','l',h.ech],['排気損失（排気の顕熱）','l',h.hx],['冷却損失（壁への熱）','h',h.qc],['その他（収支の残り）','l',h.oth],['計：図示仕事','t',h.W],['機械損失（摩擦・補機）','l',h.wfa],['計：正味仕事','t',h.wb]]:null;
+  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei,hb:h,HB,Tx:M.Tx,Tw:s.y[5],Qref,mref,maI,maR,ev:maI/mref,qin:-(qwI-qw0),qout:qwE-qwI}}}
 /* ===== VVT マップ（SPEC-34） ===== */
 const VVM={ph:[-40,-30,-20,-10,0,10,20,30,40],lo:-40,hi:40};
 /* 格子の順序（SPEC-34 B の 2）：段階 1（添字 0，4，8），段階 2（偶数），段階 3（残り）．各段階の中は行ごとに向きを変える．[i（φin の添字），j（φex の添字），段階] */

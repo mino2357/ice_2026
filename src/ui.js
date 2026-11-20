@@ -30,8 +30,8 @@ function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
 /* SPEC-30 の 9：熱物性が「化学平衡」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
-/* SPEC-08 の B の 3：熱物性が「化学平衡」でないときは冷却の 3 項目が不使用 */
-const CTLU={alm:['a',''],Tl:['','a']},INJK={inj:1,soi:2,qinj:2,tev:2},COOLK={Tc0:1,Tth:1,UAr:1},ctlSt=k=>k==='mode'?(LP.bench===1?'n':''):CTLU[k]?CTLU[k][dynOn(LP)?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):COOLK[k]?(LP.gam!==2?'n':''):'';
+/* SPEC-08 の B の 4：熱物性が「化学平衡」でないときは壁温の設定が不使用 */
+const CTLU={alm:['a',''],Tl:['','a']},INJK={inj:1,soi:2,qinj:2,tev:2},COOLK={Tw:1},ctlSt=k=>k==='mode'?(LP.bench===1?'n':''):CTLU[k]?CTLU[k][dynOn(LP)?1:0]:INJK[k]?(LP.gam!==2||INJK[k]===2&&LP.inj!==1?'n':''):COOLK[k]?(LP.gam!==2?'n':''):'';
 const ctlVal=k=>k==='spb'?live.s.spa.toFixed(1):k==='alm'?(live.s.al/D).toFixed(1):Math.abs(live.s.fc).toFixed(1);
 /* 動力計のトルクの向き（SPEC-11 の 7）：正 = 吸収，負 = 駆動 */
 const dynDir=T=>T<0?'駆動':'吸収';
