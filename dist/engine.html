@@ -350,8 +350,11 @@ const y5=y.slice(),y4=y.slice();for(let j=0;j<7;j++)for(let i=0;i<y.length;i++){
 const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6];for(let i=18;i<38;i++)ATOL[i]=1;ATOL.push(1e-10,1e-10,1e-10,1e-9,1e-9);for(let i=43;i<49;i++)ATOL[i]=1;ATOL.push(1e-3);const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49];
 /* ===== EngineCore ===== */
 const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m','mu','dq','vp'];
+/* 既燃ガスの物性の書き込み先（GAS.burned と xgas が書く順に，はじめから全部のプロパティを持たせる） */
+const mkGB=()=>({eT:0,e:0,R:0,RT:0,ep:0,Rp:0,ez:0,Rz:0});
 class Core{
-constructor(P){this.P=P;this.reset()}
+/* 右辺とソルバが使う作業用のプロパティを，はじめに全部宣言しておく（後から足すとオブジェクトの形が変わり，JIT の最適化が繰り返し捨てられる） */
+constructor(P){this.P=P;this.bo=null;this.bo2=null;this.bo3=null;this.bx=null;this.kT=null;this.TC=null;this.Zc=null;this.k0b=null;this.kb=null;this.yy=null;this.r4=null;this.r5=null;this.ea=0;this.wx=1;this.atS=0;this.trO=null;this.trA=null;this.fixw=0;this.fixTw=0;this.lastM=null;this.reset()}
 reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
 const y0=[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0));y0[49]=TA;if(SPC)y0[5]=P.Tw??K.Twc; /* 排気ポートのガスの温度（2.2 の 22）．化学平衡のモデルの壁温は設定の一定値（SPEC-08 の B） */
 this.s={y:y0,exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,V:{v:0,x:0,t0:-1,t100:NaN,F:0},Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null,spc:SPC,zs:GAS.phi2z(P.phi),inj:{on:0,th0:0,dth:1,m:0},mah:NaN,mtI:0,mfI:0,mfc:0,phc:NaN,pS:0,pSn:0,TE:NaN};
@@ -396,7 +399,9 @@ out[0]=dth;out[1]=dom;out[2]=dp;out[3]=mi-me;out[4]=mui-mue-dmc;out[5]=d5;out[6]
 out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?ppe:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;out[38]=0;out[39]=0;out[40]=0;out[41]=0;out[42]=0;out[43]=0;out[44]=0;out[45]=0;out[46]=0;out[47]=0;out[48]=0;for(let i=49;i<NY;i++)out[i]=0;return out}
 /* ===== 化学平衡のモデルの右辺（SPEC-29 B，C，SPEC-30）．成分は空気 a，燃料蒸気 f，既燃ガス b．内部エネルギーは絶対値で，発熱の項は無い ===== */
 /* 筒外の既燃ガス（組成 ζ*）の，温度が固定の場所での物性 */
-zc(){const s=this.s;let Z=this.Zc;if(!Z||Z.z!==s.zs){const o={};GAS.burned(TI,1e5,s.zs,o);Z={z:s.zs,RbI:o.R,cvbI:o.eT,cpbI:o.eT+o.R,hbI:o.e+o.R*TI};{/* 排気ポートのガスの物性の表（SPEC-27 の 9）：組成 ζ*，圧力 p° で，温度だけの関数．右辺で毎回使うので，ζ* が変わったときに 1 次元の表にしておく */const g=GAS.G,n=g.nT,e=new Float64Array(n),c=new Float64Array(n),r=new Float64Array(n),q=new Float64Array(n);for(let i=0;i<n;i++){GAS.burned(g.T0+g.dT*i,1e5,s.zs,o);e[i]=o.e;c[i]=o.eT;r[i]=o.R;q[i]=o.RT}Z.xt={e,c,r,q}}GAS.burned(TX,1e5,s.zs,o);Z.RbX=o.R;Z.hbX=o.e+o.R*TX;Z.gbX=1+o.R/o.eT;Z.kbX=psiK(Z.gbX);this.Zc=Z}return Z}
+zc(){const s=this.s;let Z=this.Zc;if(!Z||Z.z!==s.zs){const o={};GAS.burned(TI,1e5,s.zs,o);const Z0={RbI:o.R,cvbI:o.eT,cpbI:o.eT+o.R,hbI:o.e+o.R*TI};let xt;{/* 排気ポートのガスの物性の表（SPEC-27 の 9）：組成 ζ*，圧力 p° で，温度だけの関数．右辺で毎回使うので，ζ* が変わったときに 1 次元の表にしておく */const g=GAS.G,n=g.nT,e=new Float64Array(n),c=new Float64Array(n),r=new Float64Array(n),q=new Float64Array(n);for(let i=0;i<n;i++){GAS.burned(g.T0+g.dT*i,1e5,s.zs,o);e[i]=o.e;c[i]=o.eT;r[i]=o.R;q[i]=o.RT}xt={e,c,r,q}}GAS.burned(TX,1e5,s.zs,o);const gbX=1+o.R/o.eT;
+ /* 形（プロパティの並び）を 1 つにするため，全部の値を求めてから 1 つのリテラルで作る（後からプロパティを足すと最適化のやり直しが続く） */
+ Z={z:s.zs,RbI:Z0.RbI,cvbI:Z0.cvbI,cpbI:Z0.cpbI,hbI:Z0.hbI,xt,RbX:o.R,hbX:o.e+o.R*TX,gbX,kbX:psiK(gbX)};this.Zc=Z}return Z}
 /* 筒内の温度：p V = (m_a R_a + m_f R_f + m_b R_b(T, p, ζ)) T を Newton 法で解く（初期値は凍結の R_b．修正が相対 1e-11 未満になったら終える．
    凍結の温度より下では R_b が一定なので 1 回で終わる）．o に既燃ガスの物性（最後の T での値）を書く */
 cylT(p,V,ma,mf,mb,z,o){const A=GAS,r0=ma*A.Ra+mf*A.Rf,pV=p*V;if(!(mb>1e-12)){const T=pV/r0;A.burned(T,p,z,o);return T}let T=pV/(r0+mb*A.burned(A.Tfr,p,z,o).R);for(let i=0;i<8;i++){A.burned(T,p,z,o);const Rt=r0+mb*o.R,dT=(T*Rt-pV)/(Rt+T*mb*o.RT);if(Math.abs(dT)<1e-11*T)return T;T-=dT}A.burned(T,p,z,o);return T}
@@ -406,13 +411,13 @@ xgas(T,o){const g=GAS.G,t=this.zc().xt,Tc=Math.min(g.T0+g.dT*(g.nT-1),Math.max(g
 /* 状態 y から筒内の成分と温度を求める（イベントの処理と検査用） */
 cyl(y){const G=this.G,m=Math.max(y[3],1e-7),mu=Math.min(m,Math.max(0,y[4])),mf=Math.min(mu,Math.max(0,y[38])),mb=m-mu,ma=mu-mf,z=mb>1e-12?Math.min(.3,Math.max(0,y[39])/mb):this.s.zs,o={},V=kinV(G,y[0]),T=this.cylT(y[2],V,ma,mf,mb,z,o);return{T,V,m,mu,ma,mf,mb,z,B:o,U:ma*GAS.ea(T)+mf*GAS.ef(T)+mb*o.e}}
 fS(y,out){const P=this.P,G=this.G,s=this.s,C=s.C,Vv=this.V,A=GAS,Z=this.zc(),th=y[0],om=y[1],p=y[2],m=Math.max(y[3],1e-7),mu=Math.min(m,Math.max(0,y[4])),Tw=y[5],pin=y[6],mbi=Math.max(0,y[7]),mr=y[8],pp=y[9],mbp=Math.max(0,y[10]),Ein=y[16],Ep=y[17],
- mf=Math.min(mu,Math.max(0,y[38])),mb=m-mu,ma=mu-mf,mbf=Math.max(0,y[39]),ml=Math.max(0,y[40]),mfi=Math.max(0,y[41]),mfp=Math.max(0,y[42]),RO=!!P.run,Ar=PI/4*P.dr*P.dr,Vp=.5*Ar*P.Lr,pv=RO?pp:pin,tt=md4(th),DI=P.inj===1,hasB=mb>1e-12,zt=hasB?Math.min(.3,mbf/mb):Z.z,B=this.bo||(this.bo={});
+ mf=Math.min(mu,Math.max(0,y[38])),mb=m-mu,ma=mu-mf,mbf=Math.max(0,y[39]),ml=Math.max(0,y[40]),mfi=Math.max(0,y[41]),mfp=Math.max(0,y[42]),RO=!!P.run,Ar=PI/4*P.dr*P.dr,Vp=.5*Ar*P.Lr,pv=RO?pp:pin,tt=md4(th),DI=P.inj===1,hasB=mb>1e-12,zt=hasB?Math.min(.3,mbf/mb):Z.z,B=this.bo||(this.bo=mkGB());
 const sn=Math.sin(th),cs=Math.cos(th),qq=Math.sqrt(1-G.lam*G.lam*sn*sn),xp=G.r*(1-cs+(1-qq)/G.lam),kV=G.Vc+G.Ap*xp,kdV=G.Ap*G.r*sn*(1+G.lam*cs/qq),kA=PI*G.B*G.B/2+PI*G.B*(xp+G.hc);
 /* 筒内の物性 */
 const T=this.cylT(p,kV,ma,mf,mb,zt,B),ea=A.ea(T),ef=A.ef(T),Rt=ma*A.Ra+mf*A.Rf+mb*B.R,Cc=ma*A.cva(T)+mf*A.cvf(T)+mb*B.eT,g=1+Rt/Cc,Rm=Rt/m,Ya=ma/m,Yf=mf/m,Yb=mb/m,Yu=mu/m,hc0=(ma*(ea+A.Ra*T)+mf*(ef+A.Rf*T)+mb*(B.e+B.R*T))/m;
 const EX=!!P.exs,mep=y[13],ppe=y[14],pm=y[15],pex=EX?ppe:P.pa+P.dpx;
 /* 排気ポートのガス（SPEC-27 の 9）：温度 T_X（状態），組成 ζ* の既燃ガス．排気系 OFF では T_X = 800 K の一定値 */
-const TXs=EX?y[49]:TX,XB=this.bx||(this.bx={});if(EX)this.xgas(TXs,XB);const RX=EX?XB.R:Z.RbX,gX=EX?1+XB.R/XB.eT:Z.gbX;
+const TXs=EX?y[49]:TX,XB=this.bx||(this.bx=mkGB());if(EX)this.xgas(TXs,XB);const RX=EX?XB.R:Z.RbX,gX=EX?1+XB.R/XB.eT:Z.gbX;
 /* 吸気側の組成（成分ごとの気体定数．SPEC-29 C）と余剰エンタルピー */
 const mai=Math.max(0,(pin*P.Vin/TI-mbi*Z.RbI-mfi*A.Rf)/A.Ra),min_=mai+mbi+mfi,Ybi=mbi/min_,Yfi=mfi/min_;let mp_=min_,Ybp=Ybi,Yfp=Yfi;if(RO){const map=Math.max(0,(pp*Vp/TI-mbp*Z.RbI-mfp*A.Rf)/A.Ra);mp_=map+mbp+mfp;Ybp=mbp/mp_;Yfp=mfp/mp_}
 const epi=Ein/min_,epp=RO?Ep/mp_:epi,Yap=1-Ybp-Yfp,Yai=1-Ybi-Yfi,Tup=TI+epp/(Yap*GC.cpaI+Yfp*GC.cpfI+Ybp*Z.cpbI),Rup=Yap*A.Ra+Yfp*A.Rf+Ybp*Z.RbI;
@@ -437,7 +442,7 @@ const Ts=s.starter&&!s.fired?K.Tst*Math.max(0,1-om/K.wnl):0,Ti=(p-P.pa)*kdV,Td=s
 let dom=(Ti+Ts-Tf-Ta-Td)/(K.I+P.Id),dth=om;if(this.fixw)dom=0;if(om<=0&&dom<0){dom=0;dth=0}
 /* 排気系（気体定数は既燃ガスの値） */
 /* 排気弁を通る顕熱（SPEC-27 の 9）．筒内のガスの顕熱は T_ref = T_in の各成分のエンタルピーとの差 */
-let hbRz=Z.hbI;if(me>0&&hasB&&zt!==Z.z){const B3=this.bo3||(this.bo3={z:NaN,h:0});if(B3.z!==zt){A.burned(TI,1e5,zt,B3);B3.h=B3.e+B3.R*TI;B3.z=zt}hbRz=B3.h} /* T_ref の既燃ガスのエンタルピーは ζ だけで決まるので，ζ が変わったときだけ求める */
+let hbRz=Z.hbI;if(me>0&&hasB&&zt!==Z.z){const B3=this.bo3||(this.bo3=Object.assign(mkGB(),{z:NaN,h:0}));if(B3.z!==zt){A.burned(TI,1e5,zt,B3);B3.h=B3.e+B3.R*TI;B3.z=zt}hbRz=B3.h} /* T_ref の既燃ガスのエンタルピーは ζ だけで決まるので，ζ が変わったときだけ求める */
 const hXs=hbX-Z.hbI,Hxs=me>=0?me*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbRz)):me*(EX?hXs:Z.hbX-Z.hbI);
 let e0=0,e1=0,e2=0,d49=0,Qpw=0,Hx=Hxs,Thx=me>0?me*T:0,Mxp=me>0?me:0,hp=0,ReX=0,mtl=me;if(EX){const Ax=PI/4*P.dex*P.dex,Vpe=.5*Ax*P.Lex,re=ppe/(RX*TXs),zx=K.fr*P.Lex/P.dex+K.ze;
  /* ポートの壁への熱伝達（SPEC-27 の 10．Dittus–Boelter，Re の下限 2300） */
@@ -447,7 +452,7 @@ let e0=0,e1=0,e2=0,d49=0,Qpw=0,Hx=Hxs,Thx=me>0?me*T:0,Mxp=me>0?me:0,hp=0,ReX=0,m
  d49=b2/(mX*cvX);e1=(dmX*RX*TXs+mX*(RX+TXs*XB.RT)*d49)/Vpe;if(P.Vm!=null){mtl=pm>P.pa?mdRC(pm,P.pa,TX,K.Cdx*P.At,Z.kbX,Z.RbX):mdRC(pm,P.pa,TA,K.Cdx*P.At,GC.kA,A.Ra);e0=Ax/P.Lex*(ppe-pm)-zx*mep*Math.abs(mep)/(2*re*Ax*P.Lex);e2=Z.RbX*TX/P.Vm*(mep-mtl)}else{mtl=mep;e0=Ax/P.Lex*(ppe-P.pa)-(zx+1)*mep*Math.abs(mep)/(2*re*Ax*P.Lex)}}
 
 /* 吸気弁の逆流が運ぶ余剰エンタルピー（筒内の成分で T と T_in の差）と，順流で戻る分 */
-let xo=0;if(mi<0){let hbI=0;if(hasB){const B2=this.bo2||(this.bo2={});A.burned(TI,p,zt,B2);hbI=B2.e+B2.R*TI}xo=-mi*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbI))}const xi=mi>0?mi*epp:0,xt=mt<0?-mt*epi:0;
+let xo=0;if(mi<0){let hbI=0;if(hasB){const B2=this.bo2||(this.bo2=mkGB());A.burned(TI,p,zt,B2);hbI=B2.e+B2.R*TI}xo=-mi*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbI))}const xi=mi>0?mi*epp:0,xt=mt<0?-mt*epi:0;
 if(this.wx!==0)this.X={T,k:{x:xp,V:kV,dV:kdV,A:kA},mi,me,Ts,Ti,Td,Tf,Ta,tt,Yu,mt,Q,Qw,hc,Ybi,Ybp,mr:RO?mr:mi,pv,mep:EX?mep:me,mtl,pex,pm:EX?pm:pex,g,Tup,hj:hji,minj,mev,zt,Yf,TX:TXs,Qpw,hp,ReX,Hxs,Hx};
 /* 吸気側：スロットルと弁（ランナ）の流れを成分ごとに数える．スロットルの順流は，ポート噴射では当量比 φ の予混合気 */
 const ta=mt>=0?mt*(1-fph):mt*Yai,tf=mt>=0?mt*fph:mt*Yfi,tb=mt>=0?0:mt*Ybi;let d6,d7,d8,d9,d10,d16,d17,d41,d42;
