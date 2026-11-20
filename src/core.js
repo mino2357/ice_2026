@@ -73,7 +73,7 @@ const ITEMS=[
 {k:'cbr',n:'燃焼速度係数 c_b',u:'',f:1,lo:.1,hi:10,st:.1,d:1,c:'i',pg:10},
 {k:'wm',n:'Wiebe 形状係数 m_w',u:'',f:1,lo:0,hi:6,st:.5,d:2,c:'i',pg:10},
 /* 冷却（SPEC-08 の B．化学平衡のモデルだけ） */
-{k:'Tw',n:'壁温 T_w',u:'K',f:1,lo:300,hi:600,st:5,d:360,c:'i',pg:15}];
+{k:'Tw',n:'壁温 T_w',u:'K',f:1,lo:300,hi:3500,st:10,d:360,c:'i',pg:15}];
 const IT={};ITEMS.forEach(i=>IT[i.k]=i);
 const dec=it=>{const s=String(it.st);return s.includes('.')?s.split('.')[1].length:0};
 const lo0=it=>it.lo??0,gmin=it=>it.lo==null?-Infinity:0;
@@ -231,8 +231,7 @@ const GAS=(()=>{
  return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab,TND,nd:v=>{ND=v?1:0}}})();
 /* SPEC-29：温度が固定の場所（吸気 TI，外気 TA，液体の燃料）の物性の定数と，気体定数を引数に取るオリフィスの式 */
 const GC={cvaI:GAS.cva(TI),cpaI:GAS.cva(TI)+GAS.Ra,haI:GAS.ha(TI),cvfI:GAS.cvf(TI),cpfI:GAS.cvf(TI)+GAS.Rf,hfI:GAS.hf(TI),cvaA:GAS.cva(TA),cvfA:GAS.cvf(TA),gA:1+GAS.Ra/GAS.cva(TA),kA:psiK(1+GAS.Ra/GAS.cva(TA)),hl:GAS.hf(GAS.Tl)-GAS.hfg};
-/* 化学エネルギー（SPEC-33 の E の 1）：完全に燃えた状態を基準にしたエンタルピー．hbr は既燃ガスの h_b(T_ref, p°, ζ)（T_ref = T_in = 298.15 K） */
-const PRX=.023*.7**.3/.7 /* Dittus–Boelter の係数 0.023 Pr^0.3 と k = c_p μ/Pr の 1/Pr（Pr = 0.7） */,LHVV=K.Hu+GAS.hfg,chiB=(hbr,z)=>hbr-((1-z)*GC.haI+z*(GC.hfI-LHVV));
+const PRX=.023*.7**.3/.7 /* Dittus–Boelter の係数 0.023 Pr^0.3 と k = c_p μ/Pr の 1/Pr（Pr = 0.7） */;
 /* ECU の空気量の見積もり m̂_a（SPEC-30 の 4）．mah，mtI：前の IVC の筒内の未燃の空気と全質量．pS，pS0：噴射の開始の時点の吸気管圧（今回，前回）．最初の IVC の前（mah が NaN）は p V_d/(R_a T_in)，前のサイクルの噴射が無いとき（pS0 = 0）は π_S = 1 */
 const ecuAir=(mah,mtI,pS,pS0,Vd)=>mah===mah?Math.max(0,mah+(pS0>0?mtI*(pS/pS0-1):0)):pS*Vd/(GAS.Ra*TI);
 /* 比熱比が決まっている場所（外気，排気系，スロットルの順流）は，Ψ の定数を前計算したものを使う（結果は mdR と同じ） */
@@ -305,7 +304,7 @@ out[0]=dth;out[1]=dom;out[2]=dp;out[3]=mi-me;out[4]=mui-mue-dmc;out[5]=d5;out[6]
 out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?ppe:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;out[38]=0;out[39]=0;out[40]=0;out[41]=0;out[42]=0;out[43]=0;out[44]=0;out[45]=0;out[46]=0;out[47]=0;out[48]=0;for(let i=49;i<NY;i++)out[i]=0;return out}
 /* ===== 化学平衡のモデルの右辺（SPEC-29 B，C，SPEC-30）．成分は空気 a，燃料蒸気 f，既燃ガス b．内部エネルギーは絶対値で，発熱の項は無い ===== */
 /* 筒外の既燃ガス（組成 ζ*）の，温度が固定の場所での物性 */
-zc(){const s=this.s;let Z=this.Zc;if(!Z||Z.z!==s.zs){const o={};GAS.burned(TI,1e5,s.zs,o);Z={z:s.zs,RbI:o.R,cvbI:o.eT,cpbI:o.eT+o.R,hbI:o.e+o.R*TI};Z.chi=chiB(Z.hbI,s.zs);{/* 排気ポートのガスの物性の表（SPEC-27 の 9）：組成 ζ*，圧力 p° で，温度だけの関数．右辺で毎回使うので，ζ* が変わったときに 1 次元の表にしておく */const g=GAS.G,n=g.nT,e=new Float64Array(n),c=new Float64Array(n),r=new Float64Array(n),q=new Float64Array(n);for(let i=0;i<n;i++){GAS.burned(g.T0+g.dT*i,1e5,s.zs,o);e[i]=o.e;c[i]=o.eT;r[i]=o.R;q[i]=o.RT}Z.xt={e,c,r,q}}GAS.burned(TX,1e5,s.zs,o);Z.RbX=o.R;Z.hbX=o.e+o.R*TX;Z.gbX=1+o.R/o.eT;Z.kbX=psiK(Z.gbX);this.Zc=Z}return Z}
+zc(){const s=this.s;let Z=this.Zc;if(!Z||Z.z!==s.zs){const o={};GAS.burned(TI,1e5,s.zs,o);Z={z:s.zs,RbI:o.R,cvbI:o.eT,cpbI:o.eT+o.R,hbI:o.e+o.R*TI};{/* 排気ポートのガスの物性の表（SPEC-27 の 9）：組成 ζ*，圧力 p° で，温度だけの関数．右辺で毎回使うので，ζ* が変わったときに 1 次元の表にしておく */const g=GAS.G,n=g.nT,e=new Float64Array(n),c=new Float64Array(n),r=new Float64Array(n),q=new Float64Array(n);for(let i=0;i<n;i++){GAS.burned(g.T0+g.dT*i,1e5,s.zs,o);e[i]=o.e;c[i]=o.eT;r[i]=o.R;q[i]=o.RT}Z.xt={e,c,r,q}}GAS.burned(TX,1e5,s.zs,o);Z.RbX=o.R;Z.hbX=o.e+o.R*TX;Z.gbX=1+o.R/o.eT;Z.kbX=psiK(Z.gbX);this.Zc=Z}return Z}
 /* 筒内の温度：p V = (m_a R_a + m_f R_f + m_b R_b(T, p, ζ)) T を Newton 法で解く（初期値は凍結の R_b．修正が相対 1e-11 未満になったら終える．
    凍結の温度より下では R_b が一定なので 1 回で終わる）．o に既燃ガスの物性（最後の T での値）を書く */
 cylT(p,V,ma,mf,mb,z,o){const A=GAS,r0=ma*A.Ra+mf*A.Rf,pV=p*V;if(!(mb>1e-12)){const T=pV/r0;A.burned(T,p,z,o);return T}let T=pV/(r0+mb*A.burned(A.Tfr,p,z,o).R);for(let i=0;i<8;i++){A.burned(T,p,z,o);const Rt=r0+mb*o.R,dT=(T*Rt-pV)/(Rt+T*mb*o.RT);if(Math.abs(dT)<1e-11*T)return T;T-=dT}A.burned(T,p,z,o);return T}
@@ -345,9 +344,9 @@ const hbX=EX?XB.e+XB.R*TXs:Z.hbX,hji=Yap*GC.haI+Yfp*GC.hfI+Ybp*Z.hbI+epp,Hin=(mi
 const Ts=s.starter&&!s.fired?K.Tst*Math.max(0,1-om/K.wnl):0,Ti=(p-P.pa)*kdV,Td=s.fe,Tf=om>0?fmepCF(G,s.pmx,om)*G.Vd/P4:0,Ta=om>0?P.Ta:0;
 let dom=(Ti+Ts-Tf-Ta-Td)/(K.I+P.Id),dth=om;if(this.fixw)dom=0;if(om<=0&&dom<0){dom=0;dth=0}
 /* 排気系（気体定数は既燃ガスの値） */
-/* 排気弁を通る顕熱と化学エネルギー（SPEC-27 の 9，SPEC-33 の E の 1）．筒内のガスの顕熱は T_ref = T_in の各成分のエンタルピーとの差 */
+/* 排気弁を通る顕熱（SPEC-27 の 9）．筒内のガスの顕熱は T_ref = T_in の各成分のエンタルピーとの差 */
 let hbRz=Z.hbI;if(me>0&&hasB&&zt!==Z.z){const B3=this.bo3||(this.bo3={z:NaN,h:0});if(B3.z!==zt){A.burned(TI,1e5,zt,B3);B3.h=B3.e+B3.R*TI;B3.z=zt}hbRz=B3.h} /* T_ref の既燃ガスのエンタルピーは ζ だけで決まるので，ζ が変わったときだけ求める */
-const hXs=hbX-Z.hbI,Hxs=me>=0?me*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbRz)):me*(EX?hXs:Z.hbX-Z.hbI),Ech=me>=0?me*(Yf*LHVV+Yb*(hasB?chiB(hbRz,zt):0)):me*Z.chi;
+const hXs=hbX-Z.hbI,Hxs=me>=0?me*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbRz)):me*(EX?hXs:Z.hbX-Z.hbI);
 let e0=0,e1=0,e2=0,d49=0,Qpw=0,Hx=Hxs,Thx=me>0?me*T:0,Mxp=me>0?me:0,hp=0,ReX=0,mtl=me;if(EX){const Ax=PI/4*P.dex*P.dex,Vpe=.5*Ax*P.Lex,re=ppe/(RX*TXs),zx=K.fr*P.Lex/P.dex+K.ze;
  /* ポートの壁への熱伝達（SPEC-27 の 10．Dittus–Boelter，Re の下限 2300） */
  const mu=1.458e-6*TXs*Math.sqrt(TXs)/(TXs+110.4),cvX=XB.eT;ReX=Math.max((Math.abs(me)+Math.abs(mep))/2*P.dex/(Ax*mu),2300);hp=PRX*ReX**.8*(cvX+RX)*mu/P.dex;Qpw=hp*PI*P.dex*G.B*(TXs-Tw);
@@ -357,7 +356,7 @@ let e0=0,e1=0,e2=0,d49=0,Qpw=0,Hx=Hxs,Thx=me>0?me*T:0,Mxp=me>0?me:0,hp=0,ReX=0,m
 
 /* 吸気弁の逆流が運ぶ余剰エンタルピー（筒内の成分で T と T_in の差）と，順流で戻る分 */
 let xo=0;if(mi<0){let hbI=0;if(hasB){const B2=this.bo2||(this.bo2={});A.burned(TI,p,zt,B2);hbI=B2.e+B2.R*TI}xo=-mi*(hc0-(Ya*GC.haI+Yf*GC.hfI+Yb*hbI))}const xi=mi>0?mi*epp:0,xt=mt<0?-mt*epi:0;
-if(this.wx!==0)this.X={T,k:{x:xp,V:kV,dV:kdV,A:kA},mi,me,Ts,Ti,Td,Tf,Ta,tt,Yu,mt,Q,Qw,hc,Ybi,Ybp,mr:RO?mr:mi,pv,mep:EX?mep:me,mtl,pex,pm:EX?pm:pex,g,Tup,hj:hji,minj,mev,zt,Yf,TX:TXs,Qpw,hp,ReX,Hxs,Hx,Ech};
+if(this.wx!==0)this.X={T,k:{x:xp,V:kV,dV:kdV,A:kA},mi,me,Ts,Ti,Td,Tf,Ta,tt,Yu,mt,Q,Qw,hc,Ybi,Ybp,mr:RO?mr:mi,pv,mep:EX?mep:me,mtl,pex,pm:EX?pm:pex,g,Tup,hj:hji,minj,mev,zt,Yf,TX:TXs,Qpw,hp,ReX,Hxs,Hx};
 /* 吸気側：スロットルと弁（ランナ）の流れを成分ごとに数える．スロットルの順流は，ポート噴射では当量比 φ の予混合気 */
 const ta=mt>=0?mt*(1-fph):mt*Yai,tf=mt>=0?mt*fph:mt*Yfi,tb=mt>=0?0:mt*Ybi;let d6,d7,d8,d9,d10,d16,d17,d41,d42;
 if(RO){const fw=mr>=0,ra=mr*(fw?Yai:Yap),rf=mr*(fw?Yfi:Yfp),rb=mr*(fw?Ybi:Ybp),er=fw?epi:epp;d6=TI/P.Vin*(A.Ra*(ta-ra)+A.Rf*(tf-rf)+Z.RbI*(tb-rb));d7=tb-rb;d41=tf-rf;d8=Ar/P.Lr*(pin-pp)-(K.fr*P.Lr/P.dr+K.ze)*mr*Math.abs(mr)/(2*min_/P.Vin*Ar*P.Lr);d9=K.gp*TI/Vp*(A.Ra*(ra-ia)+A.Rf*(rf-if_)+Z.RbI*(rb-ib));d10=rb-ib;d42=rf-if_;d16=-mr*er-xt;d17=mr*er-xi+xo}
@@ -368,7 +367,7 @@ if(!out)out=new Array(NY);
 out[0]=dth;out[1]=dom;out[2]=dp;out[3]=dm;out[4]=dmu;out[5]=d5;out[6]=d6;out[7]=d7;out[8]=d8;out[9]=d9;out[10]=d10;out[11]=mi<0?-ib:0;out[12]=mi>=0?ib:0;out[13]=e0;out[14]=e1;out[15]=e2;out[16]=d16;out[17]=d17;
 out[18]=pdv;out[19]=tt>=PI&&tt<3*PI?pdv:0;out[20]=Tf*dth;out[21]=Ta*dth;out[22]=Td*dth;out[23]=mt;out[24]=RO?mr:mi;out[25]=mi;out[26]=me;out[27]=EX?mep:me;out[28]=mtl;out[29]=EX?ppe:pex;out[30]=Ybi;out[31]=Q;out[32]=Qw;out[33]=His;out[34]=Hos;out[35]=xo;out[36]=xi;out[37]=xt;
 out[38]=dmf;out[39]=dmbf;out[40]=P.tev>0?minj-mev:0;out[41]=d41;out[42]=d42;out[43]=mev*GC.hl;out[44]=minj;out[45]=mev;out[46]=if_;out[47]=xf;out[48]=r*psi;
-out[49]=d49;out[50]=0;out[51]=Qpw;out[52]=0;out[53]=0;out[54]=Hxs;out[55]=Hx;out[56]=Ech+(DI&&mt<0?-mt*(Yfi*LHVV+Ybi*Z.chi):0);out[57]=Thx;out[58]=Mxp;return out}
+out[49]=d49;out[50]=0;out[51]=Qpw;out[52]=0;out[53]=0;out[54]=Hxs;out[55]=Hx;out[56]=0;out[57]=Thx;out[58]=Mxp;return out}
 /* 排気ポートのガスの質量と顕熱の内部エネルギー（SPEC-27 の 9．検査用） */
 xport(y){const P=this.P,Z=this.zc(),o={},T=y[49],p=y[14],Vpe=.5*PI/4*P.dex*P.dex*P.Lex;this.xgas(T,o);const m=p*Vpe/(o.R*T);return{T,p,m,e:o.e,R:o.R,cv:o.eT,U:m*(o.e-Z.hbI)}}
 
@@ -420,9 +419,7 @@ return dt}
 /* サイクルの終端：補助積分の増分から指標を求める（REQ-14） */
 cycleEnd(){const s=this.s,P=this.P,G=this.G,cw=s.cw,cx=s.cx,C=s.C,y=s.y,a=s.a0,d=k=>y[k]-a[k],W=d(18),tc=s.t-s.tc0,Wf=d(20),Wa=d(21),Wd=d(22);s.Wg=d(19);if(cx.pmax>0)s.pmx=cx.pmax;else if(cx.pmS>0)s.pmx=cx.pmS;s.cyc++;s.ca=C.on&&C.Q>0?ca50(C):NaN;if(P.sauto&&s.fired&&s.ca===s.ca)s.spa+=KS*(s.ca-CA50T);
 const SPC=P.gam===2,ma=SPC?(s.mah===s.mah?s.mah:0):C.mut/(1+P.phi/K.AFR),mf=SPC?(P.inj===1?s.mfc:s.mfI):P.phi*ma/K.AFR,mfd=mf/tc,imep=W/G.Vd,fmep=Wf/G.Vd,amep=Wa/G.Vd,bmep=imep-fmep-amep,Pb=bmep*G.Vd/tc,wb=P4/tc,pm=cx.pmax>0?cx.pmax:cx.pmS;
-const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/((SPC?GAS.Ra:R)*TA)*G.Vd),xr:cx.xr,pinE:y[6],mexv:d(26)/tc,mepp:d(27)/tc,mtl:d(28)/tc,dpex:d(29)/tc-P.pa,ppeR:cw.ppx-cw.ppn,mr:d(24)/tc,ybi:d(30)/tc,bo:d(11),bi:d(12),pm,pmS:cx.pmS,Tm:cx.Tmax,tb:bmep*G.Vd/P4,pb:Pb,bmep,fmep,amep,Wa,em:imep>0?bmep/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:Wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:Wd/tc,Pf:Wf/tc,mth:d(23)/tc,min:d(25)/tc,YuE:s.YuE,Qc:d(31),Qw:d(32),Hi:d(33),Ho:d(34),Xo:d(35),Xi:d(36),Xt:d(37),He:d(43),minj:d(44),mev:d(45),mfx:d(47),phc:s.phc,ma,mf,Tivc:s.I0.T,TE:s.TE,Tx:SPC?(d(58)>0?d(57)/d(58):NaN):TX,Pcool:(d(32)+d(51))/tc,hb:null};
-/* 熱勘定（SPEC-33 の E） */
-if(SPC&&mf>0){const qf=mf*K.Hu,h={qf,W,Wf,Wa,Qw:d(32),Qpw:d(51),wb:W-Wf-Wa,wfa:Wf+Wa,qc:d(32)+d(51),hx:d(55),ech:d(56)};h.oth=qf-(h.W+h.qc+h.hx+h.ech);M.hb=h}
+const M={imep,pmep:(W-s.Wg)/G.Vd,W,Wg:s.Wg,Wf,Wd,tc,wb,N:wb*30/PI,ei:C.Q>0&&mf>0?W/(mf*K.Hu):NaN,pi:W/tc,ev:ma/(P.pa/((SPC?GAS.Ra:R)*TA)*G.Vd),xr:cx.xr,pinE:y[6],mexv:d(26)/tc,mepp:d(27)/tc,mtl:d(28)/tc,dpex:d(29)/tc-P.pa,ppeR:cw.ppx-cw.ppn,mr:d(24)/tc,ybi:d(30)/tc,bo:d(11),bi:d(12),pm,pmS:cx.pmS,Tm:cx.Tmax,tb:bmep*G.Vd/P4,pb:Pb,bmep,fmep,amep,Wa,em:imep>0?bmep/imep:NaN,bsfc:Pb>0&&mfd>0?mfd/Pb*3.6e9:NaN,eb:Pb>0&&mfd>0?Pb/(mfd*K.Hu):NaN,mfd,Tdm:Wd/P4,ca50:s.ca,spa:s.spa,cz:s.cz.slice(),Pd:Wd/tc,Pf:Wf/tc,mth:d(23)/tc,min:d(25)/tc,YuE:s.YuE,Qc:d(31),Qw:d(32),Hi:d(33),Ho:d(34),Xo:d(35),Xi:d(36),Xt:d(37),He:d(43),minj:d(44),mev:d(45),mfx:d(47),phc:s.phc,ma,mf,Tivc:s.I0.T,TE:s.TE,Tx:SPC?(d(58)>0?d(57)/d(58):NaN):TX,Pwall:(d(32)+d(51))/tc,Qpw:d(51)};
 s.a0=y.slice();s.tc0=s.t;s.ig=0;s.Mx=s.cf&&s.fired?M:null;s.Mh=s.Mx?(s.Mh||[]).concat([M]).slice(-10):[];this.lastM=M;this.last={p:Float32Array.from(this.tr.p),V:Float32Array.from(this.tr.V),me:Float32Array.from(this.tr.me),imep,pm,N:M.N,ok:!!s.Mx};s.cf=s.fired;this.rc()}
 ecu(dt,om){const s=this.s,P=this.P;{const N=om*30/PI;s.Nb=N+(s.Nb-N)*Math.exp(-dt/P.tN)}
 if(!s.fired&&s.fuel&&s.Nb>K.Nfire&&s.Wg>20){s.fired=1;s.starter=0;s.Ip=0;s.If=0}
@@ -532,8 +529,8 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
  *gen(){const c=this.c,s=c.s;let k=0;const st=()=>{c.step();return(++k&3)===0};
   let cy=s.cyc;while(s.cyc===cy){if(st())yield}
   /* 実際のサイクル */
-  cy=s.cyc;const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31],st0=c.clone(),qw0=s.y[32];let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN,qwI=NaN,qwE=NaN,maI=NaN;
-  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];bI=bf(c);ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]};qwI=s.y[32];maI=s.mah}if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c);qwE=s.y[32]}if((++k&3)===0)yield}
+  cy=s.cyc;const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31];let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN;
+  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];bI=bf(c);ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]}}if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c)}if((++k&3)===0)yield}
   const M=c.lastM,C={...s.C},G=c.G;if(!rep||!M||!(M.ei>0)||!C.on)return{ok:false,why:'燃焼したサイクルが得られない'};
   const Qf=M.W/M.ei,W180=zI-z0,xi=d=>SPC?K.etac*d*K.Hu/Qf:d/Qf; /* 燃えた燃料の熱の割合 ξ（SPEC-33 A）：化学平衡では既燃の側へ移った燃料 × η_c，ほかは発熱の積分 */
   /* 再計算（弁を閉じ，点火の処理をしない） */
@@ -541,15 +538,11 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
    /* 段 F の間だけ，既燃ガスの表を解離の無いものに替える（1 ステップごとに戻す．運転中の機関と交互に進むため） */
    while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){const n3=q.s.evn[3];if(nd)GAS.nd(1);try{q.step()}finally{if(nd)GAS.nd(0)}if(q.s.evn[3]!==n3)pe=q.s.y[2];if((++k&3)===0)yield}R[nm]={W:q.s.y[19]-zs,pe,xi:xi(bf(q)-b0)}}
   if(!R.F)R.F=R.FA;
-  /* 段 R：吸気の受熱の再計算．実際のサイクルの始めから，壁面熱伝達を無くして IVC まで進め，IVC の空気の質量を求める（SPEC-33 の A） */
-  let maR=NaN;if(SPC){const q=st0.clone();q.P.cw=0;const n2=q.s.evn[2];while(q.s.evn[2]===n2&&q.s.cyc===st0.s.cyc){q.step();if((++k&3)===0)yield}maR=q.s.mah}
   const aw=x=>(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,x*Qf))/Qf,xiT=xi(bE_-bI);if(!(xiT>.05)||!(R.F.xi>.05)||!(R.FA.xi>.05))return{ok:false,why:'燃えた燃料が少なすぎる'};
   /* 瞬時燃焼の段は，燃えた燃料の量が実際と違う（気化の途中で燃やす）ので，同じ熱の空気標準との比で換算する（SPEC-33 A） */
   const eO=1-Math.pow(G.eps,1-LBK.g),eA=aw(1),eU=aw(xiT),eF=eU*((W180+R.F.W)/Qf)/aw(R.F.xi),eFA=eU*((W180+R.FA.W)/Qf)/aw(R.FA.xi),et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
-  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['燃焼の遅れ（等容度）',eFA-et],['壁面熱伝達（失った仕事）',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
-  /* 熱勘定（SPEC-33 の E）：理想の充填 m_ref = ρ_a V_d の燃料の熱 Q_f,ref から正味仕事まで [J]．行は [名前, 種類（t：0 からの棒，l：段，h：壁との熱の段）, 値] */
-  const h=M.hb,mref=c.P.pa/(GAS.Ra*TA)*G.Vd,Qref=c.P.phi/GAS.AF*mref*K.Hu,rR=maR/maI,HB=h?[['理想の充填の燃料の熱','t',Qref],['吸気の受熱（充填の低下）','h',Qf*(rR-1)],['充填の不足（流れの抵抗・弁時期・残留ガス）','l',Qref-Qf*rR],['計：供給した燃料の熱','t',Qf],['未燃損失（化学エネルギー）','l',h.ech],['排気損失（排気の顕熱）','l',h.hx],['冷却損失（壁への熱）','h',h.qc],['その他（収支の残り）','l',h.oth],['計：図示仕事','t',h.W],['機械損失（摩擦・補機）','l',h.wfa],['計：正味仕事','t',h.wb]]:null;
-  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei,hb:h,HB,Tx:M.Tx,Tw:s.y[5],Qref,mref,maI,maR,ev:maI/mref,qin:-(qwI-qw0),qout:qwE-qwI}}}
+  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['燃焼の遅れ（等容度）',eFA-et],['冷却損失',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
+  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei}}}
 /* ===== VVT マップ（SPEC-34） ===== */
 const VVM={ph:[-40,-30,-20,-10,0,10,20,30,40],lo:-40,hi:40};
 /* 格子の順序（SPEC-34 B の 2）：段階 1（添字 0，4，8），段階 2（偶数），段階 3（残り）．各段階の中は行ごとに向きを変える．[i（φin の添字），j（φex の添字），段階] */

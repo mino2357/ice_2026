@@ -142,9 +142,7 @@ function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N'
 function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';$('vt').className=n===7?'vt on':'vt';pvo();vtRender()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 /* ===== 最適化タブ（SPEC-32，33） ===== */
-const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lv:0,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
-/* 熱効率の内訳の表示の切り替え（SPEC-33 C の 4）：0 = 損失（滝の図），1 = 熱勘定 */
-function lossView(v,nd){OP.lv=v;[...$('olv').children].forEach(b=>b.className=+b.dataset.v===v?'on':'');if(!nd)drawOpt()}
+const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
 function optSub(m){OP.m=m;[...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');for(const k of[0,1,2])$('o'+k).className=m===k?'opv on':'opv';if(m===1)OP.lt=-1e9;if(m===2)vmText()}
 function optObj(o){if(OP.run)return;OP.obj=o;[...$('oob').children].forEach(b=>b.className=+b.dataset.o===o?'on':'');optText()}
 const optReady=()=>live.s.fired&&live.s.Nb>=300;
@@ -159,7 +157,7 @@ function optText(){if(!$('s7'))return;$('orn').textContent=OP.run?'中止':'探�
  const q=OP.res,cur=VTK4.map(k=>Math.round(LP[k]/D)),x0=q?q.x0:cur,x=q?q.x:null,dur=v=>[v[1]-v[0],v[3]-v[2],v[3]-(v[0]+720)],row=(n,a,b)=>`<tr><td>${n}</td><td>${a}</td><td>${b??'–'}</td><td>${b!=null&&typeof a==='number'?(b-a>0?'+':b-a<0?'−':'')+Math.abs(b-a):''}</td></tr>`;
  let h=`<tr><th>${q?'':'現在'}</th><th>探索の前</th><th>結果</th><th>差</th></tr>`;['IVO','IVC','EVO','EVC'].forEach((n,i)=>h+=row(n+' °',x0[i],x?x[i]:null));const d0=dur(x0),d1=x?dur(x):null;['吸気の作用角 °','排気の作用角 °','オーバーラップ °'].forEach((n,i)=>h+=row(n,d0[i],d1?d1[i]:null));
  const o=q?q.obj:OP.obj;h+=`<tr><td>${o?'正味熱効率':'軸トルク'}</td><td>${q?optFmt(o,q.J0):'–'}</td><td>${q?optFmt(o,q.J):'–'}</td><td>${q&&q.J0===q.J0?(q.J>=q.J0?'+':'−')+(o?(Math.abs(q.J-q.J0)*100).toFixed(2)+' %pt':Math.abs(q.J-q.J0).toFixed(2)):''}</td></tr>`;if($('otb').innerHTML!==h)$('otb').innerHTML=h}
-function drawOpt(){if(OP.m===2){drawVMT();return}if(OP.m===0){const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}else{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';(OP.lv===1?drawHB:drawLoss)(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
+function drawOpt(){if(OP.m===2){drawVMT();return}if(OP.m===0){const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}else{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
 /* ===== VVT マップ（SPEC-34） ===== */
 function vmStart(){if(OP.vm&&!OP.vm.done){vmStop();return}if(!optReady()){$('vpr').textContent='運転タブで START してください';return}OP.vm=new VVTMap(live);OP.vp0=OP.vm.p0;OP.vsel=null;OP.vkey='';vmText()}
 /* 中止：計算中の評価を待たずに止める（それまでに埋まった格子と詰めた点は残す） */
@@ -184,7 +182,7 @@ const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.class
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initTH();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('sysb'),e=>{const b=e.target.closest('button[data-m]');if(b)setSys(+b.dataset.m)});
-tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('olv'),e=>{const b=e.target.closest('button[data-v]');if(b)lossView(+b.dataset.v)});lossView(0,1);tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('vrn'),vmStart);tap($('vap'),vmApply);tap($('vun'),()=>{undo();vmText()});tap($('vmc'),e=>vmTap(e.clientX,e.clientY));tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
+tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('vrn'),vmStart);tap($('vap'),vmApply);tap($('vun'),()=>{undo();vmText()});tap($('vmc'),e=>vmTap(e.clientX,e.clientY));tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
 tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
 document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
