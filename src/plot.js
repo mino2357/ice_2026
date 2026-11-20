@@ -317,7 +317,7 @@ const fmtJ=v=>Math.abs(v)<2?v.toFixed(4):v.toFixed(2);
 /* 熱効率の損失の内訳：横向きの滝の図．r は LossBk の結果 */
 function lossSpec(r,W,H){const rows=[['理論（オットー，圧縮比 ε '+r.eps.toFixed(1)+'）',0,r.eO,'t']];let e=r.eO;for(const [n,v] of r.L){rows.push([n,e-v,e,v>=0?'l':'g',v]);e-=v}rows.push(['正味の図示熱効率 η_i',0,r.ei,'r'],['機械損失（摩擦・補機）',r.eb,r.ei,'l',r.ei-r.eb],['正味熱効率 η_b',0,r.eb,'r']);
  /* 幅が 520 px 未満では，名前を棒の上の行に置く（SPEC-33 C の 1） */
- const nr=rows.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),260),pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-76},rh=pl.h/nr,mx=Math.ceil(r.eO*10)/10,X=v=>pl.x+pl.w*Math.max(0,v)/mx,bh=Math.min(20,rh*(two?.4:.62));
+ const nr=rows.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),260),pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-82},rh=pl.h/nr,mx=Math.ceil(r.eO*10)/10,X=v=>pl.x+pl.w*Math.max(0,v)/mx,bh=Math.min(20,rh*(two?.4:.62));
  return{two,rows:rows.map((q,i)=>{const a=Math.min(q[1],q[2]),b=Math.max(q[1],q[2]),yt=pl.y+rh*i;return{name:q[0],kind:q[3],v:q[4],lo:q[1],hi:q[2],ny:two?yt+8:yt+rh/2,y:two?yt+16+bh/2+1:yt+rh/2,x0:X(a),x1:X(b),h:bh,yt}}),pl,mx,X,rh}}
 /* 図の下の 3 行．膨張比／圧縮比が 1.05 より大きいときをミラーサイクル（過膨張）と書く（SPEC-33 C の 1） */
 function lossFoot(r){const q=r.epe/r.epc;return[`膨張比／圧縮比 ${q.toFixed(2)}（${q>1.05?'膨張比のほうが大きい：ミラーサイクルの向き':q<.95?'膨張比のほうが小さい':'ほぼ等しい'}）`,`等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}° ATDC，壁への熱 Q_w/Q_f ${(r.qw*100).toFixed(1)} %`,`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°，燃えた燃料の割合 ξ ${r.xi.toFixed(3)}`]}
