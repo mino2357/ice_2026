@@ -95,6 +95,8 @@ if(P.bench===1){const V=s.V,kmh=V.v*3.6,tm=V.t100===V.t100?V.t100.toFixed(1)+' s
 if(s.mode===0){const sat=s.al>=P.amax-1e-12?' 全開':s.al<=0?' 全閉':s.al<=almin(P)+1e-12?' 下限':'';return[`スロットル制御｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${TH(s.al)}${sat}`,`${R('f','固定')} ${FF(s.fc,s.y[1])}`,sp]}
 const Tm=dynMax(P,s.y[1]),sat=s.fc>=Tm-1e-12?' 上限':s.fc<=-Tm+1e-12?' 上限':'';return[`${s.fuel?'動力計制御':'モータリング'}｜${R('g','目標')} ${P.nt} → ${NT}`,`${R('m','操作量')} ${FF(s.fc,s.y[1])}${sat}`,`${R('f','固定')} ${TH(P.alm)}`,sp]}
 /* SPEC-30 の 10：ページ「噴射」のパネルの文字 */
+/* ページ「冷却」のパネルの文字（画面の文書 SPEC-18 D の 4）：冷却水温，サーモスタットの開度，冷却水へ渡す熱と放熱（前のサイクルの平均），壁温，排気温度 */
+function coolText(c){const P=c.P,y=c.s.y,M=c.lastM;if(P.gam!==2)return'熱物性が「化学平衡」のときに計算します';const x=Math.min(1,Math.max(0,(y[50]-P.Tth)/K.dTth)),kw=v=>v===v&&v!=null?(v/1e3).toFixed(2):'–',tx=M&&M.Tx===M.Tx?M.Tx.toFixed(0):'–';return`冷却水 ${y[50].toFixed(1)} K，サーモスタット ${(x*100).toFixed(0)} %，冷却水へ ${kw(M&&M.Pcool)} kW，放熱 ${kw(M&&M.Prad)} kW，壁 ${y[5].toFixed(0)} K，排気 ${tx} K`}
 function injText(c){const s=c.s,P=c.P,ph=s.phc===s.phc&&s.phc!=null?`φ_c ${s.phc.toFixed(3)}`:'φ_c –';if(P.gam!==2)return'ポート噴射（予混合気．熱物性が「化学平衡」のときだけ噴射方式を選べます）';if(P.inj!==1)return`ポート噴射（予混合気）  ${ph}`;const J=s.inj;if(!(J.m>0))return`直噴  噴射なし  ${ph}`;const a=md4(J.th0)/D,b=a+J.dth/D;return`噴射 ${a.toFixed(0)}°〜${b.toFixed(1)}°（幅 ${(J.dth/D).toFixed(1)}°${J.dth>=300*D-1e-9?'．幅が上限：インジェクタ流量を超える率':''}）  ${(J.m*1e6).toFixed(2)} mg  ${ph}`}
 /* グラフの列数（REQ-15 H.4）：Canvas が横長なら横に並べる */
 /* 列数（GUI SPEC-15 G の 4）：横長は幅 320 px ごとに 1 列．どちらでも，1 つのグラフの高さが 100 px 以上になるように列を増やす（1 列の幅 160 px 以上の範囲で） */
@@ -203,7 +205,7 @@ function sysSpec(c,m,W,H,g){const k=Math.min(W/SYW,H/SYH),ox=(W-SYW*k)/2,oy=(H-S
   const tt=md4(y[0]),ph=['吸気','圧縮','膨張','排気'][Math.floor(tt/PI)%4];
   tag('vex',396,PE[1]/k-oy/k+14,['排気弁',Cl('d',nvs+(c.V.e.d*1e3).toFixed(0),0,'mm'),Cl('L',(q.Le*1e3).toFixed(1),T_.L,'mm')],SYC.exl,'r');
   tag('cyl',396,PE[1]/k-oy/k+64,['筒内',Cl('p',(y[2]/1e6).toFixed(3),T_.pc,'MPa'),Cl('T',(Xc.T||0).toFixed(0),T_.T,'K'),Cl('θ',(tt/D).toFixed(0),T_.th,`°（${ph}）`)],'#e8ecf2','r');
-  if(EX)tag('exp',332,98,['排気管',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('d_e',(P.dex*1e3).toFixed(0),0,'mm'),Cl('p_pe',kPa(y[14]),T_.p,'kPa')],SYC.exl,'r');
+  if(EX)tag('exp',332,98,['排気管',Cl('L_e',P.Lex.toFixed(2),0,'m'),Cl('d_e',(P.dex*1e3).toFixed(0),0,'mm'),Cl('p_pe',kPa(y[14]),T_.p,'kPa'),Cl('T_X',(P.gam===2?y[49]:TX).toFixed(0),T_.T,'K')],SYC.exl,'r');
   else tag('back',396,PE[1]/k-oy/k-36,['背圧',`Δp_ex ${(P.dpx/1e3).toFixed(1)} kPa`],SYC.exl,'r');
   if(EX)tag('out',396,2,['出口（大気開放）',Cl('A_e',(PI/4*P.dex*P.dex*1e6).toFixed(0),0,'mm²'),Cl('ṁ_e',gs(Xc.mep||0),T_.m,'g/s')],SYC.exl,'r');
   {const o=tag('dyno',396,(CC[1]-oy)/k+46,['動力計（電動）',Cl(s.fe<0?'駆動':'吸収',Math.abs(s.fe).toFixed(1),T_.Td,'N·m'),Cl('P_d',(Math.abs(s.fe*y[1])/1e3).toFixed(2),T_.Pb,'kW'),Cl('定格',`${P.Tr.toFixed(0)} N·m，${(P.Pr/1e3).toFixed(0)}`,0,'kW')],'#74c0fc','r');o.y=Math.min(o.y,Y(500)-4*k-o.h)}
@@ -322,6 +324,15 @@ function drawLoss(g,W,H,r,col,msg){g.font='12px system-ui,sans-serif';g.textBase
  S.rows.forEach((q,i)=>{const c=q.kind==='l'?'#e8590c':q.kind==='g'?'#37b24d':q.kind==='t'?col.mu:col.ac;g.fillStyle=c;g.fillRect(q.x0,q.y-q.h/2,Math.max(1,q.x1-q.x0),q.h);if(i&&i<S.rows.length-1){g.strokeStyle=col.mu;g.setLineDash([2,2]);g.beginPath();g.moveTo(S.X(q.hi),q.y-S.rh+q.h/2);g.lineTo(S.X(q.hi),q.y-q.h/2);g.stroke();g.setLineDash([])}
   g.fillStyle=col.fg;if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}g.textAlign='left';g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${pc(q.hi,1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)});
  g.fillStyle=col.mu;g.textAlign='left';g.fillText(`等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}° ATDC，壁への熱 Q_w/Q_f ${pc(r.qw,1)} %`,4,H-22);g.fillText(`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°，燃えた燃料の割合 ξ ${r.xi.toFixed(3)}`,4,H-7);return S}
+/* 熱勘定：横棒の図（SPEC-33 C の 4）．r は LossBk の結果．負の値は 0 から左へ描く */
+const HBN=['正味仕事','摩擦・補機','冷却水へ（冷却損失）','壁の蓄熱','排気（顕熱）','未燃（化学エネルギー）','その他（収支の残り）'];
+function hbSpec(r,W,H){const h=r.hb,v=[h.wb,h.wfa,h.qc,h.dw,h.hx,h.ech,h.oth].map(x=>x/h.qf),nr=v.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),260),pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-62},rh=pl.h/nr,
+ lo=Math.min(0,Math.floor(Math.min(...v)*10)/10),hi=Math.max(.1,Math.ceil(Math.max(...v)*10)/10),X=x=>pl.x+pl.w*(x-lo)/(hi-lo),bh=Math.min(20,rh*(two?.4:.62));
+ return{two,lo,hi,X,pl,rh,rows:v.map((x,i)=>{const yt=pl.y+rh*i;return{name:HBN[i],v:x,ny:two?yt+8:yt+rh/2,y:two?yt+16+bh/2+1:yt+rh/2,x0:X(0),x1:X(x),h:bh,yt}})}}
+function drawHB(g,W,H,r,col,msg){g.font='12px system-ui,sans-serif';g.textBaseline='middle';if(!r||!r.hb){g.fillStyle=col.mu;g.textAlign='center';g.fillText(msg||'',W/2,H/2);return null}
+ const S=hbSpec(r,W,H);g.strokeStyle=col.ln;g.lineWidth=1;for(let v=S.lo;v<=S.hi+1e-9;v+=.1){const x=S.X(v);g.beginPath();g.moveTo(x,S.pl.y);g.lineTo(x,S.pl.y+S.pl.h);g.stroke();g.fillStyle=col.mu;g.textAlign='center';g.fillText(String(Math.round(v*100)).replace('-','−'),x,S.pl.y+S.pl.h+9)}g.fillText('燃料の熱 Q_f に対する割合（%）',S.pl.x+S.pl.w/2,S.pl.y+S.pl.h+22);
+ S.rows.forEach((q,i)=>{g.fillStyle=i===0?col.ac:i===2?'#1c7ed6':i===4?'#e8590c':col.mu;const a=Math.min(q.x0,q.x1);g.fillRect(a,q.y-q.h/2,Math.max(1,Math.abs(q.x1-q.x0)),q.h);g.fillStyle=col.fg;if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}g.textAlign='left';g.fillText(`${q.v<0?'−':''}${Math.abs(q.v*100).toFixed(1)} %`,Math.max(q.x0,q.x1)+4,q.y)});
+ g.fillStyle=col.mu;g.textAlign='left';g.fillText(`Q_f ${r.hb.qf.toFixed(0)} J/サイクル，排気温度 ${r.Tx===r.Tx?r.Tx.toFixed(0):'–'} K，冷却水 ${r.Tc.toFixed(1)} K`,4,H-22);g.fillText(`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°，燃えた燃料の割合 ξ ${r.xi.toFixed(3)}`,4,H-7);return S}
 /* ===== VVT マップ（SPEC-34 A） ===== */
 /* 双一次補間：G[j][i] は (xs[i], ys[j]) の値．範囲の外は端に寄せる．4 隅のどれかが未定義（NaN）なら未定義 */
 function bil2(G,xs,ys,a,b){const n=xs.length,m=ys.length,fx=Math.min(n-1,Math.max(0,(a-xs[0])/(xs[n-1]-xs[0])*(n-1))),fy=Math.min(m-1,Math.max(0,(b-ys[0])/(ys[m-1]-ys[0])*(m-1))),i=Math.min(n-2,Math.floor(fx)),j=Math.min(m-2,Math.floor(fy)),u=fx-i,v=fy-j;return(G[j][i]*(1-u)+G[j][i+1]*u)*(1-v)+(G[j+1][i]*(1-u)+G[j+1][i+1]*u)*v}

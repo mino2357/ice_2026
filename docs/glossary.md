@@ -22,7 +22,7 @@
 | $t$ | 時間 | s | 独立変数 | 2.1 |
 | $\theta$ | クランク角 | rad | 1 サイクル内の角度 $\theta \in [0, 4\pi)$．$\theta = 0$：吸気上死点，$\pi$：吸気下死点，$2\pi$：圧縮上死点，$3\pi$：膨張下死点．サイクルの終端で $4\pi$ を引く | 2.1 |
 
-### 2.2 状態ベクトル $\mathbf{y} \in \mathbb{R}^{21}$
+### 2.2 状態ベクトル $\mathbf{y} \in \mathbb{R}^{23}$
 
 $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分する．$\mathbf{u}$ は入力（$\alpha$，$T_{\text{dyno}}$，点火時期 $s$ など）で，積分の 1 ステップの間は一定．
 
@@ -33,14 +33,14 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 3 | $p$ | 筒内圧 | Pa | 開いた系の第一法則と状態方程式から導く筒内圧の式 | SPEC-09 |
 | 4 | $m$ | 筒内ガスの全質量 | kg | $\dfrac{dm}{dt} = \dot m_{\text{in}} - \dot m_{\text{ex}}$ | SPEC-06 |
 | 5 | $m_u$ | 筒内の未燃ガス（新気）の質量 | kg | $\dfrac{dm_u}{dt} = \dot m_{u,\text{in}} - \dot m_{u,\text{ex}} - r$ | SPEC-06 |
-| 6 | $T_w$ | シリンダ壁の平均温度 | K | $C_{w,\text{th}}\dfrac{dT_w}{dt} = \dot Q_{\text{wall}} - G_{\text{cool}}(T_w - T_{\text{cool}})$ | SPEC-08 |
+| 6 | $T_w$ | シリンダ壁の平均温度 | K | $C_{w,\text{th}}\dfrac{dT_w}{dt} = \dot Q_{\text{wall}} - G_{\text{cool}}(T_w - T_{\text{cool}})$（化学平衡のモデルでは $\dot Q_{\text{wall}} + \dot Q_{pw} - \dot Q_{\text{cool}}$） | SPEC-08 |
 | 7 | $p_{\text{in}}$ | 吸気マニホールド圧 | Pa | $\dfrac{dp_{\text{in}}}{dt} = \dfrac{RT_{\text{in}}}{V_{\text{in}}}(\dot m_{\text{th}} - \dot m_{\text{dn}})$ | SPEC-05 |
 | 8 | $m_{b,\text{in}}$ | マニホールド内の既燃ガスの質量 | kg | 流れが上流側の組成で運ぶ | SPEC-05，25 |
 | 9 | $\dot m_r$ | 吸気ランナの質量流量（マニホールド → ポートが正） | kg/s | $\dfrac{d\dot m_r}{dt} = \dfrac{A_r}{L_r}(p_{\text{in}} - p_p) - \dfrac{\zeta\,\dot m_r\lvert\dot m_r\rvert}{2\rho_r A_r L_r}$ | SPEC-25 |
 | 10 | $p_p$ | 吸気ポート圧 | Pa | $\dfrac{dp_p}{dt} = \dfrac{\gamma_0 RT_{\text{in}}}{V_p}(\dot m_r - \dot m_{\text{in}})$ | SPEC-25 |
 | 11 | $m_{b,p}$ | 吸気ポート内の既燃ガスの質量 | kg | $\dfrac{dm_{b,p}}{dt} = \dot m_r Y_r - \dot m_{\text{in}}Y_v$ | SPEC-25 |
 | 12 | $\dot m_e$ | 排気管の質量流量（ポート → 出口が正） | kg/s | $\dfrac{d\dot m_e}{dt} = \dfrac{A_e}{L_e}(p_{pe} - p_{\text{atm}}) - \dfrac{(\zeta_x + 1)\,\dot m_e\lvert\dot m_e\rvert}{2\rho_e A_e L_e}$ | SPEC-27 |
-| 13 | $p_{pe}$ | 排気ポート圧 | Pa | $\dfrac{dp_{pe}}{dt} = \dfrac{\gamma_0 RT_X}{V_{pe}}(\dot m_{\text{ex}} - \dot m_e)$ | SPEC-27 |
+| 13 | $p_{pe}$ | 排気ポート圧 | Pa | $\dfrac{dp_{pe}}{dt} = \dfrac{\gamma_0 RT_X}{V_{pe}}(\dot m_{\text{ex}} - \dot m_e)$（化学平衡のモデルでは排気ポートの質量とエネルギーの式） | SPEC-27 |
 | 14 | $p_{te}$ | 排気管の出口側の圧力（大気開放では使わない） | Pa | $\dfrac{dp_{te}}{dt} = 0$（SPEC-27 の 8 の内部の値で出口に容積を置いたときだけ $\dfrac{RT_X}{V_m}(\dot m_e - \dot m_t)$） | SPEC-27 |
 | 15 | $E_{\text{in}}$ | マニホールドの余剰エンタルピー | J | $\dfrac{dE_{\text{in}}}{dt} = -\dot m_r\varepsilon_r + \min(0, \dot m_{\text{th}})\,\varepsilon_{\text{in}}$（ランナ ON） | SPEC-05，25 |
 | 16 | $E_p$ | 吸気ポートの余剰エンタルピー | J | $\dfrac{dE_p}{dt} = \dot m_r\varepsilon_r - \dot m_{\text{in}}^+\varepsilon_p + \dot X_o$ | SPEC-25 |
@@ -49,8 +49,10 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 19 | $m_l$ | 筒内の液体の燃料の質量（同） | kg | $\dfrac{dm_l}{dt} = \dot m_{\text{inj}} - \dot m_{\text{ev}}$ | SPEC-30 |
 | 20 | $m_{f,\text{in}}$ | 吸気マニホールド内の燃料蒸気の質量（同） | kg | 既燃ガスの追跡と同じ形 | SPEC-30 |
 | 21 | $m_{f,p}$ | 吸気ポート内の燃料蒸気の質量（同） | kg | 同上 | SPEC-30 |
+| 22 | $T_X$ | 排気ポートのガスの温度（排気温度．同） | K | $\dfrac{d}{dt}\left[m_X(e_X - h_b^{\text{ref}})\right] = \dot H_{xs} - \dot H_x - \dot Q_{pw}$ と $p_{pe}V_{pe} = m_X R_X T_X$ | SPEC-27 |
+| 23 | $T_c$ | 冷却水温（同） | K | $C_c\dfrac{dT_c}{dt} = \dot Q_{\text{cool}} - \dot Q_{\text{rad}}$ | SPEC-08 |
 
-### 2.3 補助積分 $\mathbf{z} \in \mathbb{R}^{28}$
+### 2.3 補助積分 $\mathbf{z} \in \mathbb{R}^{36}$
 
 状態と同じ Runge–Kutta の重みで同時に積分する量．$\mathbf{f}$ には現れない．サイクルの集計と保存則の検査に使う．
 
@@ -66,6 +68,9 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $P_{pe}$，$\Upsilon$ | 排気弁の下流圧と吸気管既燃率の時間積分 | Pa·s，s | $\displaystyle\int p_{pe}\,dt$（排気系 OFF では $p_{\text{atm}} + \Delta p_{\text{ex}}$ の積分），$\displaystyle\int Y_{b,\text{in}}\,dt$ |
 | $H_e$ | 気化した燃料が持ち込んだエネルギー | J | $\displaystyle\int\dot m_{\text{ev}}\left[h_f(T_l) - h_{fg}\right]dt$ |
 | $F_{\text{inj}}$，$F_{\text{ev}}$，$F_{\text{iv}}$，$F_{\text{ex}}$，$F_b$ | 噴いた燃料，気化した燃料，吸気弁を通った燃料蒸気（流入が正），排気弁から出た燃料蒸気，燃えた燃料 | kg | $\displaystyle\int\dot m_{\text{inj}}\,dt$，$\displaystyle\int\dot m_{\text{ev}}\,dt$，…，$\displaystyle\int r\psi\,dt$ |
+| $Q_{pw}$，$Q_{\text{cool}}$，$Q_{\text{rad}}$ | 排気ポートの壁への熱，壁から冷却水への熱，放熱器が捨てた熱 | J | $\displaystyle\int\dot Q_{pw}\,dt$，$\displaystyle\int\dot Q_{\text{cool}}\,dt$，$\displaystyle\int\dot Q_{\text{rad}}\,dt$ |
+| $H_{xs}$，$H_x$，$E_{ch}$ | 排気弁から排気ポートへ入った顕熱，排気管へ出た顕熱，排気弁を通った化学エネルギー | J | $\displaystyle\int\dot H_{xs}\,dt$，$\displaystyle\int\dot H_x\,dt$，$\displaystyle\int\dot E_{ch}\,dt$（SPEC-27 の 9，SPEC-33 の E） |
+| $\Theta_x$，$M_x^+$ | 排気管へ出たガスの温度の質量積分と質量 | K·kg，kg | $\displaystyle\int\dot m_e^+ T_X\,dt$，$\displaystyle\int\dot m_e^+\,dt$ |
 
 ### 2.4 幾何（スライダ・クランク機構と弁）
 
@@ -152,8 +157,15 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $Y_r$，$\varepsilon_r$，$Y_v$ | ランナの流れ，吸気弁の流れに乗る値（上流側の値） | – | $\dot m_r \ge 0$ でマニホールドの値，$< 0$ でポートの値．$Y_v$ は $\dot m_{\text{in}} \ge 0$ で $Y_{b,p}$，$< 0$ で $1 - Y_u$ | SPEC-25 |
 | $\omega_H$ | 吸気ランナの共鳴の角振動数（弁が閉じているとき） | rad/s | $\omega_H = \sqrt{\dfrac{A_r}{L_r}\left(\dfrac{\gamma_0 RT_{\text{in}}}{V_p} + \dfrac{RT_{\text{in}}}{V_{\text{in}}}\right)}$ | SPEC-25 |
 | $L_e$，$d_e$，$A_e$，$V_{pe}$ | 排気管の長さ，内径，断面積，排気ポート容積（管の弁側の半分） | m，m，m²，m³ | $A_e = \dfrac{\pi}{4}d_e^2$，$V_{pe} = \dfrac12 A_e L_e$ | SPEC-27 |
-| $T_X$ | 排気系のガス温度（一定） | K | $T_X = 800$ | SPEC-27 |
-| $\omega_E$ | 排気管の共鳴の角振動数 | rad/s | $\omega_E = \sqrt{\dfrac{A_e}{L_e}\dfrac{\gamma_0 RT_X}{V_{pe}}}$ | SPEC-27 |
+| $T_X$，$\bar T_X$ | 排気ポートのガスの温度（排気温度），その 1 サイクルの質量平均 | K | 化学平衡のモデルでは状態（2.2 の 22），$\gamma$ のモデルと排気系 OFF では $800$ 一定．$\bar T_X = \dfrac{\Delta\Theta_x}{\Delta M_x^+}$ | SPEC-27 |
+| $m_X$，$e_X$，$R_X$，$\gamma_X$ | 排気ポートのガスの質量，内部エネルギー，気体定数，比熱比 | kg，J/kg，J/(kg·K)，– | $m_X = \dfrac{p_{pe}V_{pe}}{R_X T_X}$，$e_X = e_b(T_X, p_{pe}, \zeta^*)$，$R_X = R_b(T_X, p_{pe}, \zeta^*)$，$\gamma_X = 1 + \dfrac{R_X}{c_{v,X}}$ | SPEC-27 |
+| $T_{\text{ref}}$，$h_b^{\text{ref}}$ | 顕熱の基準温度，その温度の既燃ガスのエンタルピー | K，J/kg | $T_{\text{ref}} = T_{\text{amb}} = 298.15$，$h_b^{\text{ref}} = h_b(T_{\text{ref}}, p^\circ, \zeta^*)$ | SPEC-27 |
+| $h_X^s$，$h_c^s$ | 排気ポートのガスの顕熱，筒内のガスの顕熱（単位質量） | J/kg | $h_X^s = e_X + R_X T_X - h_b^{\text{ref}}$，$h_c^s = \sum_c Y_c\left[h_c(T) - h_c(T_{\text{ref}})\right]$ | SPEC-27 |
+| $\dot H_{xs}$，$\dot H_x$ | 排気弁から排気ポートへ入る顕熱，排気管へ出る顕熱 | W | $\dot m_{\text{ex}}h_c^s$（逆流は $\dot m_{\text{ex}}h_X^s$），$\dot m_e h_X^s$ | SPEC-27 |
+| $\dot Q_{pw}$，$h_p$，$A_{px}$，$L_{px}$ | 排気ポートの壁への熱流量，熱伝達率，内面積，長さ | W，W/(m²·K)，m²，m | $\dot Q_{pw} = h_p A_{px}(T_X - T_w)$，$h_p = \dfrac{\text{Nu}\,k_X}{d_e}$，$A_{px} = \pi d_e L_{px}$，$L_{px} = B$ | SPEC-27 |
+| $\text{Nu}$，$\text{Re}$，$\text{Pr}$ | 排気ポートの Nusselt 数，Reynolds 数，Prandtl 数 | – | $\text{Nu} = 0.023\,\text{Re}^{0.8}\text{Pr}^{0.3}$，$\text{Re} = \max\left(\dfrac{\dot m_p d_e}{A_e\mu_X}, 2300\right)$，$\text{Pr} = 0.7$ | SPEC-27 |
+| $\dot m_p$，$\mu_X$，$k_X$ | ポートを通る流量の代表，粘性係数，熱伝導率 | kg/s，Pa·s，W/(m·K) | $\dot m_p = \dfrac{\lvert\dot m_{\text{ex}}\rvert + \lvert\dot m_e\rvert}{2}$，$\mu_X = \dfrac{1.458 \times 10^{-6}\,T_X^{1.5}}{T_X + 110.4}$，$k_X = \dfrac{c_{p,X}\mu_X}{\text{Pr}}$ | SPEC-27 |
+| $\omega_E$ | 排気管の共鳴の角振動数 | rad/s | $\omega_E = \sqrt{\dfrac{A_e}{L_e}\dfrac{\gamma_X R_X T_X}{V_{pe}}}$（$\gamma$ のモデルでは $\gamma_X = \gamma_0$，$R_X = R$） | SPEC-27 |
 | $\Delta\bar p_{\text{ex}}$ | 排気背圧（サイクル平均） | Pa | $\Delta\bar p_{\text{ex}} = \dfrac{\Delta P_{pe}}{t_c} - p_{\text{atm}}$ | SPEC-14，27 |
 
 ### 2.7 燃焼
@@ -182,6 +194,11 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | $w$ | 代表ガス速度 | m/s | $w = C_1 c_m + C_2\dfrac{V_d T_r}{p_r V_r}\max(0,\ p - p_{\text{mot}})$ | SPEC-08 |
 | $p_{\text{mot}}$ | 燃焼が無いとしたときの圧力 | Pa | $p_{\text{mot}} = p_r\left(\dfrac{V_r}{V}\right)^{1.33}$（$(p_r, V_r, T_r)$：IVC の時点の状態） | SPEC-08 |
 | $\dot Q_{\text{wall}}$ | 壁への熱流量 | W | $\dot Q_{\text{wall}} = h_c\,A_w\,(T - T_w)$ | SPEC-08 |
+| $C_{w,\text{th}}$，$G_{\text{cool}}$，$T_{\text{cool}}$ | 壁の熱容量，壁から冷却水への熱コンダクタンス，冷却水温（$\gamma$ のモデル） | J/K，W/K，K | $1500$，$15$，$360$（一定） | SPEC-08 |
+| $\dot Q_{\text{cool}}$ | 壁から冷却水への熱流量 | W | $\dot Q_{\text{cool}} = G_{\text{cool}}(T_w - T_c)$ | SPEC-08 |
+| $\dot Q_{\text{rad}}$，$x_{th}$ | 放熱器が捨てる熱流量，サーモスタットの開度 | W，– | $\dot Q_{\text{rad}} = x_{th}UA_r(T_c - T_{\text{amb}})$，$x_{th} = \text{clamp}\left(\dfrac{T_c - T_{th}}{\Delta T_{th}}, 0, 1\right)$ | SPEC-08 |
+| $C_c$，$UA_r$ | 冷却水の熱容量，放熱器の熱通過率（全開） | J/K，W/K | $C_c = 5600$，$UA_r$ は設定（既定 $500$） | SPEC-08 |
+| $T_{c0}$，$T_{th}$，$\Delta T_{th}$ | 冷却水の初期温度，サーモスタットの開き始めの温度，全開までの温度幅 | K | 設定（既定 $360$，$358$），$\Delta T_{th} = 12$ | SPEC-08 |
 
 ### 2.9 回転運動，摩擦，動力計
 
@@ -348,6 +365,10 @@ $\dfrac{d\mathbf{y}}{dt} = \mathbf{f}(\mathbf{y}; \mathbf{u})$ を時間積分�
 | 燃え残り | 燃料のうち燃えなかった分による損失（燃焼効率 $\eta_c$，燃え終わるまでに気化しなかった燃料）．$\eta_A - \eta_U$ |
 | 熱解離（熱解離損） | 高温の既燃ガスで CO$_2$，H$_2$O の一部が CO，H$_2$，O$_2$，OH などに分かれて熱を吸うこと．上死点の温度と圧力が下がり，その分の仕事が減る．$\eta_F - \eta_{FA}$ |
 | 冷却損失 | 壁への熱伝達で失う仕事．壁へ逃げた熱 $Q_w$ のうち，仕事に変わり得た分だけが損失になる |
+| 熱勘定（ヒートバランス） | 燃料の熱 $Q_f$ が，正味仕事，摩擦・補機，冷却水へ，壁の蓄熱，排気（顕熱），未燃（化学エネルギー），その他に分かれる割合（SPEC-33 の E）．損失の内訳が「失った仕事」を数えるのに対し，熱勘定は熱そのものの行き先を数える |
+| 化学エネルギー（$\chi_c$，$E_{ch}$） | 完全に燃えた状態（CO$_2$，H$_2$O（気体），N$_2$，O$_2$．温度 $T_{\text{ref}}$）を基準にしたエンタルピー．燃料蒸気では低位発熱量 $H_u + h_{fg}$，既燃ガスでは凍結した CO，H$_2$ などと未反応の燃料の分．$\dot E_{ch}$ は排気弁を通る流れが運ぶ量 |
+| 顕熱 | 組成を変えずに温度 $T_{\text{ref}}$ まで冷やしたときに出る熱（平衡の既燃ガスでは，冷えるときの再結合の熱を含む） |
+| サーモスタット | 冷却水温が開き始めの温度 $T_{th}$ を超えると開き，放熱器へ冷却水を流す弁．閉じている間はバイパスを回る |
 | ポンピング損失 | 吸気と排気の行程の仕事（負）．$\eta_{ig} - \eta_i$ |
 | 吹き出し損失 | 排気弁が下死点より前に開くことで失う膨張の仕事 |
 | VVT マップ | 作用角を固定し，吸気位相と排気位相の 2 次元で，軸トルクを色，正味の燃料消費率を等高線で示した図（SPEC-34） |
