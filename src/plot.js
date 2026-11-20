@@ -314,18 +314,20 @@ function drawOptH(g,W,H,h,col,lab){g.font='12px system-ui,sans-serif';g.textBase
  let b=-Infinity;g.strokeStyle=col.fg;g.lineWidth=1.5;g.beginPath();h.forEach((q,i)=>{if(q.J>b&&q.cls==='fine')b=q.J;if(b>-Infinity){const x=X(i),y=Y(b);i&&isFinite(b)?g.lineTo(x,y):g.moveTo(x,y)}});g.stroke();
  h.forEach((q,i)=>{if(!(q.J>-Infinity))return;g.fillStyle=q.cls==='fine'?col.ac:col.mu;g.beginPath();g.arc(X(i),Y(q.J),q.cls==='fine'?2.2:1.8,0,7);g.fill()});return{pl,lo,hi,top}}
 const fmtJ=v=>Math.abs(v)<2?v.toFixed(4):v.toFixed(2);
-/* 熱効率の損失の内訳：横向きの滝の図．r は LossBk の結果 */
-function lossSpec(r,W,H){const rows=[['理論（オットー，ε '+r.eps.toFixed(1)+'）',0,r.eO,'t']];let e=r.eO;for(const [n,v] of r.L){rows.push([n,e-v,e,v>=0?'l':'g',v]);e-=v}rows.push(['正味の図示熱効率 η_i',0,r.ei,'r']);
- /* 幅が 520 px 未満では，名前を棒の上の行に置く（SPEC-33 C の 1） */
- const nr=rows.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),260),pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-62},rh=pl.h/nr,mx=Math.ceil(r.eO*10)/10,X=v=>pl.x+pl.w*Math.max(0,v)/mx,bh=Math.min(20,rh*(two?.4:.62));
- return{two,rows:rows.map((q,i)=>{const a=Math.min(q[1],q[2]),b=Math.max(q[1],q[2]),yt=pl.y+rh*i;return{name:q[0],kind:q[3],v:q[4],lo:q[1],hi:q[2],ny:two?yt+8:yt+rh/2,y:two?yt+16+bh/2+1:yt+rh/2,x0:X(a),x1:X(b),h:bh,yt}}),pl,mx,X,rh}}
-function drawLoss(g,W,H,r,col,msg){g.font='12px system-ui,sans-serif';g.textBaseline='middle';if(!r){g.fillStyle=col.mu;g.textAlign='center';g.fillText(msg||'',W/2,H/2);return null}
- const S=lossSpec(r,W,H),pc=(v,d)=>(v*100).toFixed(d);g.strokeStyle=col.ln;g.lineWidth=1;for(let v=0;v<=S.mx+1e-9;v+=.1){const x=S.X(v);g.beginPath();g.moveTo(x,S.pl.y);g.lineTo(x,S.pl.y+S.pl.h);g.stroke();g.fillStyle=col.mu;g.textAlign='center';g.fillText(Math.round(v*100)+'',x,S.pl.y+S.pl.h+9)}g.fillText('熱効率（%）',S.pl.x+S.pl.w/2,S.pl.y+S.pl.h+22);
- S.rows.forEach((q,i)=>{const c=q.kind==='l'?'#e8590c':q.kind==='g'?'#37b24d':q.kind==='t'?col.mu:col.ac;g.fillStyle=c;g.fillRect(q.x0,q.y-q.h/2,Math.max(1,q.x1-q.x0),q.h);if(i&&i<S.rows.length-1){g.strokeStyle=col.mu;g.setLineDash([2,2]);g.beginPath();g.moveTo(S.X(q.hi),q.y-S.rh+q.h/2);g.lineTo(S.X(q.hi),q.y-q.h/2);g.stroke();g.setLineDash([])}
-  g.fillStyle=col.fg;if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}g.textAlign='left';g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${pc(q.hi,1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)});
- g.fillStyle=col.mu;g.textAlign='left';g.fillText(`等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}° ATDC，壁への熱 Q_w/Q_f ${pc(r.qw,1)} %`,4,H-22);g.fillText(`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°，燃えた燃料の割合 ξ ${r.xi.toFixed(3)}`,4,H-7);return S}
+/* 熱効率の損失の内訳：横向きの滝の図（SPEC-33 の B，画面の文書 SPEC-33 C の 1）．単位は 1 サイクルあたりの熱量 [J]．r は LossBk の結果 */
+const lossDiv=mx=>{for(let k=-2;k<7;k++)for(const m of[1,2,5]){const d=m*10**k,n=mx/d;if(n>=3&&n<=9)return d}return mx/5};
+function lossSpec(r,W,H){const rows=[['理論（オットー，理想の充填）',0,r.p0,'t']];let e=r.p0;for(const [n,v] of r.PL){rows.push([n,e-v,e,/[受放]熱/.test(n)?'h':v>=0?'l':'g',v]);e-=v}rows.push(['図示仕事',0,r.pI,'r']);
+ /* 幅が 520 px 未満では，名前を棒の上の行に置く */
+ const nr=rows.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),290),pl={x:lw,y:4,w:Math.max(40,W-lw-104),h:H-74},rh=pl.h/nr,dt=lossDiv(r.p0),mx=Math.ceil(r.p0/dt-1e-9)*dt,X=v=>pl.x+pl.w*Math.max(0,v)/mx,bh=Math.min(18,rh*(two?.42:.62)),pc=v=>(v/r.Qref*100).toFixed(1);
+ return{two,dt,rows:rows.map((q,i)=>{const a=Math.min(q[1],q[2]),b=Math.max(q[1],q[2]),yt=pl.y+rh*i,ls=q[3]==='t'||q[3]==='r';return{name:q[0],kind:q[3],v:q[4],lo:q[1],hi:q[2],ny:two?yt+rh*.24:yt+rh/2,y:two?yt+rh*.5+bh/2:yt+rh/2,x0:X(a),x1:X(b),h:bh,yt,txt:ls?`${q[2].toFixed(0)} J（${pc(q[2])} %）`:`${q[4]>=0?'−':'+'}${Math.abs(q[4]).toFixed(0)} J（${pc(Math.abs(q[4]))} %）`}}),pl,mx,X,rh,
+  foot:[`図示熱効率 η_i ${(r.ei*100).toFixed(1)} %，体積効率 ${r.ev.toFixed(3)}，等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}° ATDC`,`吸気行程の受熱 ${r.qin.toFixed(1)} J，圧縮〜膨張の放熱 ${r.qout.toFixed(0)} J（割合は Q_f,ref ${r.Qref.toFixed(0)} J に対する値）`,`冷却損失 ${r.hb?(r.hb.qc/r.hb.qf*100).toFixed(1):'–'} %，N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°，ξ ${r.xi.toFixed(3)}`]}}
+function drawLoss(g,W,H,r,col,msg){g.font='12px system-ui,sans-serif';g.textBaseline='middle';if(!r||!r.PL){g.fillStyle=col.mu;g.textAlign='center';g.fillText(msg||'',W/2,H/2);return null}
+ const S=lossSpec(r,W,H);g.strokeStyle=col.ln;g.lineWidth=1;for(let v=0;v<=S.mx+1e-9;v+=S.dt){const x=S.X(v);g.beginPath();g.moveTo(x,S.pl.y);g.lineTo(x,S.pl.y+S.pl.h);g.stroke();g.fillStyle=col.mu;g.textAlign='center';g.fillText(Math.round(v)+'',x,S.pl.y+S.pl.h+8)}g.textAlign='right';g.fillText('J/サイクル',W-4,S.pl.y+S.pl.h+8);
+ S.rows.forEach((q,i)=>{const c=q.kind==='h'?'#1c7ed6':q.kind==='l'?'#e8590c':q.kind==='g'?'#37b24d':q.kind==='t'?col.mu:col.ac;g.fillStyle=c;g.fillRect(q.x0,q.y-q.h/2,Math.max(1,q.x1-q.x0),q.h);if(i&&i<S.rows.length-1){g.strokeStyle=col.mu;g.setLineDash([2,2]);g.beginPath();g.moveTo(S.X(q.hi),q.y-S.rh+q.h/2);g.lineTo(S.X(q.hi),q.y-q.h/2);g.stroke();g.setLineDash([])}
+  g.fillStyle=col.fg;if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}g.textAlign='left';const tw=g.measureText(q.txt).width,tx=Math.max(q.x1,S.X(q.hi))+4;g.fillText(q.txt,Math.min(tx,W-tw-2),S.two&&tx+tw>W-2?q.ny:q.y)});
+ g.fillStyle=col.mu;g.textAlign='left';S.foot.forEach((t,i)=>g.fillText(t,4,H-36+i*14,W-8));return S}
 /* 熱勘定：横棒の図（SPEC-33 C の 4）．r は LossBk の結果．負の値は 0 から左へ描く */
-const HBN=['正味仕事','摩擦・補機','冷却水へ（冷却損失）','壁の蓄熱','排気（顕熱）','未燃（化学エネルギー）','その他（収支の残り）'];
+const HBN=['正味仕事','機械損失（摩擦・補機）','冷却損失（冷却水へ）','壁の蓄熱','排気損失（顕熱）','未燃損失（化学エネルギー）','その他（収支の残り）'];
 function hbSpec(r,W,H){const h=r.hb,v=[h.wb,h.wfa,h.qc,h.dw,h.hx,h.ech,h.oth].map(x=>x/h.qf),nr=v.length,two=W<520,lw=two?6:Math.min(Math.max(150,W*.42),260),pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-62},rh=pl.h/nr,
  lo=Math.min(0,Math.floor(Math.min(...v)*10)/10),hi=Math.max(.1,Math.ceil(Math.max(...v)*10)/10),X=x=>pl.x+pl.w*(x-lo)/(hi-lo),bh=Math.min(20,rh*(two?.4:.62));
  return{two,lo,hi,X,pl,rh,rows:v.map((x,i)=>{const yt=pl.y+rh*i;return{name:HBN[i],v:x,ny:two?yt+8:yt+rh/2,y:two?yt+16+bh/2+1:yt+rh/2,x0:X(0),x1:X(x),h:bh,yt}})}}

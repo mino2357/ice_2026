@@ -6,6 +6,6 @@ const {mkP,Core,D,LossBk}=require('./node_core').load({ret:'LossBk'}),o=JSON.par
 if(o.alm!=null)o.alm*=D;const c=new Core({...mkP(),cvar:0,...o});c.start();while(c.s.t<20)c.step();
 const t0=Date.now(),L=new LossBk(c);while(!L.run(1e9));const r=L.res,f=v=>(v*100).toFixed(2);if(!r.ok){console.log(r.why);process.exit(1)}
 console.log(`N̄ ${r.N.toFixed(0)} rpm，開度 ${(r.al/D).toFixed(1)}°，ε ${r.eps}，計算 ${Date.now()-t0} ms`);
-console.log(`理論（オットー） ${f(r.eO)} %`);for(const [n,v] of r.L)console.log(`  − ${n}：${f(v)} %pt`);console.log(`正味の図示熱効率 ${f(r.ei)} %（機関の η_i ${f(r.eiM)} %）`);
+console.log(`理論（オットー，理想の充填） ${r.p0.toFixed(1)} J`);for(const [n,v] of r.PL)console.log(`  − ${n}：${v.toFixed(1)} J（${f(v/r.Qref)} %）`);console.log(`図示仕事 ${r.pI.toFixed(1)} J`);console.log(`正味の図示熱効率 ${f(r.ei)} %（機関の η_i ${f(r.eiM)} %）`);
 console.log(`段：A ${f(r.eA)}，FA ${f(r.eFA)}，t ${f(r.et)}，h ${f(r.eh)}，ig ${f(r.eig)} %．等容度 ${r.glh.toFixed(3)}，CA50 ${r.ca50.toFixed(1)}°，Q_w/Q_f ${f(r.qw)} %`);
 console.log(`和の差 ${(r.eO-r.L.reduce((s,q)=>s+q[1],0)-r.ei).toExponential(2)}，EVO の筒内圧：実際 ${(r.pE/1e3).toFixed(4)} kPa，段 h ${(r.pEh/1e3).toFixed(4)} kPa（相対 ${(r.pEh/r.pE-1).toExponential(2)}）`);

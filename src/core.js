@@ -531,8 +531,8 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
  *gen(){const c=this.c,s=c.s;let k=0;const st=()=>{c.step();return(++k&3)===0};
   let cy=s.cyc;while(s.cyc===cy){if(st())yield}
   /* 実際のサイクル */
-  cy=s.cyc;const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31];let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN;
-  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];bI=bf(c);ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]}}if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c)}if((++k&3)===0)yield}
+  cy=s.cyc;const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31],st0=c.clone(),qw0=s.y[32];let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN,qwI=NaN,qwE=NaN,maI=NaN;
+  while(s.cyc===cy){const n2=s.evn[2],n3=s.evn[3];c.step();if(s.cyc!==cy)break;if(s.evn[2]!==n2&&!rep){rep=c.clone();zI=s.y[19];bI=bf(c);ivc={m:s.y[3],T:s.I0.T,V:s.I0.V,th:s.y[0]};qwI=s.y[32];maI=s.mah}if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c);qwE=s.y[32]}if((++k&3)===0)yield}
   const M=c.lastM,C={...s.C},G=c.G;if(!rep||!M||!(M.ei>0)||!C.on)return{ok:false,why:'燃焼したサイクルが得られない'};
   const Qf=M.W/M.ei,W180=zI-z0,xi=d=>SPC?K.etac*d*K.Hu/Qf:d/Qf; /* 燃えた燃料の熱の割合 ξ（SPEC-33 A）：化学平衡では既燃の側へ移った燃料 × η_c，ほかは発熱の積分 */
   /* 再計算（弁を閉じ，点火の処理をしない） */
@@ -540,11 +540,15 @@ class LossBk{constructor(c0){const c=this.c=c0.clone();c.P.cvar=0;c.fixw=1;c.fix
    /* 段 F の間だけ，既燃ガスの表を解離の無いものに替える（1 ステップごとに戻す．運転中の機関と交互に進むため） */
    while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){const n3=q.s.evn[3];if(nd)GAS.nd(1);try{q.step()}finally{if(nd)GAS.nd(0)}if(q.s.evn[3]!==n3)pe=q.s.y[2];if((++k&3)===0)yield}R[nm]={W:q.s.y[19]-zs,pe,xi:xi(bf(q)-b0)}}
   if(!R.F)R.F=R.FA;
+  /* 段 R：吸気の受熱の再計算．実際のサイクルの始めから，壁面熱伝達を無くして IVC まで進め，IVC の空気の質量を求める（SPEC-33 の A） */
+  let maR=NaN;if(SPC){const q=st0.clone();q.P.cw=0;const n2=q.s.evn[2];while(q.s.evn[2]===n2&&q.s.cyc===st0.s.cyc){q.step();if((++k&3)===0)yield}maR=q.s.mah}
   const aw=x=>(W180+airW(ivc.m,ivc.T,ivc.V,G.Vc,G.Vc+G.Vd,x*Qf))/Qf,xiT=xi(bE_-bI);if(!(xiT>.05)||!(R.F.xi>.05)||!(R.FA.xi>.05))return{ok:false,why:'燃えた燃料が少なすぎる'};
   /* 瞬時燃焼の段は，燃えた燃料の量が実際と違う（気化の途中で燃やす）ので，同じ熱の空気標準との比で換算する（SPEC-33 A） */
   const eO=1-Math.pow(G.eps,1-LBK.g),eA=aw(1),eU=aw(xiT),eF=eU*((W180+R.F.W)/Qf)/aw(R.F.xi),eFA=eU*((W180+R.FA.W)/Qf)/aw(R.FA.xi),et=(W180+R.t.W)/Qf,eh=(W180+R.h.W)/Qf,eig=M.Wg/Qf,ei=M.W/Qf;
-  const L=[['吸気弁の閉じる時期（有効圧縮比）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['燃焼の遅れ（等容度）',eFA-et],['冷却損失',et-eh],['排気弁の開く時期（吹き出し）',eh-eig],['ポンピング',eig-ei]];
-  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei,hb:M.hb,Tx:M.Tx,Tc:M.Tc}}}
+  /* 効率の段（熱効率の差）と，1 サイクルあたりの熱量 [J] の段（SPEC-33 の B）．理想の充填 m_ref = ρ_a V_d の燃料の熱 Q_f,ref を基準にする */
+  const L=[['有効圧縮比（吸気弁の閉じる時期）',eO-eA],['燃え残り（燃焼効率・気化の遅れ）',eA-eU],['比熱の温度変化と組成',eU-eF],['熱解離',eF-eFA],['時間損失（燃焼の遅れ）',eFA-et],['圧縮〜膨張の放熱（ガス → 壁）',et-eh],['吹き出し損失（排気弁の開く時期）',eh-eig],['ポンプ損失',eig-ei]];
+  const Vd=G.Vd,mref=c.P.pa/(GAS.Ra*TA)*Vd,Qref=c.P.phi/GAS.AF*mref*K.Hu,rR=maR/maI,PL=[['吸気の受熱（壁 → ガス）',eO*Qf*(rR-1)],['充填の不足（流れの抵抗・弁時期・残留ガス）',eO*(Qref-Qf*rR)],...L.map(q=>[q[0],q[1]*Qf])];
+  return{ok:true,eO,eA,eU,eF,eFA,et,eh,eig,ei,L,xi:xiT,xiF:R.F.xi,xiFA:R.FA.xi,eFr:(W180+R.F.W)/Qf,eFAr:(W180+R.FA.W)/Qf,glh:glh(G,C),ca50:M.ca50,qw:M.Qw/Qf,N:this.N0,al:this.al0,eps:G.eps,Qf,W180,pE,pEh:R.h.pe,eiM:M.ei,hb:M.hb,Tx:M.Tx,Tc:M.Tc,PL,p0:eO*Qref,pI:M.W,Qref,mref,maI,maR,ev:maI/mref,qin:-(qwI-qw0),qout:qwE-qwI}}}
 /* ===== VVT マップ（SPEC-34） ===== */
 const VVM={ph:[-40,-30,-20,-10,0,10,20,30,40],lo:-40,hi:40};
 /* 格子の順序（SPEC-34 B の 2）：段階 1（添字 0，4，8），段階 2（偶数），段階 3（残り）．各段階の中は行ごとに向きを変える．[i（φin の添字），j（φex の添字），段階] */
