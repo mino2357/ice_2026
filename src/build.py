@@ -29,6 +29,10 @@ def md2doc(name,key):
         if lv in(2,3):toc.append([lv,i,tx])
         return f'<h{lv} id="{i}">{m.group(2)}</h{lv}>'
     h=re.sub(r'<h([1-4])[^>]*>(.*?)</h\1>',hd,h,flags=re.S)
+    # 相互参照（SPEC-16 の 10）：本文の REQ-nn，SPEC-nn，TEST-nn をリンクにする（見出し・コード・数式・リンクの中は替えない）
+    sk=r'(<h([1-4])[ >].*?</h\2>|<(code|pre)[ >].*?</\3>|<span class="(?:im|dx)">.*?</span></span>|<a [^>]*>.*?</a>|<[^>]+>)'
+    xr=lambda t:re.sub(r'(?<![A-Za-z0-9])((?:REQ|SPEC|TEST)-(?:0[1-9]|[12][0-9]|3[0-5]))(?![0-9])',r'<a class="xr" data-x="\1">\1</a>',t)
+    h=''.join(xr(c) if i%4==0 else c if i%4==1 else '' for i,c in enumerate(re.split(sk,h,flags=re.S)))  # 区切り（i%4==1）はそのまま，捕捉した下位の組（2，3）は捨てる
     parts=[c for c in re.split(r'(?=<h[23] )',h) if c.strip()]
     return dict(chunks=parts,toc=toc,nmath=h.count('class="tx '),nchar=len(h))
 DOCS={}
