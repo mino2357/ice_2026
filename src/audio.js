@@ -74,7 +74,7 @@ SND.node.connect(ctx.destination);SND.cyc=-1;if(ctx.state!=='running')try{await 
 function sndFeed(){return{Nt:SND.on&&!U.busy&&!document.hidden?live.s.Nb:0,vol:LP.vol,L:LP.Lex,d:LP.dex,cv:LP.cvar,fl:LP.fl,fm:LP.sm,ld:sndLoad(live.s.y[6],LP.pa)}}
 function sndTick(){if(!SND.post)return;const m=sndFeed();if(live.s.cyc!==SND.cyc&&live.last&&live.last.me){SND.cyc=live.s.cyc;m.tab=mkTable(live.last.me);m.env=mkEnv(live.last.me);m.M=exMach(live.last.me,LP.pa,LP.dex,cEx())}SND.post(m)}
 /* ===== 振動による体感（SPEC-36）．DOM とブラウザの API に依らない．時刻は ms ===== */
-const HAPC={w0:8,w1:80,wm:5,ph:1.2e6,H:10000,Ts:100,tau:50,cont:16,gap:4,nmax:98,Nmin:30,dN:.05,dW:.25};
+const HAPC={w0:8,w1:80,wm:5,ph:1.2e6,H:10000,Ts:100,tau:50,cont:6,gap:2,nmax:98,Nmin:30,dN:.05,dW:.25};
 /* 区分（A の 2）：'b' 燃焼，'x' 失火，'m' 圧縮だけ，'s' 停止．c.s.Mx は完爆後に完了した直前のサイクルの記録 */
 function hapKind(c){const s=c.s;if(s.fired&&s.fuel){const M=s.Mx;return M?(M.Qin>0?'b':'x'):'m'}if(s.fired||s.starter)return'm';return's'}
 /* パルス幅（A の 3〜4）[ms]．0 は振動なし，Infinity は途切れない振動．Th：開始の間隔 [ms] */
