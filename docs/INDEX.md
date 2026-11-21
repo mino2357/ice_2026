@@ -22,7 +22,7 @@
 | 10 | 回転運動，摩擦，スターター | `requirements/REQ-10.md`（627） | `specification/SPEC-10.md`（2268） | `specification/TEST-10.md`（816） | 658–690 | 11 12 | – |
 | 11 | 電動式動力計と運転モード | `requirements/REQ-11.md`（2062） | `specification/SPEC-11.md`（4497） | `specification/TEST-11.md`（2802） | 691–692 | 10 12 13 18 22 31 35 | `core.js`:262,1960,1986 `ui.js`:156 |
 | 12 | ECU（スロットル開度の PI 制御と点火時期の自動最適化） | `requirements/REQ-12.md`（1055） | `specification/SPEC-12.md`（2696） | `specification/TEST-12.md`（1936） | 814–876 | 07 13 | `core.js`:264 |
-| 13 | 数値積分 | `requirements/REQ-13.md`（2129） | `specification/SPEC-13.md`（9232） | `specification/TEST-13.md`（4744） | 877–1023 | 03 04 07 08 10 12 14 29 | `core.js`:738,1490,1656,1719,1741,1744… |
+| 13 | 数値積分 | `requirements/REQ-13.md`（2129） | `specification/SPEC-13.md`（9232） | `specification/TEST-13.md`（4832） | 877–1023 | 03 04 07 08 10 12 14 29 | `core.js`:738,1490,1656,1719,1741,1744… |
 | 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（823） | `specification/SPEC-14.md`（2881） | `specification/TEST-14.md`（1481） | 1190–1254 | 11 12 13 15 18 | `core.js`:1024,1831 |
 | 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（1614） | `gui/SPEC-15.md`（6639） | `gui/TEST-15.md`（4122） | 1304–1444 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,53,145,381,400,586 |
 | 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5681） | `gui/TEST-16.md`（3776） | 1642–1831 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
@@ -124,7 +124,7 @@
 | `docs/dev-notes.md` | 2810 |
 | `docs/verification.md` | 41822 |
 | `docs/review_v26.md` | 34714 |
-| `docs/report_solver.md` | 12099 |
+| `docs/report_solver.md` | 19042 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
 | `src/core.js` | 85697 |
@@ -133,5 +133,5 @@
 | `src/doc.js` | 57869 |
 | `src/ui.js` | 40762 |
 | `src/tests.js` | 241519 |
-| `docs/changes/2026-11-21-solver.md` | 962 |
+| `docs/changes/2026-11-21-solver.md` | 1946 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
