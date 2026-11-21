@@ -927,8 +927,8 @@ if(!RUN.ui){
   const s=hapTL(calls).map(q=>q[0]).filter(x=>x<=t),miss=done.slice(1).filter(tc=>!s.some(x=>Math.abs(x-tc)<=17)).length,dn=Math.abs(s.length-done.length);if(!(dn<=1&&miss===0))ok=false;out.push(`${r}×：振動 ${s.length} 回，完了 ${done.length} サイクル，17 ms の外 ${miss}`)}
  chkB(36,'シミュレーションの時間（S4，1× と 0.5×，実時間 4 s）：振動の回数が完了したサイクルの数と ±1，各サイクルの完了から ±17 ms に振動が始まる',ok,out.join('；'))}
 /* 7：計算時間 */
-{const h=new Hap();let mx=0,sum=0;for(let i=0;i<60;i++)h.tick(i*1000/60,{on:1,Nb:3000,kind:'b',imep:.9e6,r:1,cyc:0,mode:0});for(let i=60;i<660;i++){const t0=performance.now();h.tick(i*1000/60,{on:1,Nb:3000,kind:'b',imep:.9e6,r:1,cyc:0,mode:0});const d=performance.now()-t0;sum+=d;mx=Math.max(mx,d)}
- chkB(36,'計算時間：1 フレームの処理の平均 ≤ 0.05 ms，最大 ≤ 1 ms（3000 rpm，600 フレーム）',sum/600<=.05&&mx<=1,`平均 ${(sum/600*1e3).toFixed(1)} μs，最大 ${(mx*1e3).toFixed(0)} μs`)}
+{const h=new Hap();let mx=0,sum=0;for(let i=0;i<60;i++)h.tick(i*1000/60,{on:1,Nb:3000,kind:'b',imep:.9e6,r:1,cyc:0,mode:0});const ds=[];for(let i=60;i<660;i++){const t0=performance.now();h.tick(i*1000/60,{on:1,Nb:3000,kind:'b',imep:.9e6,r:1,cyc:0,mode:0});const d=performance.now()-t0;sum+=d;mx=Math.max(mx,d);ds.push(d)}ds.sort((x,y)=>x-y);const p99=ds[Math.floor(.99*ds.length)];
+ chkB(36,'計算時間：1 フレームの処理の平均 ≤ 0.05 ms，99 パーセンタイル ≤ 0.2 ms（3000 rpm，600 フレーム．最大は記録）',sum/600<=.05&&p99<=.2,`平均 ${(sum/600*1e3).toFixed(1)} μs，99 % ${(p99*1e3).toFixed(0)} μs，最大 ${(mx*1e3).toFixed(0)} μs`)}
 /* 8：計算に影響しない */
 {const s2=yield*scen('S2'),fr=1000/60,ys=[];for(const m of[-1,0,1]){const c=s2.c.clone(),h=new Hap(),st={debt:0,spd:1};for(let i=0;i<180;i++){advance(st,c,fr/1e3,0);if(m>=0)h.tick(i*fr,hapIn(c,m,1));if(RUN.over())yield}ys.push(JSON.stringify(c.s.y))}
  chkB(36,'計算に影響しない：S2 から 3 s を，振動 OFF，実時間，シミュレーションの時間で進めた状態ベクトルが完全に一致',ys[0]===ys[1]&&ys[1]===ys[2])}
