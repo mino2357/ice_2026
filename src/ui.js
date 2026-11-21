@@ -2,16 +2,21 @@
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={mj:{},swTest:0,sys:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
-const Sim={debt:0,spd:.1};
+const U={mj:{},swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+/* spd：再生速度（Infinity = 最速）．rs：速さの倍率（最速のときに表示．SPEC-15 F の 4），w0，t0：その計測の区間の始まり */
+const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
 cam:null,camC:0,vt:null,vtc:()=>({ivo:LP.ivo,ivc:LP.ivc,evo:LP.evo,evc:LP.evc}),change(c,now){if(now-this.tl>=3000){if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}this.cam=valves({...LP},geo(LP));this.camC=LP.cam}this.tl=now},set(c){if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}this.cam=valves({...LP},geo(LP));this.camC=LP.cam},clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9}};
 let COL={};const readCol=()=>{const cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();COL={fg:v('--fg'),mu:v('--mu'),ln:v('--ln'),ac:v('--ac'),cd:v('--cd'),ng:v('--ng')}};
 /* ===== input helpers ===== */
 function tap(el,fn){let d;el.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:NOW()}});el.addEventListener('pointerup',e=>{if(d&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);d=0});el.addEventListener('pointercancel',()=>d=0)}
-function hold(el,ms,fn){let t;el.addEventListener('pointerdown',()=>{clearTimeout(t);t=setTimeout(fn,ms)});['pointerup','pointercancel','pointerleave'].forEach(v=>el.addEventListener(v,()=>clearTimeout(t)))}
 /* ===== time advance (frame-rate independent) ===== */
-function advance(st,c,el,budget){st.debt+=Math.min(el,.05)*st.spd;const t0=performance.now();let n=0;while(st.debt>0){st.debt-=c.step();/* 上限の判定は 4 ステップごと（既燃ガスの表の節点を作るステップは 1 ステップが長い．SPEC-15 F の 2） */if(budget&&(++n&3)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}}}
+/* 最速（spd = Infinity）：毎フレーム，上限の時間まで進める．止まっている機関（完爆前でスターターも回っていない，ω = 0）は 1× で進める（計算することが無い） */
+const atRest=c=>!!c.s&&!c.s.fired&&!c.s.starter&&c.s.y[1]===0;
+function advance(st,c,el,budget){const mx=st.spd===Infinity&&!atRest(c);if(mx){st.debt=Infinity;budget=budget||FB.mx}else st.debt+=Math.min(el,.05)*(st.spd===Infinity?1:st.spd);const t0=performance.now();let n=0;while(st.debt>0){st.debt-=c.step();/* 上限の判定は 4 ステップごと（既燃ガスの表の節点を作るステップは 1 ステップが長い．SPEC-15 F の 2） */if(budget&&(++n&3)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}}if(mx)st.debt=0}
+/* 速さの倍率：直近 1 s 以上の区間の（シミュレーションの時間の進み）÷（実経過時間）．リセットで時間が戻ったら区間を取り直す */
+function spdTick(now){const t=live.s.t;if(Sim.w0==null||t<Sim.t0){Sim.w0=now;Sim.t0=t}else if(now-Sim.w0>=1000){Sim.rs=(t-Sim.t0)/((now-Sim.w0)/1e3);Sim.w0=now;Sim.t0=t}}
+const rsShow=()=>Sim.spd===Infinity&&Sim.rs>0?Sim.rs:0;
 /* ===== settings logic ===== */
 const note=t=>{$('ts').textContent=t};
 function setParam(k,v,noUndo){const it=IT[k],old=LP[k];if(it.c==='r'){if(v===LP[k])delete U.pend[k];else U.pend[k]=v;rs();return}if(v===old)return;
@@ -27,6 +32,8 @@ function undo(){const u=U.undo;if(!u)return;U.undo=null;if(u.ks){Base.change(liv
 function setParams(o){const ks=Object.keys(o).filter(k=>o[k]!==LP[k]);if(!ks.length)return;Base.change(live,NOW());U.undo={ks,olds:ks.map(k=>LP[k])};ks.forEach(k=>LP[k]=o[k]);note(`${ks.map(k=>IT[k].n+' '+disp(IT[k],o[k])).join('，')}`);rs()}
 function defaults(){ITEMS.filter(i=>i.pg===U.pg).forEach(i=>setParam(i.k,defv(i),1));U.undo=null;note('このページを既定値に戻しました');rs()}
 function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
+/* [START]：状態に有限でない値があるときは，初期値に戻してから始動する（SPEC-15 D の 4） */
+function startTap(){if(!live.s.y.every(Number.isFinite))coldReset();live.start();if(SND.on)sndEnsure()}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
 /* SPEC-30 の 9：熱物性が「化学平衡」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
@@ -74,11 +81,9 @@ function swText(){const r=$('swt').children,R=SW.run;let a='',c='',b='';if(R){co
 if(!R&&SW.cur&&SW.cur.sig!==swSig())b='設定が変わりました（再計測で更新）';else if(SW.ref)b='灰色：基準（前回の計測）';r[0].textContent=a;r[1].textContent=c;r[2].textContent=b;$('swg').disabled=!!U.busy&&!R&&!U.swTest}
 let SLAY=[];function drawSw(){const q=prep($('tc'));if(!q)return;const cur=SW.run?SW.run.sets.filter(x=>x.pts.length):SW.cur&&SW.cur.sets;SLAY=drawScreen(q.g,q.W,q.H,sweepSpec(cur,SW.ref&&SW.ref.sets,SW.sub),COL,null)}
 function drawPv0(){const q=prep($('pv0'));if(q)drawScreen(q.g,q.W,q.H,screenSpec(live,AX,0,{now:NOW(),ref:Base.ref,nt:1}),COL,null)}
-/* 全体タブ（SPEC-31） */
-function drawSysT(){const q=prep($('sys'));if(q)drawSys(q.g,live,q.W,q.H,COL,U.sys)}
-function sysB(){[...$('sysb').children].forEach(b=>b.className=+b.dataset.m===U.sys?'on':'')}
-function setSys(m){U.sys=m;sysB();drawSysT()}
-function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-bandH(),COL);ntRender();thRender()}
+/* 全体図（SPEC-31．運転タブの [全体図] から開く） */
+function drawSysT(){const q=prep($('sys'));if(q)drawSys(q.g,live,q.W,q.H,COL)}
+function drawEng(){const q=prep($('eng'));if(q)drawEngine(q.g,live,q.W,q.H-bandH(),COL,0,rsShow());ntRender();thRender()}
 /* 運転タブの帯の高さ：目標回転数の帯，動力計制御ではスロットル開度の帯を重ねる（SPEC-23 の 6） */
 const bandH=()=>NTB*(dynOn(LP)?2:1);
 /* ===== target-rpm slider (REQ-23) ===== */
@@ -138,12 +143,12 @@ function ctlRender(){{const lb=dynOn(LP)&&live.s.fired&&!live.s.fuel?'STOP':'FUE
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){const all=wTier()>0,L=all?metricList(live,0).concat(metricList(live,1)):metricList(live,U.mpg),M=$('M'),key=L.map(q=>q[0]).join('|');if(M.dataset.key!==key){M.dataset.key=key;M.innerHTML=L.map(q=>`<div data-k="${q[0]}"><b></b><span></span></div>`).join('')}L.forEach((q,i)=>{const d=M.children[i],b=d.firstChild,sp=d.lastChild,jp=!!U.mj[q[0]],t=jp?q[2]:q[0];if(b.textContent!==t)b.textContent=t;if(b.classList.contains('jp')!==jp)b.classList.toggle('jp',jp);if(sp.textContent!==q[1])sp.textContent=q[1]})}
 /* ===== tabs ===== */
-function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===i?'on':'');for(let j=0;j<8;j++)$('s'+j).className=i===j?'on':'';if(i===6)sysB();if(i===7){optSub(OP.m);optText()}if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
+function show(i){if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;U.tab=i;[...$('N').children].forEach(b=>b.className=+b.dataset.t===(i===6?0:i)?'on':'');for(let j=0;j<9;j++)$('s'+j).className=i===j?'on':'';if(i===7){optSub(OP.m);optText()}if(i===8)OP.lt=-1e9;if(i===5){swSub(SW.sub);swText()}$('pl').className='';if(i===2)rs();if(i===3)rchips();if(i===4){txLoad();txStat();docVals();fitMath($('s4'));if(DV.cur===0)docReveal();docFit(DV.cur);$('s4').scrollTop=DV.top[DV.cur]}}
 function setSub(n){U.sub=n;[...$('sg').children].forEach((x,j)=>x.className=j===n?'on':'');$('pvo').style.display=n===0?'':'none';$('vt').className=n===7?'vt on':'vt';pvo();vtRender()}
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
-/* ===== 最適化タブ（SPEC-32，33） ===== */
+/* ===== 最適化タブ（SPEC-32，34）と熱効率タブ（SPEC-33） ===== */
 const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
-function optSub(m){OP.m=m;[...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');for(const k of[0,1,2])$('o'+k).className=m===k?'opv on':'opv';if(m===1)OP.lt=-1e9;if(m===2)vmText()}
+function optSub(m){OP.m=m;[...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');for(const k of[0,2])$('o'+k).className=m===k?'opv on':'opv';if(m===2)vmText()}
 function optObj(o){if(OP.run)return;OP.obj=o;[...$('oob').children].forEach(b=>b.className=+b.dataset.o===o?'on':'');optText()}
 const optReady=()=>live.s.fired&&live.s.Nb>=300;
 function optStart(){if(OP.run){optStop();return}if(!optReady()){$('opr').textContent='運転タブで START してください';return}OP.run=new VTOpt(live,OP.obj);OP.h=OP.run.h;OP.res=null;OP.t0=NOW();optText()}
@@ -157,7 +162,9 @@ function optText(){if(!$('s7'))return;$('orn').textContent=OP.run?'中止':'探�
  const q=OP.res,cur=VTK4.map(k=>Math.round(LP[k]/D)),x0=q?q.x0:cur,x=q?q.x:null,dur=v=>[v[1]-v[0],v[3]-v[2],v[3]-(v[0]+720)],row=(n,a,b)=>`<tr><td>${n}</td><td>${a}</td><td>${b??'–'}</td><td>${b!=null&&typeof a==='number'?(b-a>0?'+':b-a<0?'−':'')+Math.abs(b-a):''}</td></tr>`;
  let h=`<tr><th>${q?'':'現在'}</th><th>探索の前</th><th>結果</th><th>差</th></tr>`;['IVO','IVC','EVO','EVC'].forEach((n,i)=>h+=row(n+' °',x0[i],x?x[i]:null));const d0=dur(x0),d1=x?dur(x):null;['吸気の作用角 °','排気の作用角 °','オーバーラップ °'].forEach((n,i)=>h+=row(n,d0[i],d1?d1[i]:null));
  const o=q?q.obj:OP.obj;h+=`<tr><td>${o?'正味熱効率':'軸トルク'}</td><td>${q?optFmt(o,q.J0):'–'}</td><td>${q?optFmt(o,q.J):'–'}</td><td>${q&&q.J0===q.J0?(q.J>=q.J0?'+':'−')+(o?(Math.abs(q.J-q.J0)*100).toFixed(2)+' %pt':Math.abs(q.J-q.J0).toFixed(2)):''}</td></tr>`;if($('otb').innerHTML!==h)$('otb').innerHTML=h}
-function drawOpt(){if(OP.m===2){drawVMT();return}if(OP.m===0){const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}else{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
+function drawOpt(){if(OP.m===2){drawVMT();return}const q=prep($('ohc'));if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)}
+/* 熱効率タブ（SPEC-33 C） */
+function drawLossT(){{const q=prep($('olc'));if(!q)return;const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)}}
 /* ===== VVT マップ（SPEC-34） ===== */
 function vmStart(){if(OP.vm&&!OP.vm.done){vmStop();return}if(!optReady()){$('vpr').textContent='運転タブで START してください';return}OP.vm=new VVTMap(live);OP.vp0=OP.vm.p0;OP.vsel=null;OP.vkey='';vmText()}
 /* 中止：計算中の評価を待たずに止める（それまでに埋まった格子と詰めた点は残す） */
@@ -177,14 +184,14 @@ function vmTap(x,y){const m=OP.vm;if(!m||!vmGrid(m))return;const c=$('vmc'),r=c.
  for(const k of['T','B']){const o=m.opt[k];if(o&&Math.hypot(X(o.x[0])-px,Y(o.x[1])-py)<=12){OP.vsel={x:o.x.slice(),src:k};vmText();return}}const cl=v=>Math.max(lo,Math.min(hi,Math.round(v)));OP.vsel={x:[cl(lo+(px-pl.x)/pl.w*(hi-lo)),cl(hi-(py-pl.y)/pl.h*(hi-lo))],src:'tap'};vmText()}
 function vmApply(){if(!OP.vsel||(OP.vm&&!OP.vm.done))return;setParams({phin:OP.vsel.x[0]*D,phex:OP.vsel.x[1]*D});vmText()}
 /* 熱効率の内訳の計算：表示中だけ，前の計算から 1 s 以上たってサイクルが進んでいれば始め，1 フレームに ms ずつ進める */
-function lossTick(ms){if(U.tab!==7||OP.m!==1||LP.gam!==2||!optReady()){OP.lb=null;return}const now=performance.now();if(!OP.lb&&now-OP.lt>=1000&&live.s.cyc!==OP.lcy){OP.lb=new LossBk(live);OP.lcy=live.s.cyc}if(OP.lb){const t=performance.now();if(OP.lb.run(ms)){const r=OP.lb.res;if(r&&r.ok)OP.lres=r;OP.lb=null;OP.lt=performance.now()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}}
+function lossTick(ms){if(U.tab!==8||LP.gam!==2||!optReady()){OP.lb=null;return}const now=performance.now();if(!OP.lb&&now-OP.lt>=1000&&live.s.cyc!==OP.lcy){OP.lb=new LossBk(live);OP.lcy=live.s.cyc}if(OP.lb){const t=performance.now();if(OP.lb.run(ms)){const r=OP.lb.res;if(r&&r.ok)OP.lres=r;OP.lb=null;OP.lt=performance.now()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}}
 const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initTH();initVT();
-tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('sysb'),e=>{const b=e.target.closest('button[data-m]');if(b)setSys(+b.dataset.m)});
+tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('bsys'),()=>show(6));tap($('bback'),()=>show(0));
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('vrn'),vmStart);tap($('vap'),vmApply);tap($('vun'),()=>{undo();vmText()});tap($('vmc'),e=>vmTap(e.clientX,e.clientY));tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
-tap($('b1'),()=>{live.start();if(SND.on)sndEnsure()});tap($('b2'),()=>live.stop());hold($('b3'),600,coldReset);
-tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
+tap($('b1'),startTap);tap($('b2'),()=>live.stop());
+tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;Sim.w0=null;Sim.rs=NaN;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
 document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
 ['p-V','p-θ','弁','吸気','トルク','ECU','動力計','バルブタイミング'].forEach(t=>$('sg').insertAdjacentHTML('beforeend',`<button>${t}</button>`));
 tap($('sg'),e=>{const b=e.target.closest('button');if(b)setSub([...$('sg').children].indexOf(b))});
@@ -199,7 +206,7 @@ buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
-if(!U.busy){advance(Sim,live,el,9);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();
+if(!U.busy){advance(Sim,live,el,Sim.spd===Infinity?FB.mx:FB.n);spdTick(now);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
-if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText();if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
+if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===8)drawLossT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText();if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}

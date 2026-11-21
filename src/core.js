@@ -62,7 +62,7 @@ const ITEMS=[
 {k:'Kpd',n:'K_pd',u:'N·m/rpm',f:1,lo:.01,hi:2,st:.01,d:.2,c:'i',pg:7},
 {k:'Kid',n:'K_id',u:'N·m/(rpm·s)',f:1,lo:.05,hi:5,st:.05,d:.6,c:'i',pg:7},
 {k:'sol',n:'ソルバ',u:'',ch:['RK4','DOPRI5(4)'],d:1,c:'i',pg:8},
-{k:'dth',n:'RK4刻み Δθ',u:'°CA',f:D,lo:.25,hi:2,st:.25,d:.25,c:'i',pg:8},
+{k:'dth',n:'RK4刻み Δθ',u:'°CA',f:D,lo:.01,hi:5,st:.01,d:.25,c:'i',pg:8},
 {k:'rtol',n:'RK45 rtol',u:'',ch:['1e-4','1e-5','1e-6'],vals:[1e-4,1e-5,1e-6],d:1,c:'i',pg:8},
 {k:'vol',n:'音量',u:'%',f:.01,lo:0,hi:100,st:5,d:60,c:'i',pg:9},
 {k:'Lex',n:'排気管長 L',u:'m',f:1,lo:.3,hi:3,st:.1,d:1,c:'i',pg:9},
@@ -451,7 +451,7 @@ run(T){const t1=this.s.t+T;while(this.s.t<t1)this.step()}
 /* ===== metrics display (validity rule) ===== */
 const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':x.toFixed(n)+u;
 /* ===== WOT sweep (REQ-26) ===== */
-const SWC={als:[90,50,10],alsAll:[10,20,30,40,50,60,70,80,90],al:90,Tw:K.Twc,N1:7000,step:250,steps:[25,100,250,500],last:3,nmax:60,nminR:[3,30],nmaxR:[10,200],nmaxSt:10,
+const SWC={als:[90],alsAll:[10,20,30,40,50,60,70,80,90],al:90,Tw:K.Twc,N1:7000,step:250,steps:[25,100,250,500],last:3,nmax:60,nminR:[3,30],nmaxR:[10,200],nmaxSt:10,
 crit:{std:{n:'標準',tolR:.003,tolA:.02,tolS:.3,nmin:4},strict:{n:'厳格',tolR:.001,tolA:.01,tolS:.1,nmin:6}},critD:'strict',flowD:true,procs:{up:'上り',updown:'往復',indep:'独立'},procD:'up'};
 /* 回転数の点：刻みの 1 つ目から N1 まで（SPEC-26 の 5．N = 0 はサイクルが進まないので含めない） */const swN=st=>Array.from({length:Math.round(SWC.N1/st)},(_,i)=>st*(i+1)),SWN=swN(SWC.step),SWN7=swN(1000);
 const swOpt=o=>({crit:SWC.critD,flow:SWC.flowD,proc:SWC.procD,...(o||{})});

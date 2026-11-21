@@ -7,8 +7,11 @@ body{margin:0;height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-i
 @supports (height:100dvh){body{height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}}
 button{min-height:44px;min-width:44px;font:inherit;font-size:13px;color:var(--fg);background:var(--cd);border:1px solid var(--ln);border-radius:8px;padding:0 2px;white-space:nowrap;overflow:hidden}
 button.on{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.35}
-nav{flex:none;height:48px;display:grid;grid-template-columns:1fr 1fr 1fr 1.18fr 1fr 1fr 1fr 1fr;background:var(--cd);border-bottom:1px solid var(--ln)}
+nav{flex:none;height:48px;display:grid;grid-template-columns:1fr 1fr 1.18fr 1fr 1fr 1fr 1fr 1fr;background:var(--cd);border-bottom:1px solid var(--ln)}
 nav button{border:0;border-radius:0;background:none;font-size:12px;padding:0;min-height:48px;min-width:0}nav button.on{background:none;color:var(--ac);font-weight:700;box-shadow:inset 0 -3px 0 var(--ac)}
+/* 「設定」から右は入力を変える・調べるタブ：左に仕切り線，「設定」に歯車の印（SPEC-15 B の 1） */
+nav button[data-t="2"]{position:relative}nav button[data-t="2"]::before{content:"";position:absolute;left:0;top:25%;width:1px;height:50%;background:var(--ln)}nav button svg{vertical-align:-1px;margin-right:1px}
+#ops{grid-template-columns:2fr 2fr 1fr 1fr}#bsys{position:absolute;top:4px;right:4px;width:64px;height:44px;z-index:1}
 section{display:none;flex:1;min-height:0;flex-direction:column;gap:4px;padding:6px 8px;max-width:900px;width:100%;margin:auto;position:relative;overflow:hidden}section.on{display:flex}
 canvas{flex:1 1 0;height:0;min-height:0;width:100%;background:var(--cd);border-radius:8px;display:block}#eng{min-height:140px}.ew{flex:1 1 0;height:0;min-height:140px;position:relative;display:flex;flex-direction:column}.ntb{position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;gap:4px;padding:2px 4px;touch-action:none;user-select:none;-webkit-user-select:none}.ntb button{flex:none;width:44px;height:44px;font-size:20px;line-height:1}.ntb button:disabled{opacity:.35}.ntv{flex:none;width:64px;font-size:11px;line-height:14px;text-align:center;font-variant-numeric:tabular-nums}.ntv b{font-size:14px;display:block}.ntr{flex:1 1 0;min-width:0;height:44px;position:relative}.thb{bottom:48px}.r.rsl{display:block;height:48px;padding:2px 6px}.r.rsl .ntr{height:44px}.r span i{font-style:normal}.ntr i{position:absolute;left:22px;right:22px;top:21px;height:3px;border-radius:2px;background:var(--ln)}.ntk{position:absolute;left:0;top:0;width:44px;height:44px;touch-action:none}.ntk b{position:absolute;left:11px;top:11px;width:22px;height:22px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 2px var(--cd)}.ntk.on b{transform:scale(1.2)}#pv{min-height:120px}#tc{min-height:200px}.swa{flex:1 1 0;min-height:0;overflow:hidden;font-size:12px;line-height:1.35}.swa table{width:100%;border-collapse:collapse}.swa th{text-align:left;color:var(--ac);font-weight:600;padding:4px 2px 1px}.swa td{padding:1px 2px;border-bottom:1px solid var(--ln);vertical-align:middle}.swa td:first-child{color:var(--mu);white-space:nowrap;padding-right:6px}.swo{flex:1 1 0;min-height:0;overflow:hidden;font-size:13px}.swo p{margin:6px 0 3px;color:var(--ac);font-weight:600;font-size:12px}.swo .ob{display:grid;gap:4px}.swo .o5{grid-template-columns:repeat(5,1fr)}.swo .o3{grid-template-columns:repeat(3,1fr)}
 .o4{grid-template-columns:repeat(4,1fr)}
@@ -44,7 +47,7 @@ button.ok,button.ng{border-color:currentColor;font-weight:700}button.run{border-
 /* ===== 画面の大きさに応じた表示（REQ-15 H）．基本は小（スマートフォン） ===== */
 #pv0{display:none}
 /* 中・大（幅 700 px 以上）：メトリクス 24 項目を同時に表示 */
-@media(min-width:700px){#mp{display:none}#sp{grid-template-columns:repeat(5,1fr)}.m{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:700px){#mp{display:none}#ops{grid-template-columns:2fr 2fr 1fr}.m{grid-template-columns:repeat(4,1fr)}}
 /* 大（幅 900 px 以上）：2 列 */
 @media(min-width:900px){
 section{max-width:1400px;padding:8px 12px;gap:6px}#s3,#s4{max-width:900px}
