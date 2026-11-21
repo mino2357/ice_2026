@@ -125,6 +125,7 @@
 | `docs/verification.md` | 41822 |
 | `docs/review_v26.md` | 34714 |
 | `docs/report_solver.md` | 19042 |
+| `docs/report_egr.md` | 8062 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
 | `src/core.js` | 85697 |
@@ -133,5 +134,6 @@
 | `src/doc.js` | 57869 |
 | `src/ui.js` | 40762 |
 | `src/tests.js` | 241519 |
-| `docs/changes/2026-11-21-solver.md` | 1946 |
+| `docs/changes/2026-11-21-solver.md` | 3224 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
+| `docs/changes/2026-11-22-egr.md` | 414 |
