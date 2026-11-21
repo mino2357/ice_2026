@@ -14,6 +14,7 @@ def _tx(m):
     tex=tex[2:-2].strip() if tex[:2] in('\\(','\\[') else tex
     e=_html.escape(tex,quote=True)
     return f'<span class="dx"><span class="tx raw" data-d="1" data-tex="{e}">{e}</span></span>' if d else f'<span class="im"><span class="tx raw" data-tex="{e}">{e}</span></span>'
+PGMAX=50000
 def md2doc(name,key):
     src=os.path.join(d,'..','docs',name)
     # TeX の誤りの検出：MathML にも変換してみて，変換できない式があれば止める（この MathML は埋め込まない）
@@ -34,6 +35,8 @@ def md2doc(name,key):
     xr=lambda t:re.sub(r'(?<![A-Za-z0-9])((?:REQ|SPEC|TEST)-(?:0[1-9]|[12][0-9]|3[0-5]))(?![0-9])',r'<a class="xr" data-x="\1">\1</a>',t)
     h=''.join(xr(c) if i%4==0 else c if i%4==1 else '' for i,c in enumerate(re.split(sk,h,flags=re.S)))  # 区切り（i%4==1）はそのまま，捕捉した下位の組（2，3）は捨てる
     parts=[c for c in re.split(r'(?=<h[23] )',h) if c.strip()]
+    # 1 ページの大きさの上限（GUI SPEC-16 の 9 の「ページ」）：超える節は，同じ節番号の続きの見出し（###）で分ける
+    big=[(i,len(c)) for i,c in enumerate(parts) if len(c)>PGMAX];assert not big,name+'：1 ページが %d 字を超えます（ページ，字数）：%s'%(PGMAX,big)
     return dict(chunks=parts,toc=toc,nmath=h.count('class="tx '),nchar=len(h))
 DOCS={}
 for _n,_k in[('requirements.md','req'),('specification.md','spec'),('gui.md','gui'),('glossary.md','glo')]:DOCS[_k]=md2doc(_n,_k)
