@@ -5,7 +5,9 @@
    点検の内容は tools/dev/README.md． */
 'use strict';
 const fs=require('fs'),path=require('path'),vm=require('vm');
-const root=path.resolve(__dirname,'../..'),rd=f=>fs.readFileSync(path.join(root,f),'utf8');
+const DS=require('./docsrc.js');
+/* 4 文書は断片を連結して読む（docsrc.js）．指摘の行番号は，出力のときに断片のファイルと行に直す */
+const root=path.resolve(__dirname,'../..'),rd=f=>{const m=/^docs\/(requirements|specification|gui|glossary)\.md$/.exec(f);return m?DS.read(m[1]):fs.readFileSync(path.join(root,f),'utf8')};
 const V=process.argv.includes('-v');
 const req=rd('docs/requirements.md'),spec=rd('docs/specification.md'),gui=rd('docs/gui.md'),glo=rd('docs/glossary.md'),claude=rd('CLAUDE.md');
 const core=rd('src/core.js'),tests=rd('src/tests.js'),docjs=rd('src/doc.js'),uijs=rd('src/ui.js'),plotjs=rd('src/plot.js'),audiojs=rd('src/audio.js');
@@ -102,4 +104,4 @@ for(const [f,s0] of [['docs/requirements.md',req],['docs/specification.md',spec]
  if(V)console.log('どの受入基準からも引かれていないテスト項目（参考）',free.join(' ')||'なし')}
 
 if(V){console.log('TEST の項目数',Object.keys(nT).sort().map(k=>k+':'+nT[k]).join(' '),'計',Object.values(nT).reduce((a,b)=>a+b,0));console.log('受入基準の数',Object.keys(nA).sort().map(k=>k+':'+nA[k]).join(' '),'計',Object.values(nA).reduce((a,b)=>a+b,0))}
-out.forEach(l=>console.log(l));console.log(out.length?'指摘 '+out.length+' 件':'指摘なし');process.exit(out.length?1:0);
+out.forEach(l=>console.log(DS.fix(l)));console.log(out.length?'指摘 '+out.length+' 件':'指摘なし');process.exit(out.length?1:0);

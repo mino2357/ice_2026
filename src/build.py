@@ -16,7 +16,11 @@ def _tx(m):
     return f'<span class="dx"><span class="tx raw" data-d="1" data-tex="{e}">{e}</span></span>' if d else f'<span class="im"><span class="tx raw" data-tex="{e}">{e}</span></span>'
 PGMAX=50000
 def md2doc(name,key):
-    src=os.path.join(d,'..','docs',name)
+    # 文書は見出しごとの断片（docs/<名前>/，並びは _order.txt）を連結して読む．連結した全文は dist/docs/ に置く（読むため．Git には入れない）
+    dd=os.path.join(d,'..','docs',name[:-3]);fr=[x.strip() for x in open(os.path.join(dd,'_order.txt'),encoding='utf-8').read().split('\n') if x.strip()]
+    miss=sorted(set(x for x in os.listdir(dd) if x.endswith('.md'))-set(fr));assert not miss,name+'：_order.txt に無い断片：'+' '.join(miss)
+    os.makedirs(os.path.join(d,'..','dist','docs'),exist_ok=True);src=os.path.join(d,'..','dist','docs',name)
+    open(src,'w',encoding='utf-8').write(''.join(open(os.path.join(dd,x),encoding='utf-8').read() for x in fr))
     # TeX の誤りの検出：MathML にも変換してみて，変換できない式があれば止める（この MathML は埋め込まない）
     assert 'class="math' not in _pd(src,'--mathml'),name+'：変換できない数式があります'
     h=_pd(src,'--mathjax')

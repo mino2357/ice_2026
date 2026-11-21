@@ -5,7 +5,7 @@
    仕様書の項目と検査の名前は 1 対 1 に番号で結ばれていないので，漏れの判定は人が読んで行う． */
 'use strict';
 const fs=require('fs'),path=require('path'),root=path.resolve(__dirname,'../..');
-const spec=fs.readFileSync(path.join(root,'docs/specification.md'),'utf8'),TR=JSON.parse(fs.readFileSync(process.argv[2],'utf8')),ids=process.argv.slice(3).map(Number);
+const spec=require('./docsrc.js').read('specification'),TR=JSON.parse(fs.readFileSync(process.argv[2],'utf8')),ids=process.argv.slice(3).map(Number);
 const T={};let cur=null;for(const l of spec.split('\n')){const m=l.match(/^### TEST-(\d\d)：(.*)$/);if(m){cur=+m[1];T[cur]={title:m[2],items:[]}}else if(/^##+ /.test(l))cur=null;else if(cur&&/^\d+\. /.test(l))T[cur].items.push(l)}
 const kinds=l=>(l.match(/\[[ASUDM]\]/g)||[]).join('');
 if(!ids.length){console.log('TEST  項目  [A] [S] [U] [D]  検査');for(const k of Object.keys(T)){const it=T[k].items,c=x=>it.filter(l=>l.includes('['+x+']')).length;console.log(String(k).padStart(4),String(it.length).padStart(5),String(c('A')).padStart(4),String(c('S')).padStart(3),String(c('U')).padStart(3),String(c('D')).padStart(3),String((TR[k]||[]).length).padStart(5),(TR[k]||[]).length<it.length-c('D')?' ← 検査の数が項目の数より少ない':'')}process.exit(0)}
