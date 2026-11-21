@@ -625,6 +625,7 @@ U.swTest=1;SW.nmin=8;SW.nmax=30;swStart();const o=SW.run&&SW.run.o,okC=!!o&&o.nm
 chkB(26,'サイクル数の最少・最多：最少 12 で整定点はすべて 12 サイクル以上，最多 4（打ち切りの規則の検査）で全点 4 サイクル以下，未整定の点は 4 で打ち切り，画面の指定が計測と前提の表に渡る',okA&&okB&&okC&&okD,`最少12：${A.pts.map(o=>o.cyc+(o.ok?'':'*')).join(',')}，最多4：${B.pts.map(o=>o.cyc+(o.ok?'':'*')).join(',')}，渡し ${okC}，前提 ${okD}`)}yield;}
 U.swTest=1;SW.step=500;SW.als=[90];SW.crit='std';SW.flow=false;SW.cur=null;SW.ref=null;const lp0=JSON.stringify(LP),ls0=JSON.stringify(live.s);SW.maxMs=0;const ui=function*(){tapEl($('swg'));while(SW.run){swTick(8);yield}};
 yield*ui();const c1=SW.cur;yield*ui();swSub(0);drawSw();const lg1=(sweepSpec(SW.cur.sets,SW.ref&&SW.ref.sets,0)[0].lg||[]).map(q=>q.n);
+if(!RUN.ui){const S=new Sweep({...mkPT()},swN(500));let ns=0;S.c={s:{fuel:1,cyc:0,fired:1},lastM:null,step(){const t=performance.now();while(performance.now()-t<10);ns++}};const t0=performance.now();S.run(8);const el=performance.now()-t0;chkB(26,'1 回の計算の打ち切り：1 ステップ 10 ms の模擬で，持ち時間 8 ms の計算が 20 ms 以内に戻り，進めたステップが 1 回',el<=20&&ns===1,`${el.toFixed(1)} ms，${ns} ステップ`,'≤ 20 ms，1 ステップ')}
 chkB(26,'計測の前後で運転中のエンジンの設定と状態が一致，1 回の計算 ≤ 30 ms',JSON.stringify(LP)===lp0&&JSON.stringify(live.s)===ls0&&SW.maxMs<=30,SW.maxMs.toFixed(1)+' ms');
 tapEl($('swc'));chkB(26,'2 回目の完了で基準（前回）が描かれ，[基準を消す] で消える',lg1.includes('基準')&&SW.ref===null&&c1&&SW.cur!==c1,lg1.join('，'));
 setParam('phin',5*D);swText();const st1=$('swt').textContent;yield*ui();swText();const st2=$('swt').textContent;
