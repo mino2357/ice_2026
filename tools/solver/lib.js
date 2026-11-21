@@ -18,7 +18,7 @@ function run(E,cond,o,spa,nc){const {Core,mkP,SWC,D,PI}=E,[,N,al]=cond;
  while(c.s.cyc<nc){const cy=c.s.cyc;c.step();st++;if(c.s.cyc!==cy){if(c.s.cyc===nc-10){nf0=globalThis.__NF;st0=st}if(c.s.cyc>nc-10)H.push(c.lastM);if(c.s.cyc===nc-1)prev=c.lastM}if(st>4e6||!Number.isFinite(c.s.y[2]))break}
  /* 指標は最後の 10 サイクルの平均（低負荷ではサイクルごとの差が 10⁻⁴ ほど残るため） */
  const M={};for(const m of MET)M[m]=H.length?H.reduce((a,q)=>a+q[m],0)/H.length:NaN;
- return{M,last:c.lastM||{},prev,nf:(globalThis.__NF-nf0)/10,st:(st-st0)/10,spa:c.s.spa,fin:c.s.y.every(Number.isFinite)&&H.length===10,nfa:c.s.nfa,clp:c.s.clp}}
+ return{M,H,last:c.lastM||{},prev,nf:(globalThis.__NF-nf0)/10,st:(st-st0)/10,spa:c.s.spa,fin:c.s.y.every(Number.isFinite)&&H.length===10,nfa:c.s.nfa,clp:c.s.clp}}
 const set=o=>{for(const k of['__ST','__CAP','__TC','__EX','__SF'])delete globalThis[k];Object.assign(globalThis,o||{})};
 /* 陽的 Runge–Kutta の埋め込み対（一般の係数表）．段 0 は与えられた k0．A[i]：段 i の係数，b：進める解，bh：誤差の見積もり用の解 */
 function erk(A,b,bh){const s=b.length;return function(o,y,h,k0,X,n){const N=y.length,K=o.__K&&o.__K.length===s?o.__K:(o.__K=Array.from({length:s},()=>new Array(N).fill(0))),yy=o.__y||(o.__y=new Array(N).fill(0)),ks=[k0];

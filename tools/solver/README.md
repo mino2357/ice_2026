@@ -9,6 +9,7 @@ REQ-13 の受入基準 11〜13 のための調査（`docs/report_solver.md`）�
 | `survey2.js` | 公式の比較（DOPRI5，BS3(2)，Heun–Euler，Ralston，RKC） |
 | `survey3.js` | 刻みを決めている成分，不受理の割合，クランク角ごとのステップ数 |
 | `survey4.js` | BS3(2) の周りの工夫（ノルム，PI 制御，安全率）と SSP(4,3)，Merson |
+| `survey5.js` | 候補を 50 の運転点（回転数 10 × 開度 5）で確かめる（約 6 分．結果は `survey5_result.json`） |
 
 ```
 node tools/solver/survey2.js BS3      # 名前に BS3 を含む公式だけ（1 分ほど）
