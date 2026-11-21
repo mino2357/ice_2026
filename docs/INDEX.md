@@ -63,7 +63,7 @@
 | 要件定義書 | 3. 状態と記号 | `requirements/s3.md` | 933 |
 | 要件定義書 | 4. 要件 | `requirements/s4.md` | 10 |
 | 要件定義書 | 5. 受入 | `requirements/s5.md` | 10 |
-| 要件定義書 | 5.1 納品条件 | `requirements/s5.1.md` | 613 |
+| 要件定義書 | 5.1 納品条件 | `requirements/s5.1.md` | 608 |
 | 要件定義書 | 5.2 実機目視チェックリスト [M]（Galaxy S26+／Chrome） | `requirements/s5.2.md` | 1532 |
 | 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 3597 |
 | 要件定義書 | 7. 改訂の記録 | `requirements/s7.md` | 13 |
@@ -132,3 +132,4 @@
 | `src/doc.js` | 57296 |
 | `src/ui.js` | 40762 |
 | `src/tests.js` | 235756 |
+| `docs/changes/2026-11-21-structure.md` | 3041 |
