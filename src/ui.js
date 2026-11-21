@@ -191,7 +191,8 @@ const sndLbl=()=>{const b=$('snd');b.className=SND.on?'on':''};
 const HAPNOTE='振動は，端末のサイレントモードや本体の振動の設定で止まります（画面からは分かりません）';
 const HAP=new Hap(),hapOK=()=>typeof navigator.vibrate==='function',vib=p=>{if(!hapOK())return;try{navigator.vibrate(p)}catch(e){}};
 function hapBtn(){const b=$('hap');b.disabled=!hapOK();if(b.disabled)U.hap=0;b.className=U.hap?'on':''}
-function hapTick(now){const r=HAP.tick(now,U.hap&&!U.busy&&!document.hidden&&hapOK()?hapIn(live,LP.hapt,Sim.spd===Infinity?(Sim.rs>0?Sim.rs:1):Sim.spd):{on:0});if(r!=null)vib(r)}
+/* 燃焼の時刻を取り出して Hap に渡す（tS：このフレームの積分の前のシミュレーションの時刻，el：実経過 [s]） */
+function hapTick(now,tS,el){const ev=live.igT.splice(0),t1=live.s.t,on=U.hap&&!U.busy&&!document.hidden&&hapOK();const r=HAP.tick(now,on&&tS!=null&&t1>=tS?{on:1,ev,t0:tS,t1,dt:el*1e3}:{on:on?1:0,ev:[],t0:0,t1:0,dt:0});if(r!=null)vib(r)}
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initTH();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('bsys'),()=>show(6));tap($('bback'),()=>show(0));
@@ -212,7 +213,7 @@ buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
-if(!U.busy){advance(Sim,live,el,Sim.spd===Infinity?FB.mx:FB.n);spdTick(now);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();hapTick(now);
+const tS=live.s.t;if(!U.busy){advance(Sim,live,el,Sim.spd===Infinity?FB.mx:FB.n);spdTick(now);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();hapTick(now,tS,el);
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
 if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===8)drawLossT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText();if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}

@@ -69,7 +69,6 @@ const ITEMS=[
 {k:'dex',n:'排気管内径 d',u:'mm',f:1e-3,lo:20,hi:80,st:2,d:40,c:'i',pg:9},
 {k:'fl',n:'流れ雑音',u:'%',f:.01,lo:0,hi:100,st:10,d:40,c:'i',pg:9},
 {k:'sm',n:'音の種類',u:'',ch:['計算','演出'],d:0,c:'i',pg:9},
-{k:'hapt',n:'振動の時間',u:'',ch:['実時間','再生速度'],d:0,c:'i',pg:9},
 {k:'cid',n:'着火遅れ係数 c_d',u:'',f:1,lo:.1,hi:10,st:.1,d:1,c:'i',pg:10},
 {k:'cbr',n:'燃焼速度係数 c_b',u:'',f:1,lo:.1,hi:10,st:.1,d:1,c:'i',pg:10},
 {k:'wm',n:'Wiebe 形状係数 m_w',u:'',f:1,lo:0,hi:6,st:.5,d:2,c:'i',pg:10},
@@ -270,7 +269,7 @@ const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m
 const mkGB=()=>({eT:0,e:0,R:0,RT:0,ep:0,Rp:0,ez:0,Rz:0});
 class Core{
 /* 右辺とソルバが使う作業用のプロパティを，はじめに全部宣言しておく（後から足すとオブジェクトの形が変わり，JIT の最適化が繰り返し捨てられる） */
-constructor(P){this.P=P;this.bo=null;this.bo2=null;this.bo3=null;this.bx=null;this.kT=null;this.TC=null;this.Zc=null;this.k0b=null;this.kb=null;this.yy=null;this.r4=null;this.r5=null;this.ea=0;this.wx=1;this.atS=0;this.trO=null;this.trA=null;this.fixw=0;this.fixTw=0;this.lastM=null;this.reset()}
+constructor(P){this.P=P;this.bo=null;this.bo2=null;this.bo3=null;this.bx=null;this.kT=null;this.TC=null;this.Zc=null;this.k0b=null;this.kb=null;this.yy=null;this.r4=null;this.r5=null;this.ea=0;this.wx=1;this.atS=0;this.trO=null;this.trA=null;this.fixw=0;this.fixTw=0;this.lastM=null;this.igT=[];this.reset()}
 reset(){const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
 const y0=[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0));y0[49]=TA;if(SPC)y0[5]=P.Tw??K.Twc; /* 排気ポートのガスの温度（2.2 の 22）．化学平衡のモデルの壁温は設定の一定値（SPEC-08 の B） */
 this.s={y:y0,exOn:P.exs,clp:0,nfa:0,eve:0,evn:[0,0,0,0,0,0],ig:0,tc0:0,pq:[0,0,0,0],runOn:P.run,spa:P.spb,ca:NaN,rs:20261114,cz:[0,0],al:P.alc,Ip:0,If:0,fc:0,fe:0,ov:0,up:0,V:{v:0,x:0,t0:-1,t100:NaN,F:0},Nb:0,starter:0,fuel:0,fired:0,Wg:0,C:{on:0,th0:0,db:1,Q:0,mut:0},I0:{p:P.pa,V:k.V,T:K.Ti0},t:0,pmx:P.pa,mode:P.mode,h:1e-4,cyc:0,cf:0,hn:0,li:-1,YuE:NaN,Mx:null,spc:SPC,zs:GAS.phi2z(P.phi),inj:{on:0,th0:0,dth:1,m:0},mah:NaN,mtI:0,mfI:0,mfc:0,phc:NaN,pS:0,pSn:0,TE:NaN};
@@ -386,7 +385,7 @@ xport(y){const P=this.P,Z=this.zc(),o={},T=y[49],p=y[14],Vpe=.5*PI/4*P.dex*P.dex
 
 rnd(){const s=this.s;let t=(s.rs=(s.rs+0x6D2B79F5)>>>0);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}
 uz(){return(2*this.rnd()-1)*Math.sqrt(3)}
-ign(T,Yu,p,cy){const s=this.s,P=this.P,C=s.C,om=Math.max(s.y[1],K.wmin),phc=cy?GAS.AF*cy.mf/Math.max(cy.ma,1e-12):P.phi,b=burn(this.G,T,p,1-Yu,cy?Math.min(2,Math.max(.3,phc)):P.phi,om,s.spa,P.cid,P.cbr);if(cy){s.phc=phc;C.mut=cy.mu}C.th0=b.th0;C.db=b.db;C.m=P.wm;if(P.cvar){const z1=this.uz(),z2=this.uz();s.cz=[z1,z2];C.th0+=CCV.s0*D*z1;C.db*=Math.max(.5,1+CCV.sb*z2)}else s.cz=[0,0];C.Q=cy?(s.fuel?cy.mf*K.Hu:0):s.fuel?C.mut/(1+P.phi/K.AFR)*P.phi/K.AFR*K.Hu*K.etac*richEps(P.phi):0;C.on=cy?!!s.fuel&&cy.mf>0:!!s.fuel;s.ig=1}
+ign(T,Yu,p,cy){const s=this.s,P=this.P,C=s.C,om=Math.max(s.y[1],K.wmin),phc=cy?GAS.AF*cy.mf/Math.max(cy.ma,1e-12):P.phi,b=burn(this.G,T,p,1-Yu,cy?Math.min(2,Math.max(.3,phc)):P.phi,om,s.spa,P.cid,P.cbr);if(cy){s.phc=phc;C.mut=cy.mu}C.th0=b.th0;C.db=b.db;C.m=P.wm;if(P.cvar){const z1=this.uz(),z2=this.uz();s.cz=[z1,z2];C.th0+=CCV.s0*D*z1;C.db*=Math.max(.5,1+CCV.sb*z2)}else s.cz=[0,0];C.Q=cy?(s.fuel?cy.mf*K.Hu:0):s.fuel?C.mut/(1+P.phi/K.AFR)*P.phi/K.AFR*K.Hu*K.etac*richEps(P.phi):0;C.on=cy?!!s.fuel&&cy.mf>0:!!s.fuel;s.ig=1;/* 燃焼の時刻（振動．SPEC-36 A の 3）．状態ではない */if(C.on&&C.Q>0){const g=this.igT;g.push(s.t);if(g.length>256)g.shift()}}
 /* 次のイベント（REQ-13 4）：サイクルの終端，IVO，IVC，EVO，EVC，点火．th より先で最も近い角度を this.ea に置く */
 nextEv(th){const V=this.V,lo=th+1e-7;let a=P4;let x=V.gO;if(x>lo&&x<a)a=x;x=V.gA;if(x>lo&&x<a)a=x;x=V.gB;if(x>lo&&x<a)a=x;x=V.gC;if(x>lo&&x<a)a=x;x=md4(2*PI-this.s.spa*D);if(x>lo&&x<a)a=x;if(this.P.gam===2&&this.P.inj===1){x=md4(this.P.soi);if(x>lo&&x<a)a=x;const J=this.s.inj;if(J.on){x=md4(J.th0+J.dth);if(x>lo&&x<a)a=x}}this.ea=a;return a-th}
 /* イベントの処理：ステップの終端（角度 th1，状態 y1）で，その角度にあるイベントをすべて処理する */

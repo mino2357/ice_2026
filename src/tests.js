@@ -900,52 +900,39 @@ $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${n
 const TNAME=['','クランク運動学','熱物性','カム・VVT・弁干渉','オリフィス流量','スロットル・マニホールド','筒内組成','Wiebe燃焼','壁面熱伝達','筒内圧力方程式','回転運動・始動・摩擦','水ブレーキ動力計','ECU（スロットルPI）','数値積分','メトリクス','画面構成・操作','解説','グラフ軸・自動レンジ','設定','機関断面図','検証基盤','エンジン音','制御状態表示','目標回転数スライダ','内部EGR・点火時期','吸気ランナ','性能曲線タブ','排気系','アイドルの妥当性','化学種の熱物性と化学平衡','燃料の噴射と気化','全体図','最適化（バルブタイミング）','熱効率の損失の内訳','VVT マップ','シャシーダイナモメーター','振動による体感'];
 
 /* ---- TEST-36 振動による体感 ---- */
-/* 送った命令の列から，実際の振動の区間を再構成する（後から送った命令で前の命令を打ち切る）．calls：[{t, p}]（p は配列か 0） */
-const hapTL=calls=>{const on=[];for(let i=0;i<calls.length;i++){const c=calls[i],end=i+1<calls.length?calls[i+1].t:Infinity;if(!Array.isArray(c.p))continue;let x=c.t;c.p.forEach((d,j)=>{if(j%2===0&&d>0){const a=x,b=Math.min(x+d,end);if(a<end&&b>a+1e-6)on.push([a,b,c.t])}x+=d})}return on};
-const hapRun=(fr,n,inp)=>{const h=new Hap(),calls=[];for(let i=0;i<n;i++){const t=i*fr,r=h.tick(t,inp(t,i));if(r!=null)calls.push({t,p:r})}return{h,calls}};
+/* 送った命令の列から振動の区間を再構成する（後の命令で前の命令を打ち切る．打ち切られた区間と，同じ時刻から続く次の命令の区間はつなぐ）．calls：[{t, p}] */
+const hapTL=calls=>{const on=[];for(let i=0;i<calls.length;i++){const c=calls[i],end=i+1<calls.length?calls[i+1].t:Infinity;if(!Array.isArray(c.p))continue;let x=c.t;c.p.forEach((d,j)=>{if(j%2===0&&d>0){const a=x,b=Math.min(x+d,end);if(b>a+1e-6){const L=on[on.length-1];if(L&&Math.abs(L[1]-a)<1e-6&&L[3])L[1]=b,L[3]=b===end;else on.push([a,b,c.t,b===end])}}x+=d})}return on};
+/* 機関を模擬の時計で進め，Hap に燃焼の時刻を渡す．戻り値：命令，燃焼から求めた振動の開始の予定，各フレームの処理時間 */
+const hapDrive=function*(c,r,ms,on){const fr=1000/60,h=new Hap(),st={debt:0,spd:r},calls=[],exp=[],dts=[];let t=0;c.igT.length=0;while(t<ms){const tS=c.s.t;advance(st,c,fr/1e3,0);t+=fr;const ev=c.igT.splice(0),t1=c.s.t;for(const te of ev)exp.push(t+(t1>tS?(te-tS)/(t1-tS):0)*fr);const q0=performance.now(),q=h.tick(t,{on:on??1,ev,t0:tS,t1,dt:fr});dts.push(performance.now()-q0);if(q!=null)calls.push({t,p:q});if(RUN.over())yield}return{calls,exp,dts,end:t}};
 TST[36]=function*(){
 if(!RUN.ui){
-/* 1：区分とパルス幅 */
-{const W=hapPulse,a=[W('b',0,200),W('b',.6e6,200),W('b',1.2e6,200),W('b',2e6,150)],ok1=[8,44,80,75].every((v,i)=>Math.abs(a[i]-v)<=1e-9);let mono=true,pv=-1;for(let i=0;i<=100;i++){const w=W('b',1.2e6*i/100,200);if(!(w>pv))mono=false;pv=w}
- const ok2=W('b',-1e5,150)===8&&W('x',.9e6,150)===0&&W('s',.9e6,150)===0&&W('m',.9e6,150)===5&&W('b',.9e6,5.9)===Infinity&&W('b',.9e6,6)===3&&W('b',0,17)===8,k0=hapKind({s:{fired:1,fuel:1,starter:0,Mx:null}}),kx=hapKind({s:{fired:1,fuel:1,starter:0,Mx:{imep:9e5,Qin:0}}}),kb=hapKind({s:{fired:1,fuel:1,starter:0,Mx:{imep:9e5,Qin:500}}}),km=hapKind({s:{fired:1,fuel:0,starter:0,Mx:null}}),kc=hapKind({s:{fired:0,fuel:0,starter:1,Mx:null}}),ks=hapKind({s:{fired:0,fuel:0,starter:0,Mx:null}});
- chkB(36,'区分とパルス幅：IMEP 0，0.6，1.2 MPa（T_h 200 ms）で 8，44，80 ms，2.0 MPa（T_h 150 ms）で 75 ms，単調に増える，負の IMEP で 8 ms，失火と停止で無し，圧縮だけで 5 ms，T_h 5.9 ms で途切れない振動，6 ms でパルス（3 ms），17 ms で 8 ms．区分：完了したサイクルが無く燃料 ON で圧縮だけ，Q_in = 0 で失火',ok1&&mono&&ok2&&k0==='m'&&kx==='x'&&kb==='b'&&km==='m'&&kc==='m'&&ks==='s',`${a.join('，')} ms，単調 ${mono}，区分 ${[k0,kx,kb,km,kc,ks].join('')}`)}
-/* 2：実時間の列 */
-{const fr=1000/60,res=[],bad=[];let rate=0,inside=0,elem=0;for(const N of[800,3000,6000]){const st=[];for(const r of[.1,1,8]){const R=hapRun(fr,600,()=>({on:1,Nb:N,kind:'b',imep:.9e6,r,cyc:0,mode:0})),tl=hapTL(R.calls),s=tl.map(q=>q[0]).filter(x=>x>=500);st.push(s.join());
-   const d=s.slice(1).map((x,i)=>x-s[i]),T=120000/N,m=d.reduce((a,b)=>a+b,0)/d.length,em=Math.abs(m/T-1),ei=Math.max(...d.map(x=>Math.abs(x-T)));if(r===1)res.push(`${N} rpm：平均 ${m.toFixed(3)} ms（${(em*100).toFixed(3)} %），最大の誤差 ${ei.toFixed(2)} ms`);if(!(em<=.005&&ei<=2))bad.push(N+'/'+r);
-   rate=Math.max(rate,R.calls.length/(Math.ceil(1e4/(47*T))+1));for(let i=0;i<R.calls.length;i++){const c=R.calls[i],p=c.p;if(Array.isArray(p)&&!(p.length<=98&&p.every(Number.isInteger)&&p[0]>=0&&p.slice(1).every(v=>v>=1)))elem++;if(i)for(const q of hapTL(R.calls.slice(0,i)))if(q[0]<c.t-1e-9&&c.t<q[1]-1e-9)inside++}}
-  if(st[0]!==st[1]||st[1]!==st[2])bad.push(N+' 再生速度で違う')}
- chkB(36,'実時間の列（800，3000，6000 rpm，10 s）：振動の開始の間隔の平均が 120/N̄（0.5 %），各間隔の誤差 ≤ 2 ms，再生速度 0.1×，1×，最速で同じ．パターンの要素が整数（先頭 ≥ 0，ほか ≥ 1），要素 ≤ 98．振動の途中で送らない．命令が ⌈10 s/(47 T_h)⌉ + 1 回以下（定常では使い切る前にだけ送る）',bad.length===0&&elem===0&&inside===0&&rate<=1,`${res.join('；')}；違反 ${bad.join(',')||'0'}，要素 ${elem}，途中 ${inside}，命令の回数／上限 ${rate.toFixed(2)}`)}
-/* 3：途切れない振動 */
-{const P=N=>hapRun(1000/60,600,()=>({on:1,Nb:N,kind:'b',imep:.9e6,r:1,cyc:0,mode:0})).calls.filter(c=>Array.isArray(c.p)),a=P(21000),b=P(19000);
- const vb=b.flatMap(c=>c.p.slice(c.p[0]===0?2:0));chkB(36,'途切れない振動：21000 rpm（T_h 5.71 ms）でパターンが [10000]（10 s に 2 回以下），19000 rpm（6.32 ms）では休止があり，振動と休止が 2〜4 ms',a.length>0&&a.length<=2&&a.every(c=>c.p.length===1&&c.p[0]===10000)&&b.some(c=>c.p.length>1)&&vb.every(v=>v>=2&&v<=4),`21000 rpm：${a.map(c=>c.p.length).slice(0,4).join(',')} 要素，19000 rpm：${b.map(c=>c.p.length).slice(0,4).join(',')} 要素，値 ${[...new Set(vb)].sort().join(',')} ms`)}
-/* 4：サイクルの区分（運転中の機関） */
-{const fr=1000/60,drive=function*(c,h,T,t0,calls){const st={debt:0,spd:1};let t=t0;while(t<t0+T){advance(st,c,fr/1e3,0);t+=fr;const r=h.tick(t,hapIn(c,0,1));if(r!=null)calls.push({t,p:r});if(RUN.over())yield}return t},ons=calls=>{const a=calls.filter(c=>Array.isArray(c.p));return a.length?a[a.length-1].p.filter((v,i)=>i%2===0&&v>0):[]};
- const s4=yield*scen('S4'),c=s4.c.clone(),h=new Hap(),cl=[];let t=yield*drive(c,h,1000,0,cl);const w0=hapPulse('b',c.s.Mx.imep,120000/h.sN),oa=ons(cl),okA=oa.length>0&&oa.every(v=>Math.abs(v-h.sw)<1+1e-9)&&Math.abs(h.sw-w0)<=.5;
- c.stop();const cl2=[];t=yield*drive(c,h,1000,t,cl2);const ob=ons(cl2),okB=ob.length>0&&ob.every(v=>v===5);
- const cr=(yield*scen('CRANK')).c.clone(),h3=new Hap(),cl3=[];yield*drive(cr,h3,500,0,cl3);const oc=ons(cl3),okC=oc.length>0&&oc.every(v=>v===5);
- c.stop();const cl4=[];yield*drive(c,h,1000,t,cl4);const okD=cl4.length>0&&cl4[0].p===0&&cl4.slice(1).every(q=>!Array.isArray(q.p));
- const R=hapRun(fr,150,tm=>({on:1,Nb:800,kind:tm>=1000&&tm<1150?'x':'b',imep:.9e6,r:1,cyc:0,mode:0})),s=hapTL(R.calls).map(q=>q[0]).filter(x=>x>=400),gap=Math.max(...s.slice(1).map((x,i)=>x-s[i])),okE=gap>=290&&s.some(x=>x>1300)&&s.some(x=>x<1000);
- chkB(36,'サイクルの区分：(a) S4 の定常で幅が IMEP の式と 1 ms 以内，(b) FUEL CUT（駆動）で 5 ms，(c) クランキングで 5 ms，(d) 止めると vibrate(0) の後は送らない，(e) 失火のサイクルの振動が抜ける',okA&&okB&&okC&&okD&&okE,`(a) ${[...new Set(oa)].join(',')}（送ったときの幅 ${h.sw.toFixed(2)} ms，式 ${w0.toFixed(2)} ms），(b) ${[...new Set(ob)].join(',')}，(c) ${[...new Set(oc)].join(',')}，(d) ${cl4.length} 回（先頭 ${cl4.length?JSON.stringify(cl4[0].p):'–'}），(e) 最長の間隔 ${gap.toFixed(0)} ms`)}
-/* 5：シミュレーションの時間 */
-{const fr=1000/60,s4=yield*scen('S4'),out=[];let ok=true;for(const r of[1,.5]){const c=s4.c.clone(),h=new Hap(),st={debt:0,spd:r},calls=[],done=[];let t=0,cy=c.s.cyc;while(t<4000){advance(st,c,fr/1e3,0);t+=fr;if(c.s.cyc!==cy){cy=c.s.cyc;done.push(t)}const q=h.tick(t,hapIn(c,1,r));if(q!=null)calls.push({t,p:q});if(RUN.over())yield}
-  const s=hapTL(calls).map(q=>q[0]).filter(x=>x<=t),miss=done.slice(1).filter(tc=>!s.some(x=>Math.abs(x-tc)<=17)).length,dn=Math.abs(s.length-done.length);if(!(dn<=1&&miss===0))ok=false;out.push(`${r}×：振動 ${s.length} 回，完了 ${done.length} サイクル，17 ms の外 ${miss}`)}
- chkB(36,'シミュレーションの時間（S4，1× と 0.5×，実時間 4 s）：振動の回数が完了したサイクルの数と ±1，各サイクルの完了から ±17 ms に振動が始まる',ok,out.join('；'))}
-/* 7：計算時間 */
-{const h=new Hap();let mx=0,sum=0;for(let i=0;i<60;i++)h.tick(i*1000/60,{on:1,Nb:3000,kind:'b',imep:.9e6,r:1,cyc:0,mode:0});const ds=[];for(let i=60;i<660;i++){const t0=performance.now();h.tick(i*1000/60,{on:1,Nb:3000,kind:'b',imep:.9e6,r:1,cyc:0,mode:0});const d=performance.now()-t0;sum+=d;mx=Math.max(mx,d);ds.push(d)}ds.sort((x,y)=>x-y);const p99=ds[Math.floor(.99*ds.length)];
- chkB(36,'計算時間：1 フレームの処理の平均 ≤ 0.05 ms，99 パーセンタイル ≤ 0.2 ms（3000 rpm，600 フレーム．最大は記録）',sum/600<=.05&&p99<=.2,`平均 ${(sum/600*1e3).toFixed(1)} μs，99 % ${(p99*1e3).toFixed(0)} μs，最大 ${(mx*1e3).toFixed(0)} μs`)}
-/* 8：計算に影響しない */
-{const s2=yield*scen('S2'),fr=1000/60,ys=[];for(const m of[-1,0,1]){const c=s2.c.clone(),h=new Hap(),st={debt:0,spd:1};for(let i=0;i<180;i++){advance(st,c,fr/1e3,0);if(m>=0)h.tick(i*fr,hapIn(c,m,1));if(RUN.over())yield}ys.push(JSON.stringify(c.s.y))}
- chkB(36,'計算に影響しない：S2 から 3 s を，振動 OFF，実時間，シミュレーションの時間で進めた状態ベクトルが完全に一致',ys[0]===ys[1]&&ys[1]===ys[2])}
+/* 1：パターン */
+{const P=(sg,t0)=>hapPattern(sg,t0).p,a=P([[5,8],[20,23],[40,43]],0),b=P([[0,3]],0),c=P([5,9,13,17,21].map(x=>[x,x+3]),0),d=P(Array.from({length:100},(_,i)=>[i*10+5,i*10+8]),0),ok=JSON.stringify(a)==='[0,5,3,12,3,17,3]'&&JSON.stringify(b)==='[3]'&&JSON.stringify(c)==='[0,5,19]'&&d.length<=98&&[a,b,c,d].every(p=>p.every(Number.isInteger)&&p.slice(1).every(v=>v>=1));
+ chkB(36,'パターン：5，20，40 ms の 3 つで [0,5,3,12,3,17,3]，0 ms で [3]，休止 1 ms の 5 つは [0,5,19] につながる，100 個でも要素 ≤ 98，整数で先頭のほかは ≥ 1',ok,`${JSON.stringify(a)}，${JSON.stringify(b)}，${JSON.stringify(c)}，${d.length} 要素`)}
+/* 2：燃焼の回数と時刻，6：計算時間 */
+{const s4=yield*scen('S4'),out=[];let ok=true,dts=[];for(const r of[.1,.5,1]){const R=yield*hapDrive(s4.c.clone(),r,4000),tl=hapTL(R.calls),st=tl.map(q=>q[0]),wd=tl.map(q=>q[1]-q[0]),e=R.exp,n=Math.min(st.length,e.length),de=Math.max(0,...st.slice(0,n).map((x,i)=>Math.abs(x-e[i])));if(!(st.length===e.length&&de<=1&&wd.every(w=>w>=2.5&&w<=3.5)&&e.length>0))ok=false;out.push(`${r}×：燃焼 ${e.length}，振動 ${st.length}，時刻の差 ≤ ${de.toFixed(2)} ms，長さ ${Math.min(...wd).toFixed(1)}〜${Math.max(...wd).toFixed(1)} ms`);if(r===1)dts=R.dts}
+ chkB(36,'燃焼の回数と時刻（S4，0.1×，0.5×，1×，実時間 4 s）：振動の数 = 燃焼の数，開始が式の時刻と 1 ms 以内，長さ 3 ms',ok,out.join('；'));
+ const ds=dts.slice().sort((x,y)=>x-y),p99=ds[Math.floor(.99*ds.length)],mn=dts.reduce((a,b)=>a+b,0)/dts.length;
+ chkB(36,'計算時間：1 フレームの処理の平均 ≤ 0.05 ms，99 パーセンタイル ≤ 0.2 ms（最大は記録）',mn<=.05&&p99<=.2,`平均 ${(mn*1e3).toFixed(1)} μs，99 % ${(p99*1e3).toFixed(0)} μs，最大 ${(ds[ds.length-1]*1e3).toFixed(0)} μs`)}
+/* 3：つながる振動 */
+{const f=sp=>new Hap().tick(100,{on:1,ev:[0,1,2,3].map(i=>i*sp),t0:0,t1:16.7,dt:16.7}),a=f(4),b=f(8);
+ chkB(36,'つながる振動：4 ms ごとの燃焼 4 つで休止の無い 1 つの振動，8 ms ごとでは休止がある',Array.isArray(a)&&a.length===1&&Array.isArray(b)&&b.length>1,`${JSON.stringify(a)}，${JSON.stringify(b)}`)}
+/* 4：燃焼しないときは振動しない */
+{const s4=yield*scen('S4'),c=s4.c.clone();yield*hapDrive(c,1,500);c.stop();yield*hapDrive(c,1,200);const A=yield*hapDrive(c,1,1000),cr=(yield*scen('CRANK')).c.clone(),B=yield*hapDrive(cr,1,1000),na=A.calls.filter(q=>Array.isArray(q.p)).length,nb=B.calls.filter(q=>Array.isArray(q.p)).length;
+ chkB(36,'燃焼しないときは振動しない：FUEL CUT（駆動）の 0.2 s 後から 1 s，クランキングの 1 s でパターンを送らない',na===0&&nb===0&&A.exp.length===0&&B.exp.length===0,`FUEL CUT ${na} 回（燃焼 ${A.exp.length}），クランキング ${nb} 回（燃焼 ${B.exp.length}）`)}
+/* 7：計算に影響しない */
+{const s2=yield*scen('S2'),ys=[];for(const on of[0,1]){const c=s2.c.clone();yield*hapDrive(c,1,3000,on);ys.push(JSON.stringify(c.s.y))}
+ chkB(36,'計算に影響しない：S2 から 3 s を，振動 OFF と ON で進めた状態ベクトルが完全に一致',ys[0]===ys[1])}
 }
-/* 6：画面と止める命令 */
+/* 5：画面と止める命令 */
 {uiDefault();const own=Object.prototype.hasOwnProperty.call(navigator,'vibrate'),v0=navigator.vibrate,log=[],b0=U.busy,Bx=e=>e.getBoundingClientRect();navigator.vibrate=p=>{log.push(Array.isArray(p)?p.slice():p);return true};hapBtn();show(0);yield 'frame';
  const b=$('hap'),q=[];q.push(!!b&&vis(b)&&Bx(b).width>=43.5&&Bx(b).height>=43.5&&txtW(b)<=.95*room(b)&&b.textContent==='振動'&&b.className===''&&!U.hap&&!b.disabled);
- U.busy=0;tapEl(b);q.push(U.hap===1&&b.className==='on');live.start();let t0=performance.now();while(!log.some(Array.isArray)&&performance.now()-t0<1000)yield 'frame';q.push(log.some(Array.isArray));
+ U.busy=0;tapEl(b);q.push(U.hap===1&&b.className==='on');Sim.spd=1;sp();live.start();let t0=performance.now();while(!log.some(Array.isArray)&&performance.now()-t0<4000)yield 'frame';q.push(log.some(Array.isArray));
  tapEl(b);const n1=log.length;q.push(U.hap===0&&log[n1-1]===0);t0=performance.now();while(performance.now()-t0<300)yield 'frame';q.push(log.slice(n1).every(x=>!Array.isArray(x)));
  tapEl(b);t0=performance.now();while(!Array.isArray(log[log.length-1])&&performance.now()-t0<1000)yield 'frame';U.busy=1;yield 'frame';yield 'frame';const n2=log.length;q.push(log[n2-1]===0);U.busy=0;
  t0=performance.now();while(!Array.isArray(log[log.length-1])&&performance.now()-t0<1000)yield 'frame';Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));q.push(log[log.length-1]===0);delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));
  tapEl(b);U.busy=b0;navigator.vibrate=undefined;hapBtn();q.push(b.disabled);if(own)navigator.vibrate=v0;else delete navigator.vibrate;hapBtn();
- const it=ITEMS.find(i=>i.k==='hapt'),pg=PAGES.indexOf('音と振動');q.push(!!it&&it.pg===pg&&it.ch.join()==='実時間,再生速度'&&it.d===0);U.pg=pg;show(2);rs();pvText();q.push($('pvt').textContent.includes('サイレント'));
+ const pg=PAGES.indexOf('音と振動');q.push(pg>=0&&!ITEMS.some(i=>i.k==='hapt'));U.pg=pg;show(2);rs();pvText();q.push($('pvt').textContent.includes('サイレント'));
  uiDefault();show(0);live.reset();
- chkB(36,'画面：[振動] が 44 px 以上で文字が収まり既定 OFF．ON で START して 1 s 以内に送る．OFF で直ちに vibrate(0)，その後は送らない．テストの実行中とページの非表示で vibrate(0)．API が無いと無効．設定「音と振動」に「振動の時間」（実時間・再生速度，既定 実時間）と，説明に「サイレント」',q.every(x=>x),q.map(x=>x?1:0).join(''))}
+ chkB(36,'画面：[振動] が 44 px 以上で文字が収まり既定 OFF．ON にして 1× で START すると 4 s 以内に送る．OFF で直ちに vibrate(0)，その後は送らない．テストの実行中とページの非表示で vibrate(0)．API が無いと無効．設定「音と振動」の説明に「サイレント」',q.every(x=>x),q.map(x=>x?1:0).join(''))}
 };
