@@ -74,7 +74,7 @@ SND.node.connect(ctx.destination);SND.cyc=-1;if(ctx.state!=='running')try{await 
 function sndFeed(){return{Nt:SND.on&&!U.busy&&!document.hidden?live.s.Nb:0,vol:LP.vol,L:LP.Lex,d:LP.dex,cv:LP.cvar,fl:LP.fl,fm:LP.sm,ld:sndLoad(live.s.y[6],LP.pa)}}
 function sndTick(){if(!SND.post)return;const m=sndFeed();if(live.s.cyc!==SND.cyc&&live.last&&live.last.me){SND.cyc=live.s.cyc;m.tab=mkTable(live.last.me);m.env=mkEnv(live.last.me);m.M=exMach(live.last.me,LP.pa,LP.dex,cEx())}SND.post(m)}
 /* ===== 振動による体感（SPEC-36）．DOM とブラウザの API に依らない．時刻は ms ===== */
-const HAPC={w0:8,w1:80,wm:5,ph:1.2e6,H:300,Ts:100,tau:50,cont:16,gap:4,nmax:98,Nmin:30};
+const HAPC={w0:8,w1:80,wm:5,ph:1.2e6,H:10000,Ts:100,tau:50,cont:16,gap:4,nmax:98,Nmin:30,dN:.05,dW:.25};
 /* 区分（A の 2）：'b' 燃焼，'x' 失火，'m' 圧縮だけ，'s' 停止．c.s.Mx は完爆後に完了した直前のサイクルの記録 */
 function hapKind(c){const s=c.s;if(s.fired&&s.fuel){const M=s.Mx;return M?(M.Qin>0?'b':'x'):'m'}if(s.fired||s.starter)return'm';return's'}
 /* パルス幅（A の 3〜4）[ms]．0 は振動なし，Infinity は途切れない振動．Th：開始の間隔 [ms] */
@@ -83,21 +83,23 @@ function hapPulse(k,imep,Th){if(k==='s'||k==='x')return 0;if(!(Th>=HAPC.cont))re
 function hapPattern(segs,t0){const p=[],on=[];let cur=0;for(const[s,e]of segs){const a=Math.max(0,Math.round(s-t0)),b=Math.round(e-t0);if(b<=a)continue;
  if(!p.length){if(p.length+2>HAPC.nmax)break;if(a>0)p.push(0,a);p.push(b-a);on.push([t0+a,t0+b])}
  else if(a-cur<HAPC.gap){p[p.length-1]+=b-cur;on[on.length-1][1]=t0+b}else{if(p.length+2>HAPC.nmax)break;p.push(a-cur,b-a);on.push([t0+a,t0+b])}cur=b}
- return{p:p.length?p:[0,HAPC.H],on}}
+ return{p:p.length?p:[0,HAPC.Ts],on}}
 /* 位相と送る判断（B，C の 1，3，4）．tick(now, i)：i = {on, Nb, kind, imep, r, cyc, mode}．戻り値：null（送らない），0（止める），配列（パターン） */
-class Hap{constructor(){this.t=null;this.Nh=0;this.psi=0;this.last=-1e9;this.cyc=null;this.on=[];this.sent=-1e9;this.sN=0;this.sw=0;this.sk='';this.stop=1}
+class Hap{constructor(){this.t=null;this.Nh=0;this.psi=0;this.last=-1e9;this.cyc=null;this.on=[];this.until=-1e9;this.rsP=0;this.sN=0;this.sw=0;this.sk='';this.stop=1}
  tick(now,i){if(!i.on){this.t=null;this.cyc=null;if(this.stop)return null;this.stop=1;this.on=[];return 0}
   const dt=this.t==null?0:now-this.t;this.t=now;this.Nh=dt?this.Nh+(i.Nb-this.Nh)*(1-Math.exp(-dt/HAPC.tau)):i.Nb;
-  const k=this.Nh<HAPC.Nmin?'s':i.kind,f=this.Nh/120e3*(i.mode?i.r:1),Th=f>0?1/f:Infinity;let rs=0;
+  const k=this.Nh<HAPC.Nmin?'s':i.kind,f=this.Nh/120e3*(i.mode?i.r:1),Th=f>0?1/f:Infinity;
   if(f>0){this.psi+=f*dt;if(this.psi>=1){const n=Math.floor(this.psi);this.psi-=n;this.last=now-this.psi/f}}
-  if(i.mode&&this.cyc!=null&&i.cyc!==this.cyc&&f>0){if(now-this.last>=Th/2){const d=Math.abs((1-this.psi)/f);this.psi=0;this.last=now;rs=d>5}else this.psi=Math.min(.999999,(now-this.last)*f)}
+  /* シミュレーションの時間：サイクルの完了を検出したら，いちばん近い予定のパルスとの差が許容（B の 2，C の 3）を超えるときだけ，いまパルスを始めて送り直す */
+  if(i.mode&&this.cyc!=null&&i.cyc!==this.cyc&&f>0){let e=Infinity;for(const q of this.on)if(Math.abs(now-q[0])<Math.abs(e))e=now-q[0];if(!(Math.abs(e)<=Math.max(10,.2*Th))){this.psi=0;this.last=now;this.rsP=1}}
   this.cyc=i.cyc;
   if(k==='s'){if(this.stop)return null;this.stop=1;this.on=[];return 0}
-  const w=hapPulse(k,i.imep,Th),need=this.stop||rs||now-this.sent>=HAPC.Ts||k!==this.sk||Math.abs(this.Nh-this.sN)>.02*this.sN||(isFinite(w)&&isFinite(this.sw)?Math.abs(w-this.sw)>2:w!==this.sw);
+  const w=hapPulse(k,i.imep,Th),need=this.stop||this.rsP||now>=this.until-HAPC.Ts||k!==this.sk||Math.abs(this.Nh-this.sN)>HAPC.dN*this.sN||(isFinite(w)&&isFinite(this.sw)?Math.abs(w-this.sw)>HAPC.dW*this.sw:w!==this.sw);
   if(!need)return null;
   /* 振動の区間の中では送らない（途切れない振動は待たない） */
   if(isFinite(w)&&this.on.some(([a,b])=>a<now-1e-9&&now<b-1e-9))return null;
-  const segs=[];if(!isFinite(w))segs.push([now,now+HAPC.H]);else if(w>0)for(let j=0;;j++){const s=now+(j-this.psi)*Th;if(s>=now+HAPC.H)break;if(s+w>now)segs.push([s,s+w])}
-  const P=hapPattern(segs,now);this.on=P.on;this.sent=now;this.sN=this.Nh;this.sw=w;this.sk=k;this.stop=0;return P.p}}
+  /* 位相を，前の命令で最後に始まったパルスからの経過で置き直す（C の 3） */if(!this.rsP&&isFinite(w)&&f>0){let ls=-Infinity;for(const q of this.on)if(q[0]<=now&&q[0]>ls)ls=q[0];if(ls>-Infinity&&now-ls<Th){this.psi=(now-ls)*f;this.last=ls}}
+  const segs=[];if(!isFinite(w))segs.push([now,now+HAPC.H]);else if(w>0)for(let j=0;j<=HAPC.nmax/2;j++){const s=now+(j-this.psi)*Th;if(s>=now+HAPC.H)break;if(s+w>now)segs.push([s,s+w])}
+  const P=hapPattern(segs,now);this.on=P.on;this.until=P.on.length?P.on[P.on.length-1][1]:now+HAPC.Ts;this.sN=this.Nh;this.sw=w;this.sk=k;this.stop=0;this.rsP=0;return P.p}}
 /* 運転中の機関から Hap への入力（mode：0 実時間，1 シミュレーションの時間．r：再生速度の倍率） */
 function hapIn(c,mode,r){const M=c.s.Mx;return{on:1,Nb:c.s.Nb,kind:hapKind(c),imep:M?M.imep:0,r,cyc:c.s.cyc,mode}}
