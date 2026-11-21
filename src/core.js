@@ -205,13 +205,20 @@ const GAS=(()=>{
  function nodeN(i){if(tabN[i])return tabN[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT),Q=new Float64Array(G.np*G.nT);
   for(let ip=0;ip<G.np;ip++){const n0=eq(TND,Math.exp(G.lp0+G.dlp*ip),z,ec).n,r0=bR(n0,z,ec);for(let it=0;it<G.nT;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(n0,T,z,ec);R[k]=r0;c[k]=bCv(n0,T,z,ec)}}
   return tabN[i]={e,c,R,Q}}
- function node(i){if(tab[i])return tab[i];const ec=K.etac,z=phi2z((G.f0+G.df*i)/ec),e=new Float64Array(G.np*G.nT),c=new Float64Array(G.np*G.nT),R=new Float64Array(G.np*G.nT),Q=new Float64Array(G.np*G.nT),df=(a,k,it,L,h)=>it-2>=iF&&it+2<=L?(-a[k+2]+8*a[k+1]-8*a[k-1]+a[k-2])/(12*h):it===iF?(-3*a[k]+4*a[k+1]-a[k+2])/(2*h):it===L?(3*a[k]-4*a[k-1]+a[k-2])/(2*h):(a[k+1]-a[k-1])/(2*h);
-  for(let ip=0;ip<G.np;ip++){const p=Math.exp(G.lp0+G.dlp*ip);let w=null,nf=null;
+ /* 節点の表を p の行ごとに作る（NodeB）．node(i) は全行を一度に，warm(ms) は持ち時間の中で行ごとに作る（計測の前に表を作っておく．SPEC-29 A の 6，SPEC-26 B の 1）．どちらも同じ計算 */
+ const df=(a,k,it,L,h)=>it-2>=iF&&it+2<=L?(-a[k+2]+8*a[k+1]-8*a[k-1]+a[k-2])/(12*h):it===iF?(-3*a[k]+4*a[k+1]-a[k+2])/(2*h):it===L?(3*a[k]-4*a[k-1]+a[k-2])/(2*h):(a[k+1]-a[k-1])/(2*h);
+ class NodeB{constructor(i){const n=G.np*G.nT;this.i=i;this.ec=K.etac;this.z=phi2z((G.f0+G.df*i)/this.ec);this.ip=0;this.t={e:new Float64Array(n),c:new Float64Array(n),R:new Float64Array(n),Q:new Float64Array(n)}}
+  row(){const ip=this.ip,{e,c,R,Q}=this.t,ec=this.ec,z=this.z,p=Math.exp(G.lp0+G.dlp*ip);let w=null,nf=null;
    for(let it=iF;it<G.nT;it++){const T=G.T0+G.dT*it,q=eq(T,p,z,ec,w),k=ip*G.nT+it;w=q.n;if(it===iF)nf=q.n.slice();e[k]=bE(q.n,T,z,ec);R[k]=bR(q.n,z,ec)}
    /* 平衡の側の傾き c_v = ∂e/∂T と ∂R/∂T は，節点の値の差分で求める（内側は 4 次の中心差分，端は 2 次の片側差分）．凍結の側は c_v が凍結組成の値，∂R/∂T = 0 */
    for(let it=iF;it<G.nT;it++){const k=ip*G.nT+it,h=G.dT,L=G.nT-1;c[k]=df(e,k,it,L,h);Q[k]=df(R,k,it,L,h)}
-   for(let it=0;it<iF;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(nf,T,z,ec);R[k]=bR(nf,z,ec);c[k]=bCv(nf,T,z,ec)}}
-  return tab[i]={e,c,R,Q}}
+   for(let it=0;it<iF;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(nf,T,z,ec);R[k]=bR(nf,z,ec);c[k]=bCv(nf,T,z,ec)}this.ip++}
+  /* 持ち時間 ms の中で行を作る（ms = Infinity で全行）．できたら表を返す */
+  run(ms){const t0=performance.now();while(this.ip<G.np){this.row();if(performance.now()-t0>ms)break}return this.ip>=G.np?this.t:null}}
+ let WB=null;const WO=Array.from({length:G.nf},(_,i)=>i).sort((a,b)=>Math.abs(G.f0+G.df*a-1)-Math.abs(G.f0+G.df*b-1)||a-b);
+ function node(i){if(tab[i])return tab[i];if(WB&&WB.i===i){const t=WB.run(Infinity);WB=null;return tab[i]=t}return tab[i]=new NodeB(i).run(Infinity)}
+ /* 表のまだ無い節点を，φ_r = 1 に近い順に，持ち時間 ms の中で作る．全節点がそろっていれば true */
+ function warm(ms){const t0=performance.now();for(;;){if(!WB){const i=WO.find(j=>!tab[j]);if(i==null)return true;WB=new NodeB(i)}const left=ms-(performance.now()-t0);if(left<=0)return false;const t=WB.run(left);if(!t)return false;tab[WB.i]=t;WB=null}}
  /* 補間：T は 3 次 Hermite（e と傾き c_v，R と傾き ∂R/∂T．T について C¹ で，右辺が節点で跳ばない）．ln p と φ は線形．偏微分は補間した関数の微分 */
  const cl=(x,a,b)=>x<a?a:x>b?b:x,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
  /* ホットパス：オブジェクトと配列を作らない．o に e, R と偏微分 eT, ep, ez, RT, Rp, Rz を書く */
@@ -229,7 +236,7 @@ const GAS=(()=>{
   o.ep=inP?((e01-e00)*(1-wf)+(e11-e10)*wf)*ip:0;o.Rp=inP?((r01-r00)*(1-wf)+(r11-r10)*wf)*ip:0;o.ez=inF?(eB-eA)*dzf:0;o.Rz=inF?(rB-rA)*dzf:0;return o}
  /* 平衡を直接解いた既燃ガスの物性（表を使わない．検証用） */
  function direct(T,p,z,ec=K.etac,frz=true){if(frz&&T<Tfr){const q=eq(Tfr,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N}}const q=eq(T,p,z,ec);return{e:bE(q.n,T,z,ec),R:bR(q.n,z,ec),n:q.n,N:q.N,q}}
- return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,burned,direct,tab,TND,nd:v=>{ND=v?1:0}}})();
+ return{S,SP,F,cp,h,s0,u,T0,y,Mf,nC,hfg,Tl,Tfr,Ma,Ra,Rf,AF,ea,cva,ha,ef,cvf,hf,eq,elem,A,bE,bR,bCv,z2phi,phi2z,G,node,NodeB,warm,burned,direct,tab,TND,nd:v=>{ND=v?1:0}}})();
 /* SPEC-29：温度が固定の場所（吸気 TI，外気 TA，液体の燃料）の物性の定数と，気体定数を引数に取るオリフィスの式 */
 const GC={cvaI:GAS.cva(TI),cpaI:GAS.cva(TI)+GAS.Ra,haI:GAS.ha(TI),cvfI:GAS.cvf(TI),cpfI:GAS.cvf(TI)+GAS.Rf,hfI:GAS.hf(TI),cvaA:GAS.cva(TA),cvfA:GAS.cvf(TA),gA:1+GAS.Ra/GAS.cva(TA),kA:psiK(1+GAS.Ra/GAS.cva(TA)),hl:GAS.hf(GAS.Tl)-GAS.hfg};
 const PRX=.023*.7**.3/.7 /* Dittus–Boelter の係数 0.023 Pr^0.3 と k = c_p μ/Pr の 1/Pr（Pr = 0.7） */;
@@ -459,7 +466,7 @@ const swOpt=o=>({crit:SWC.critD,flow:SWC.flowD,proc:SWC.procD,...(o||{})});
 const swR=a=>Math.max(...a)-Math.min(...a),swM=a=>a.reduce((x,v)=>x+v,0)/a.length;
 class Sweep{constructor(P0,Ns,al,opt){this.Ns=Ns||SWN;this.al=al??SWC.al;this.o=swOpt(opt);this.C=SWC.crit[this.o.crit];this.nmin=this.o.nmin??this.C.nmin;this.nmax=this.o.nmax??SWC.nmax;const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:this.al*D});c.fixw=1;c.fixTw=1;c.s.y[5]=c.P.gam===2&&c.P.Tw!=null?c.P.Tw:SWC.Tw;this.pts=[];this.i=0;this.done=false;this.sig=JSON.stringify(P0);this.begin()}
 begin(){const c=this.c,N=this.Ns[this.i];c.s.y[1]=N*PI/30;c.s.Nb=N;c.P.nt=N;if(!c.s.fuel)c.start();/* 計測の機関は初めから完爆済みとして扱う（SPEC-26 の 4） */c.s.fired=1;c.s.starter=0;this.h=[];this.cy=c.s.cyc;this.nc=0}
-run(ms){const c=this.c,t0=performance.now();while(!this.done){c.step();/* エンスト（燃料 OFF）：点をエンストとして記録し，描かない（SPEC-26 の 4） */if(!c.s.fuel){this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length});this.i++;if(this.i>=this.Ns.length)this.done=true;else this.begin();continue}if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}/* 経過時間は毎ステップ調べる（最初の点で表の節点を作る遅いステップが続くため．SPEC-26 B の 1） */if(performance.now()-t0>ms)break}return this.done}
+run(ms){const c=this.c,t0=performance.now();/* 化学平衡のモデルでは，既燃ガスの表の全節点ができるまで積分しない（表を作る遅いステップで 1 回の計算が延びないよう，持ち時間の中で行ごとに作る．SPEC-26 B の 1） */if(c.P.gam===2&&!GAS.warm(ms))return false;while(!this.done){c.step();/* エンスト（燃料 OFF）：点をエンストとして記録し，描かない（SPEC-26 の 4） */if(!c.s.fuel){this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length});this.i++;if(this.i>=this.Ns.length)this.done=true;else this.begin();continue}if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}/* 経過時間は毎ステップ調べる（最初の点で表の節点を作る遅いステップが続くため．SPEC-26 B の 1） */if(performance.now()-t0>ms)break}return this.done}
 check(){const h=this.h,C=this.C;let ok=false,r=null;if(h.length>=this.nmin){const a=h.slice(-SWC.last),T=a.map(m=>m.tb),z=a.length-1;r={T:swR(T),S:swR(a.map(m=>m.spa)),ev:swR(a.map(m=>m.ev))/swM(a.map(m=>m.ev)),mth:swR(a.map(m=>m.mth))/swM(a.map(m=>m.mth)),pin:swR(a.map(m=>m.pinE))/swM(a.map(m=>m.pinE))};
 ok=r.T<=C.tolR*Math.abs(T[z])+C.tolA&&r.S<=C.tolS&&(!this.o.flow||(r.ev<=C.tolR&&r.mth<=C.tolR&&r.pin<=C.tolR))}
 if(ok||h.length>=this.nmax||this.nc>=2*this.nmax){const M=h[h.length-1]||{};this.pts.push({N:this.Ns[this.i],Na:M.N,Nw:this.c.s.y[1]*30/PI,tb:M.tb,pb:M.pb,bmep:M.bmep,ev:M.ev,bsfc:M.bsfc,eb:M.eb,spa:M.spa,xr:M.xr,dpex:M.dpex,ppeR:M.ppeR,mt:M.mtl,ok,cyc:h.length,r});this.i++;if(this.i>=this.Ns.length)this.done=true;else this.begin()}}}
