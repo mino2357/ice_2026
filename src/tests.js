@@ -4,7 +4,7 @@ let TR={};
 const TST={},
  NT=36,
  UIT=[8,15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35,36],
- RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0};
+ RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0,pj:1};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{
  const e=Math.abs(val-ref)/(Math.abs(ref)||1);
@@ -12,6 +12,11 @@ const chk=(id,n,ref,val,tol)=>{
 };
 const chkB=(id,n,ok,val,ref)=>{
  (TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})
+};
+/* 性能の記録（SPEC-20 B の 10）：時間を測った値と上限．判定する実行（RUN.pj．実機と npm test）では上限を超えると FAIL，判定しない実行（npm run verify）では記録だけ */
+const chkP=(id,n,val,lim,unit,dec,note)=>{
+ const over=!(val<=lim);
+ (TR[id]=TR[id]||[]).push({n:'［性能］'+n,ref:'≤ '+lim+' '+unit,val:(val===val?val.toFixed(dec==null?1:dec):'–')+' '+unit+(note||''),err:'–',perf:1,over,ok:!over||!RUN.pj})
 };
 const fnum=x=>typeof x==='number'?(Number.isInteger(x)&&Math.abs(x)<1e9?String(x):x.toPrecision(7)):String(x);
 const fin=c=>c.s.y.every(Number.isFinite);
@@ -1371,7 +1376,8 @@ TST[15]=function*(){
   Sim.spd=s0;
   sp();
   live.reset();
-  chkB(15,'最速：速さの倍率が有限の正の値で，（シミュレーションの時間の進み）÷（実経過時間）と ±15% で一致，断面図の 3 行目が「最速 ○×」，フレームの間隔 ≤ 250 ms．[1×] に戻すと 3 行目が無い',isMax&&rs>0&&rs<Infinity&&Math.abs(rs/mine-1)<=.15&&/^最速 [0-9.]+×$/.test(L3)&&mx<=250&&L1.length===2&&Sim.spd===s0,`倍率 ${rs===rs?rs.toFixed(2):'–'}（実測 ${mine===mine?mine.toFixed(2):'–'}），「${L3}」，最長 ${mx.toFixed(0)} ms`)
+  chkB(15,'最速：速さの倍率が有限の正の値で，（シミュレーションの時間の進み）÷（実経過時間）と ±15% で一致，断面図の 3 行目が「最速 ○×」．[1×] に戻すと 3 行目が無い',isMax&&rs>0&&rs<Infinity&&Math.abs(rs/mine-1)<=.15&&/^最速 [0-9.]+×$/.test(L3)&&L1.length===2&&Sim.spd===s0,`倍率 ${rs===rs?rs.toFixed(2):'–'}（実測 ${mine===mine?mine.toFixed(2):'–'}），「${L3}」，最長 ${mx.toFixed(0)} ms`)
+  chkP(15,'最速のときのフレームの間隔（最長）',mx,250,'ms',0);
  }
 /* 11〜13：線図の切り替えのボタンと，バルブタイミングの画面（SPEC-15 I） */
  {
@@ -1802,7 +1808,8 @@ TST[16]=function*(){
   yield;
   const back=E.offsetHeight>100&&$('dv2').offsetHeight===0&&E.querySelectorAll('h3[data-sec]').length===21;
   chkB(16,'文書の見出し：全ページを通して要件定義書と画面の文書を合わせて REQ-01〜36，仕様書と画面の文書を合わせて SPEC-01〜36 と TEST-01〜36 が 1 つずつ．[式の解説] で元の表示に戻り，文書ごとに表示中のページと縦スクロール位置を保つ',okH&&back&&Math.abs(p2-300)<=1&&Math.abs(p3-120)<=1&&g2===L2&&g3===L3,`見出し ${okH}，戻る ${back}，ページ ${g2===L2&&g3===L3}，位置 ${p2} / ${p3} px`,'300 / 120 ±1');
-  chkB(16,'ページ：画面にある断片は表示中の 1 ページだけ，[◀ 前] [次 ▶] で 1 ページずつ移動（端では無効，44 px 以上），1 ページの切り替え ≤ 100 ms',one&&navOk&&pmax<=100,`1 ページだけ ${one}，移動 ${navOk}，最長 ${pmax.toFixed(0)} ms`,'≤ 100 ms');
+  chkB(16,'ページ：画面にある断片は表示中の 1 ページだけ，[◀ 前] [次 ▶] で 1 ページずつ移動（端では無効，44 px 以上）',one&&navOk,`1 ページだけ ${one}，移動 ${navOk}`);
+  chkP(16,'ページの切り替え（4 文書の全ページの最長）',pmax,100,'ms',0);
   for(const k of[1,2,3,4])docPage(k,pg0[k]);
   DV.top=tops0.slice();
   docShow(doc0)
@@ -1926,7 +1933,8 @@ TST[16]=function*(){
    rs.push(s.k===w.k&&s.pg===w.pg&&Math.abs(s.top-w.top)<=1)
   }
   const h1=hid();
-  chkB(16,'相互参照の移動：本文と対応の行のリンクで行き先の見出しが上端（±4 px），各移動 ≤ 250 ms，[◀ 戻る]（44 px 以上）で逆の順に元の文書・ページ・位置（±1 px）に戻り，空になると隠れる',!!bk&&h0&&res.length===3&&res.every(r=>r[1]&&r[2]<=250)&&vis&&rs.length===3&&rs.every(x=>x)&&h1,res.map(r=>`${r[0]} ${r[1]?'○':'×'} ${r[2].toFixed(0)} ms`).join('，')+`／戻る ${rs.map(x=>x?'○':'×').join('')}，表示 ${vis}，空で隠れる ${h1}`,'○ ≤ 250 ms');
+  chkB(16,'相互参照の移動：本文と対応の行のリンクで行き先の見出しが上端（±4 px），[◀ 戻る]（44 px 以上）で逆の順に元の文書・ページ・位置（±1 px）に戻り，空になると隠れる',!!bk&&h0&&res.length===3&&res.every(r=>r[1])&&vis&&rs.length===3&&rs.every(x=>x)&&h1,res.map(r=>`${r[0]} ${r[1]?'○':'×'} ${r[2].toFixed(0)} ms`).join('，')+`／戻る ${rs.map(x=>x?'○':'×').join('')}，表示 ${vis}，空で隠れる ${h1}`);
+  chkP(16,'相互参照の移動（3 回の最長）',res.length?Math.max(...res.map(r=>r[2])):NaN,250,'ms',0);
   for(const k of[1,2,3,4])if(DV.built[k])docPage(k,pgX[k]);
   DV.top=topX;
   docShow(docX)
@@ -3382,7 +3390,7 @@ TST[24]=function*(){
  const s2=yield*scen('S2'),xi=avg(s2.rec,5,'xr');
  chkB(24,'アイドル（S2）：0.15 ≤ x_r ≤ 0.35',xi>=.15&&xi<=.35,fx(xi,3));
  const el=(performance.now()-t0)/1e3;
- chkB(24,'TEST-24 の所要 ≤ 35 s',el<=35,fx(el,1)+' s','≤ 35 s')
+ chkP(24,'TEST-24 の所要',el,35,'s',1)
 };
 /* ---- TEST-25 intake runner ---- */
 const SWK={};
@@ -3545,7 +3553,8 @@ TST[26]=function*(){
   A5=yield*swRun('a50',{...mkPT()},undefined,50);
   A1=yield*swRun('a10',{...mkPT()},undefined,10);
   const el=(performance.now()-t0)/1e3+S.el;
-  chkB(26,'開度 3 つ（90，50，10°）× 28 点の計測（厳格＋流量，上り）の所要 ≤ 30 s',[S,A5,A1].every(x=>x.pts.length===28)&&el<=30,el.toFixed(2)+' s','≤ 30 s');
+  chkB(26,'開度 3 つ（90，50，10°）× 28 点の計測（厳格＋流量，上り）が全点で終わる',[S,A5,A1].every(x=>x.pts.length===28),[S,A5,A1].map(x=>x.pts.length).join('，')+' 点','28 点');
+  chkP(26,'開度 3 つ × 28 点の計測の所要',el,30,'s',2);
   const it=p.map(o=>o.tb),ip=p.map(o=>o.pb),kt=it.indexOf(Math.max(...it)),kp=ip.indexOf(Math.max(...ip));
   chkB(26,'全開：T_b の最大が端点以外，P_b 最大の回転数 > T_b 最大の回転数，全点整定',kt>0&&kt<p.length-1&&S.Ns[kp]>S.Ns[kt]&&p.every(o=>o.ok),`T_b 最大 ${Math.max(...it).toFixed(1)} N·m @ ${S.Ns[kt]}，P_b 最大 ${(Math.max(...ip)/1e3).toFixed(2)} kW @ ${S.Ns[kp]} rpm`);
   yield;
@@ -3787,7 +3796,8 @@ TST[26]=function*(){
   const r0=S0.run(8),hold=r0===false&&S0.c.s.t===tA;
   GAS.warm=w0;
   const all=GAS.warm(1e9);
-  chkB(26,'表を前もって作る：1 節点を持ち時間 2 ms ずつ行ごとに作ると各回 ≤ 4 ms，できた表が node(i) とビット単位で一致．表がそろうまで計測は積分しない．warm が全節点をそろえる',Math.max(...ts)<=4&&same&&hold&&all,`${ts.length} 回，最大 ${Math.max(...ts).toFixed(2)} ms，一致 ${same}，積分しない ${hold}，そろう ${all}`,'≤ 4 ms')
+  chkB(26,'表を前もって作る：1 節点を持ち時間 2 ms ずつ行ごとに作り，できた表が node(i) とビット単位で一致．表がそろうまで計測は積分しない．warm が全節点をそろえる',same&&hold&&all,`${ts.length} 回，一致 ${same}，積分しない ${hold}，そろう ${all}`);
+  chkP(26,'表を前もって作る：持ち時間 2 ms の 1 回（最長）',Math.max(...ts),4,'ms',2)
  }
  if(!RUN.ui){
   const S=new Sweep({...mkPT()},swN(500));
@@ -3798,7 +3808,8 @@ TST[26]=function*(){
   const el=performance.now()-t0;
   chkB(26,'1 回の計算の打ち切り：1 ステップ 10 ms の模擬で，持ち時間 8 ms の計算が 20 ms 以内に戻り，進めたステップが 1 回',el<=20&&ns===1,`${el.toFixed(1)} ms，${ns} ステップ`,'≤ 20 ms，1 ステップ')
  }
- chkB(26,'計測の前後で運転中のエンジンの設定と状態が一致，1 回の計算 ≤ 30 ms',JSON.stringify(LP)===lp0&&JSON.stringify(live.s)===ls0&&SW.maxMs<=30,SW.maxMs.toFixed(1)+' ms');
+ chkB(26,'計測の前後で運転中のエンジンの設定と状態が一致',JSON.stringify(LP)===lp0&&JSON.stringify(live.s)===ls0);
+ chkP(26,'性能曲線の計測：1 回の計算（最長）',SW.maxMs,30,'ms',1);
  tapEl($('swc'));
  chkB(26,'2 回目の完了で基準（前回）が描かれ，[基準を消す] で消える',lg1.includes('基準')&&SW.ref===null&&c1&&SW.cur!==c1,lg1.join('，'));
  setParam('phin',5*D);
@@ -4584,7 +4595,7 @@ TST[31]=function*(){
   const q=prep($('sys')),t0=performance.now();
   for(let i=0;i<30;i++)drawSys(q.g,live,q.W,q.H,COL);
   const t=(performance.now()-t0)/30;
-  chkB(31,'描画の時間：30 回描いた平均が 6 ms 以下',t<=6,`${t.toFixed(2)} ms`,'≤ 6 ms')
+  chkP(31,'全体図の描画（30 回の平均）',t,6,'ms',2)
  }
  show(0);
  uiDefault()
@@ -4730,7 +4741,8 @@ TST[32]=function*(){
   const P={...s4.c.P};
   VTK4.forEach((k,i)=>P[k]=R.x[i]*D);
   const hit=valveHit(P,s4.c.G);
-  chkB(32,'機関での探索（S4，軸トルク最大）：8 近傍の J ≤ J* ＋ 許容の 2 倍，J* ≥ J(x₀)，VALVE HIT なし，評価 ≤ 400 回，所要 ≤ 60 s',nb.every(v=>v<=R.J+tol)&&R.J>=R.J0&&!hit&&R.ne<=400&&op.t<=6e4,`${R.x0.join('，')} → ${R.x.join('，')}°，T_b ${R.J0.toFixed(3)} → ${R.J.toFixed(3)} N·m，8 近傍の最大の差 ${(Math.max(...nb)-R.J).toExponential(2)}（許容 ${tol.toExponential(1)}），評価 ${R.ne} 回，${(op.t/1e3).toFixed(1)} s`)
+  chkB(32,'機関での探索（S4，軸トルク最大）：8 近傍の J ≤ J* ＋ 許容の 2 倍，J* ≥ J(x₀)，VALVE HIT なし，評価 ≤ 400 回',nb.every(v=>v<=R.J+tol)&&R.J>=R.J0&&!hit&&R.ne<=400,`${R.x0.join('，')} → ${R.x.join('，')}°，T_b ${R.J0.toFixed(3)} → ${R.J.toFixed(3)} N·m，8 近傍の最大の差 ${(Math.max(...nb)-R.J).toExponential(2)}（許容 ${tol.toExponential(1)}），評価 ${R.ne} 回`);
+  chkP(32,'機関での探索の所要',op.t/1e3,60,'s',1)
  }
 /* 5：画面の操作（S4 の機関で [探索] → [中止] → [適用] → [元に戻す]） */
  {
@@ -4762,7 +4774,8 @@ TST[32]=function*(){
   tapEl($('oun'));
   const un=VTK4.every((k,i)=>LP[k]===lp0[i]);
   live=sv;
-  chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る，探索中のフレームの間隔 ≤ 250 ms',st&&stopped&&ap&&un&&mx<=250,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}，最長 ${mx.toFixed(0)} ms（${n} フレーム）`,'≤ 250 ms')
+  chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る',st&&stopped&&ap&&un,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}（${n} フレーム）`);
+  chkP(32,'探索中のフレームの間隔（最長）',mx,250,'ms',0)
  }
  Object.assign(OP,o0);
  uiDefault();
@@ -4841,7 +4854,9 @@ TST[33]=function*(){
    dm=(performance.now()-t2)/30
   }
   live=sv;
-  chkB(33,'画面：上のタブの 4 番目が「熱効率」．表示すると 3 s 以内に図が出る，12 行の名前と値が Canvas の中，フレームの間隔 ≤ 250 ms，1 回の描画 ≤ 6 ms',ok1&&inside&&mx<=250&&dm<=6,`図 ${ok1}（${n} フレーム），配置 ${inside}，最長 ${mx.toFixed(0)} ms，描画 ${dm.toFixed(2)} ms`)
+  chkB(33,'画面：上のタブの 4 番目が「熱効率」．表示すると 3 s 以内に図が出る，12 行の名前と値が Canvas の中',ok1&&inside,`図 ${ok1}（${n} フレーム），配置 ${inside}`);
+  chkP(33,'熱効率の図が出るまでのフレームの間隔（最長）',mx,250,'ms',0);
+  chkP(33,'熱効率の図の 1 回の描画',dm,6,'ms',2)
  }
 /* 6：圧縮比の定義（SPEC-33 の A） */
  if(!RUN.ui){
@@ -4931,7 +4946,8 @@ TST[34]=function*(){
    return[nb.every(d=>d<=tol)&&J>=gm-gtol,Math.max(...nb)]
   };
   const [okT,dT]=yield*chk(m.opt.T,'tb'),[okB,dB]=yield*chk(m.opt.B,'eb');
-  chkB(34,'機関（S4）：格子の点がすべて値を持つ，(0, 0) が細かい許容の評価と粗い許容の 2 倍以内，★ と ◆ が 1° の局所最適で格子の最良以上，計算 ≤ 40 s',miss.length===0&&ok00&&okT&&okB&&m.t<=4e4,`欠け ${miss.length}，(0,0) の差 ${d00.toExponential(1)} N·m，★ (${m.opt.T.x}) ${m.opt.T.tb.toFixed(3)} N·m（近傍の最大の差 ${dT.toExponential(1)}），◆ (${m.opt.B.x}) η_b ${(m.opt.B.eb*100).toFixed(3)} %（${dB.toExponential(1)}），評価 ${m.ne} 回，${(m.t/1e3).toFixed(1)} s`)
+  chkB(34,'機関（S4）：格子の点がすべて値を持つ，(0, 0) が細かい許容の評価と粗い許容の 2 倍以内，★ と ◆ が 1° の局所最適で格子の最良以上',miss.length===0&&ok00&&okT&&okB,`欠け ${miss.length}，(0,0) の差 ${d00.toExponential(1)} N·m，★ (${m.opt.T.x}) ${m.opt.T.tb.toFixed(3)} N·m（近傍の最大の差 ${dT.toExponential(1)}），◆ (${m.opt.B.x}) η_b ${(m.opt.B.eb*100).toFixed(3)} %（${dB.toExponential(1)}），評価 ${m.ne} 回`);
+  chkP(34,'VVT マップの計算の所要',m.t/1e3,40,'s',1)
  }
 /* 4，5：画面の操作と描画（S4 の機関） */
  {
@@ -4966,7 +4982,8 @@ TST[34]=function*(){
   const ap=LP.phin===-20*D&&LP.phex===10*D;
   tapEl($('vun'));
   const un=LP.phin===lp0[0]&&LP.phex===lp0[1];
-  chkB(34,'操作：[計算] で始まり，段階 1 の後の [中止] で止まる，(−20, 10) のタップで選ばれて値が出る，[適用] で φin = −20°，φex = 10°，[元に戻す] で戻る，フレームの間隔 ≤ 250 ms',st&&stopped&&sel&&ap&&un&&mx<=250,`開始 ${st}，中止 ${stopped}，選択 ${sel}（${OP.vsel&&OP.vsel.x}），適用 ${ap}，戻す ${un}，最長 ${mx.toFixed(0)} ms（${n} フレーム）`,'≤ 250 ms');
+  chkB(34,'操作：[計算] で始まり，段階 1 の後の [中止] で止まる，(−20, 10) のタップで選ばれて値が出る，[適用] で φin = −20°，φex = 10°，[元に戻す] で戻る',st&&stopped&&sel&&ap&&un,`開始 ${st}，中止 ${stopped}，選択 ${sel}（${OP.vsel&&OP.vsel.x}），適用 ${ap}，戻す ${un}（${n} フレーム）`);
+  chkP(34,'VVT マップの計算中のフレームの間隔（最長）',mx,250,'ms',0);
   OP.vm.opt.T={x:[-20,0],tb:0,eb:.3};
   OP.vm.opt.B={x:[-10,5],tb:0,eb:.3};
   OP.vsel={x:[20,-20],src:'tap'};
@@ -4978,7 +4995,8 @@ TST[34]=function*(){
   const t2=performance.now();
   for(let k=0;k<30;k++)drawVMT();
   const dm=(performance.now()-t2)/30;
-  chkB(34,'描画：○ ★ ◆ ＋ と凡例の帯が Canvas の中，色の画像を作った後の描画 30 回の平均 ≤ 6 ms',ins&&dm<=6,`印 ${S2.mk.length} 個，${ins}，${dm.toFixed(2)} ms`,'≤ 6 ms');
+  chkB(34,'描画：○ ★ ◆ ＋ と凡例の帯が Canvas の中',ins,`印 ${S2.mk.length} 個，${ins}`);
+  chkP(34,'VVT マップの描画（色の画像を作った後の 30 回の平均）',dm,6,'ms',2);
   live=sv
  }
 /* 6：出力の無い点（φin < 0 で T_b < 0，η_b が未定義．約 10000 rpm の全開の形） */
@@ -5105,8 +5123,9 @@ TST[35]=function*(){
   const ts=t;
   while(!vpOk()&&performance.now()-ts<2e4){vpTick(8);yield 'frame';const t2=performance.now();mx=Math.max(mx,t2-t);t=t2;n++}
   const el=(performance.now()-ts)/1e3;
-  q.push(w0&&vpOk()&&VP.Pmax>1e4&&/0→100 km\/h/.test(tx())&&mx<=250);
-  chkB(35,'設定ページ「車両」：6 項目・スクロールなし，車重の [+] で 0→100 km/h の文字が延び，C_d の [+]×10 で最高速度の文字が下がる（同じ操作の中で．文字が欠けない），図に単位付きの軸名・目盛・2 系列，P_max が無いと「計測中」で自動の計測が 20 s 以内に終わる（フレームの間隔 ≤ 250 ms）',q.every(x=>x),`${q.map(x=>x?1:0).join('')}，「${t0}」，計測 ${el.toFixed(1)} s（${n} フレーム，最長 ${mx.toFixed(0)} ms），P_max ${(VP.Pmax/1e3).toFixed(1)} kW @ ${VP.Nmax} rpm`);
+  q.push(w0&&vpOk()&&VP.Pmax>1e4&&/0→100 km\/h/.test(tx()));
+  chkB(35,'設定ページ「車両」：6 項目・スクロールなし，車重の [+] で 0→100 km/h の文字が延び，C_d の [+]×10 で最高速度の文字が下がる（同じ操作の中で．文字が欠けない），図に単位付きの軸名・目盛・2 系列，P_max が無いと「計測中」で自動の計測が 20 s 以内に終わる',q.every(x=>x),`${q.map(x=>x?1:0).join('')}，「${t0}」，計測 ${el.toFixed(1)} s（${n} フレーム），P_max ${(VP.Pmax/1e3).toFixed(1)} kW @ ${VP.Nmax} rpm`);
+  chkP(35,'車両の予測の計測中のフレームの間隔（最長）',mx,250,'ms',0);
   Object.assign(VP,vp0)
  }
 /* 7：運転タブ */
@@ -5149,13 +5168,14 @@ TST[35]=function*(){
  live.reset();
  show(3)
 };
-async function runAll(only,ui){
+async function runAll(only,ui,pj){
  if(U.busy)return;
  U.busy=1;
  U.cancel=0;
  U.uiDraw=0;
  RUN.ui=!!ui;
- if(ui)only=UIT;
+ RUN.pj=pj===0?0:1;
+ if(ui)only=only?only.filter(k=>UIT.includes(k)):UIT;
  TR={};
  SC={};
  for(let i=1;i<=NT;i++)ST[i]='';
@@ -5193,8 +5213,20 @@ async function runAll(only,ui){
     RUN.total=(performance.now()-tStart)/1e3;
     const tg=RUN.ui?UIT:Object.keys(TST).map(Number),un=tg.filter(k=>k!=20&&!(TR[k]&&TR[k].length));
     chkB(20,RUN.ui?'画面のモード：[U] の項目を持つ TEST-'+UIT.filter(k=>k!==20).map(pad).join('，')+' がすべて実行され結果を持つ':'TEST-01〜19，21〜36 がすべて実行され結果を持つ',un.length===0||(!!only&&!RUN.ui),un.length?'未実行: '+un.join(','):`${tg.length-1} / ${tg.length-1}`);
-    chkB(20,'テスト実行中の最長フレーム間隔 ≤ 250 ms',RUN.maxF<=250,RUN.maxF.toFixed(1)+' ms（TEST-'+pad(RUN.maxId)+'）','≤ 250 ms');
-    chkB(20,'総所要時間 ≤ 360 s',RUN.total<=360,RUN.total.toFixed(1)+' s','≤ 360 s')
+    {
+     const pj0=RUN.pj;
+     RUN.pj=0;
+     chkP(99,'a',2,1,'ms');
+     RUN.pj=1;
+     chkP(99,'a',2,1,'ms');
+     chkP(99,'b',1,1,'ms');
+     RUN.pj=pj0;
+     const a=TR[99];
+     delete TR[99];
+     chkB(20,'性能の記録：上限を超えた値は，判定しない実行では記録だけ（PASS．上限超えの印），判定する実行では FAIL．上限以下は PASS',a.length===3&&a.every(r=>r.perf)&&a[0].ok&&a[0].over&&!a[1].ok&&a[1].over&&a[2].ok&&!a[2].over,a.map(r=>(r.ok?'PASS':'FAIL')+(r.over?'・超え':'')).join('，'))
+    }
+    chkP(20,'テスト実行中の最長フレーム間隔',RUN.maxF,250,'ms',1,'（TEST-'+pad(RUN.maxId)+'）');
+    chkP(20,'総所要時間',RUN.total,360,'s',1)
    }
    ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'
   }else ST[id]=''
@@ -5212,8 +5244,10 @@ function rchips(cur){
   np=ids.filter(k=>ST[k]==='ok').length,
   NR=RUN.ui?UIT.length:NT,
   ni=ids.reduce((s,k)=>s+TR[k].length,0),
-  nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0);
- $('sm').innerHTML=U.busy?`実行中… TEST-${pad(cur||0)}（完了 ${ids.length}/${NR}）`:ids.length?`<b class="${np===NR?'ok':'ng'}">PASS ${np}/${NR}${RUN.ui?'（画面のモード）':''}</b>　検証項目 ${ni} 件中 FAIL ${nf} 件　所要 ${RUN.total.toFixed(1)} s`:'未実行です．「全テスト実行」を押してください（運転中の機関は一時停止し，終了後に元の状態へ戻ります）．';
+  nf=ids.reduce((s,k)=>s+TR[k].filter(r=>!r.ok).length,0),
+  pf=ids.reduce((s,k)=>s+TR[k].filter(r=>r.perf).length,0),
+  pv=ids.reduce((s,k)=>s+TR[k].filter(r=>r.over).length,0);
+ $('sm').innerHTML=U.busy?`実行中… TEST-${pad(cur||0)}（完了 ${ids.length}/${NR}）`:ids.length?`<b class="${np===NR?'ok':'ng'}">PASS ${np}/${NR}${RUN.ui?'（画面のモード）':''}</b>　検証項目 ${ni} 件中 FAIL ${nf} 件　所要 ${RUN.total.toFixed(1)} s${pf?`　性能の記録 ${pf} 件（上限超え ${pv} 件${RUN.pj?'':'．判定しない'}）`:''}`:'未実行です．「全テスト実行」を押してください（運転中の機関は一時停止し，終了後に元の状態へ戻ります）．';
  $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="${ST[i+1]||''}${U.sel===i+1?' sl':''}">${i+1}</button>`).join('');
  dtl()
 }
@@ -5223,7 +5257,7 @@ function dtl(){
  if(!r||!r.length){$('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}<br>${st==='run'?'実行中':'未実行'}`;return}
  U.ix=Math.min(U.ix,r.length-1);
  const x=r[U.ix],nf=r.filter(q=>!q.ok).length;
- $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok?'ok':'ng'}">${x.ok?'PASS':'FAIL'}</b>`
+ $('dt').innerHTML=`<b>TEST-${n}</b>　${TNAME[U.sel]}　${U.ix+1}/${r.length}${nf?`　<b class="ng">FAIL ${nf}</b>`:''}<br>${x.n}<br>基準：${x.ref}<br>実測：${x.val}<br>相対誤差：${x.err}<br><b class="${x.ok&&!x.over?'ok':'ng'}">${x.over?(x.ok?'上限超え（判定しない）':'FAIL（上限超え）'):x.ok?'PASS':'FAIL'}</b>`
 }
 const TNAME=[
  '',
@@ -5334,7 +5368,8 @@ TST[36]=function*(){
    }
    chkB(36,'燃焼の回数と時刻（S4，0.1×，0.5×，1×，実時間 4 s）：振動の数 = 燃焼の数，開始が式の時刻と 1 ms 以内，長さ 3 ms',ok,out.join('；'));
    const ds=dts.slice().sort((x,y)=>x-y),p99=ds[Math.floor(.99*ds.length)],mn=dts.reduce((a,b)=>a+b,0)/dts.length;
-   chkB(36,'計算時間：1 フレームの処理の平均 ≤ 0.05 ms，99 パーセンタイル ≤ 0.2 ms（最大は記録）',mn<=.05&&p99<=.2,`平均 ${(mn*1e3).toFixed(1)} μs，99 % ${(p99*1e3).toFixed(0)} μs，最大 ${(ds[ds.length-1]*1e3).toFixed(0)} μs`)
+   chkP(36,'振動の 1 フレームの処理（平均）',mn*1e3,50,'μs',1);
+   chkP(36,'振動の 1 フレームの処理（99 パーセンタイル）',p99*1e3,200,'μs',0,'（最大 '+(ds[ds.length-1]*1e3).toFixed(0)+' μs）')
   }
 /* 3：つながる振動 */
   {

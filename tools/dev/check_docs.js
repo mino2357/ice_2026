@@ -104,4 +104,11 @@ for(const [f,s0] of [['docs/requirements.md',req],['docs/specification.md',spec]
  if(V)console.log('どの受入基準からも引かれていないテスト項目（参考）',free.join(' ')||'なし')}
 
 if(V){console.log('TEST の項目数',Object.keys(nT).sort().map(k=>k+':'+nT[k]).join(' '),'計',Object.values(nT).reduce((a,b)=>a+b,0));console.log('受入基準の数',Object.keys(nA).sort().map(k=>k+':'+nA[k]).join(' '),'計',Object.values(nA).reduce((a,b)=>a+b,0))}
+/* 性能の記録（SPEC-20 B の 10）：仕様書の表と，src/tests.js の chkP の呼び出し（番号，上限，単位）が同じこと */
+{const U={'\\text{ms}':'ms','\\text{s}':'s','\\mu\\text{s}':'μs'},doc=[],code=[];
+ for(const l of lines(SPEC['20'].body.join('\n'))){const m=l.match(/^\s*\| TEST-(\d\d) \| (.*?) \| \$([0-9.]+)\\ (.*?)\$ \|$/);if(m)doc.push(+m[1]+'|'+m[2]+'|'+m[3]+' '+(U[m[4]]||m[4]))}
+ for(const m of tests.matchAll(/chkP\((\d+),'([^']*)',[^\n]*?,([0-9.]+),'([^']+)'/g))if(m[1]!=='99')code.push(+m[1]+'|'+m[2]+'|'+m[3]+' '+m[4]);
+ for(const c of code)if(!doc.includes(c))bad('性能の記録','src/tests.js の「'+c+'」が SPEC-20 B の 10 の表に無い');
+ if(doc.length<10)bad('性能の記録','SPEC-20 B の 10 の表が読めない（'+doc.length+' 行）');
+ for(const d of doc)if(!code.includes(d))bad('性能の記録','SPEC-20 B の 10 の表の「'+d+'」が src/tests.js に無い')}
 out.forEach(l=>console.log(DS.fix(l)));console.log(out.length?'指摘 '+out.length+' 件':'指摘なし');process.exit(out.length?1:0);

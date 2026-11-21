@@ -9,7 +9,9 @@
     "check": "node --expose-internals tools/dev/fmt.js --check && node tools/dev/index.js && node tools/dev/check_docs.js && node tools/dev/unused.js",
     "test:one": "npm run build && node tools/dev/run.js",
     "index": "node tools/dev/index.js",
-    "fmt": "node --expose-internals tools/dev/fmt.js"
+    "fmt": "node --expose-internals tools/dev/fmt.js",
+    "verify": "node tools/dev/verify.js",
+    "delta": "node tools/dev/delta.js"
   },
   "devDependencies": {
     "playwright": "1.63.0"

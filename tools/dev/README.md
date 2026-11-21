@@ -1,10 +1,16 @@
 # tools/dev — 開発用の道具
 
-点検と調査に使う小さなスクリプト．成果物（`dist/engine.html`）には含めない．納品条件の判定は `npm test` で行う（要件定義書 5.1 節）．
+点検と調査に使う小さなスクリプト．成果物（`dist/engine.html`）には含めない．納品条件（要件定義書 5.1 節）の判定は，段階 1 は `npm run verify`，段階 2 は `npm test` で行う．
 
 | スクリプト | 用途 | 必要なもの |
 | :--- | :--- | :--- |
 | `check_docs.js` | 文書とコードの整合の点検（下の一覧）．指摘があれば終了コード 1．`npm run check`，`npm test` の最初に走る | Node.js |
+| `verify.js` | 段階 1 の検証（`npm run verify`）：変わったファイルから影響するテストだけを選んで実行し，PASS なら `verify.lock.json` を更新（仕様書 9 節） | Playwright |
+| `inputs.js` | 検証の入力のハッシュと `verify.lock.json` の読み書き（`verify.js`，`tests/headless.js`，`delta.js` が使う） | Node.js |
+| `delta.js` | 要件の差分（`npm run delta`）：承認済みの時点からの要件の断片の差分．`--approve` で今の HEAD を承認済みにする | git |
+| `index.js` | 索引 `docs/INDEX.md` を作る（`npm run check` の中で作り直す） | Node.js |
+| `docsrc.js` | 4 文書の断片を連結して読む（`check_docs.js`，`coverage.js`，`index.js` が使う） | Node.js |
+| `fmt.js` | `src/*.js` の整形（`npm run fmt`）．空白だけを変え，構文木が同じことを確かめる | Node.js（`--expose-internals`） |
 | `unused.js` | `src/` の最上位で定義した名前と定数表（`K`，`SWC`）のキーのうち，どこからも使われていないもの | Node.js |
 | `run.js` | アプリ内テストを 1 つのビューポートで実行．`--only 24,26` で一部だけ，`--names` で全検査，`--time` でテストごとの所要時間，`--ui` で画面のモード（[U] の項目だけ），`--json`／`--md` で一覧を保存 | ビルド済みの成果物，Playwright |
 | `coverage.js` | 仕様書のテスト項目と，`run.js --json` の検査の名前を，テストごとに並べて表示（漏れは人が読んで判定） | `run.js` の出力 |
