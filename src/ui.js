@@ -2,7 +2,7 @@
 const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();let live=new Core(LP),AX=mkAX();
-const U={mj:{},swTest:0,tab:0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 /* spd：再生速度（Infinity = 最速）．rs：速さの倍率（最速のときに表示．SPEC-15 F の 4），w0，t0：その計測の区間の始まり */
 const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24};
 const Base={ref:null,tl:-1e9,cp:l=>({p:Float32Array.from(l.p),V:Float32Array.from(l.V),imep:l.imep,pm:l.pm,N:l.N}),
@@ -54,7 +54,7 @@ $('bs').style.display=eng?'none':'';$('ap').style.display=$('ds').style.display=
 const hasP=Object.keys(U.pend).length>0;$('ap').disabled=!hasP||!lamOK();$('ds').disabled=!hasP;
 $('pv').style.display=$('pvt').style.display=eng?'none':'';$('drv').style.display=eng?'':'none';
 if(eng){const Pq={...LP,...U.pend},G=geo(Pq),ok=lamOK();$('drv').innerHTML=`<b>導出値${hasP?'（保留中の値で計算）':''}</b><br>連桿比 λ = r/l = ${G.lam.toFixed(3)} ${ok?'':'<b class="ng">（λ ≤ 0.5 を満たさないため適用不可）</b>'}<br>行程容積 V_d = ${(G.Vd*1e6).toFixed(1)} cm³<br>隙間容積 V_c = ${(G.Vc*1e6).toFixed(1)} cm³<br>クリアランス高さ h_c = ${(G.hc*1e3).toFixed(2)} mm<br>弁干渉：${valveHit(Pq,G)?'<b class="ng">VALVE HIT</b>':'なし'}<br><span style="color:var(--mu)">この4項目は「適用」で確定し，コールドリセットします．</span>`}swFresh();if(vehPg())pvText()}
-function pvText(){if(vehPg()){$('pvt').textContent=vehText();return}if(camPg()){$('pvt').textContent=camText(LP,live.G);return}if(U.pg===PAGES.indexOf('噴射')&&live.last){$('pvt').textContent=injText(live);return}if(U.pg===PAGES.indexOf('冷却')&&live.last){$('pvt').textContent=coolText(live);return}const l=live.last,r=Base.ref;if(!l){$('pvt').textContent='運転タブで START してください';return}const sg=x=>(x>=0?'+':'')+x.toFixed(0);
+function pvText(){if(vehPg()){$('pvt').textContent=vehText();return}if(camPg()){$('pvt').textContent=camText(LP,live.G);return}if(U.pg===PAGES.indexOf('噴射')&&live.last){$('pvt').textContent=injText(live);return}if(U.pg===PAGES.indexOf('冷却')&&live.last){$('pvt').textContent=coolText(live);return}if(U.pg===PAGES.indexOf('音と振動')){$('pvt').textContent=HAPNOTE;return}const l=live.last,r=Base.ref;if(!l){$('pvt').textContent='運転タブで START してください';return}const sg=x=>(x>=0?'+':'')+x.toFixed(0);
 $('pvt').textContent=`IMEP ${(l.imep/1e3).toFixed(0)} kPa${r?'（基準比 '+sg((l.imep-r.imep)/1e3)+'）':''}  p_max ${(l.pm/1e6).toFixed(2)} MPa${r?'（'+(l.pm>=r.pm?'+':'')+((l.pm-r.pm)/1e6).toFixed(2)+'）':''}  N̄ ${live.s.Nb.toFixed(0)} rpm`}
 /* ===== canvases ===== */
 const dprc=()=>Math.min(devicePixelRatio||1,2.5);
@@ -185,14 +185,20 @@ function vmTap(x,y){const m=OP.vm;if(!m||!vmGrid(m))return;const c=$('vmc'),r=c.
 function vmApply(){if(!OP.vsel||(OP.vm&&!OP.vm.done))return;setParams({phin:OP.vsel.x[0]*D,phex:OP.vsel.x[1]*D});vmText()}
 /* 熱効率の内訳の計算：表示中だけ，前の計算から 1 s 以上たってサイクルが進んでいれば始め，1 フレームに ms ずつ進める */
 function lossTick(ms){if(U.tab!==8||LP.gam!==2||!optReady()){OP.lb=null;return}const now=performance.now();if(!OP.lb&&now-OP.lt>=1000&&live.s.cyc!==OP.lcy){OP.lb=new LossBk(live);OP.lcy=live.s.cyc}if(OP.lb){const t=performance.now();if(OP.lb.run(ms)){const r=OP.lb.res;if(r&&r.ok)OP.lres=r;OP.lb=null;OP.lt=performance.now()}OP.maxMs=Math.max(OP.maxMs,performance.now()-t)}}
-const sndLbl=()=>{const b=$('snd');b.textContent=SND.on?'音ON':'音OFF';b.className=SND.on?'on':''};
+/* [音] と [振動]：文字は変えず，ON のとき選ばれた色（SPEC-21 D の 5，画面の文書 SPEC-36 D の 1） */
+const sndLbl=()=>{const b=$('snd');b.className=SND.on?'on':''};
+/* 振動（SPEC-36）：navigator.vibrate を呼ぶのはここだけ */
+const HAPNOTE='振動は，端末のサイレントモードや本体の振動の設定で止まります（画面からは分かりません）';
+const HAP=new Hap(),hapOK=()=>typeof navigator.vibrate==='function',vib=p=>{if(!hapOK())return;try{navigator.vibrate(p)}catch(e){}};
+function hapBtn(){const b=$('hap');b.disabled=!hapOK();if(b.disabled)U.hap=0;b.className=U.hap?'on':''}
+function hapTick(now){const r=HAP.tick(now,U.hap&&!U.busy&&!document.hidden&&hapOK()?hapIn(live,LP.hapt,Sim.spd===Infinity?(Sim.rs>0?Sim.rs:1):Sim.spd):{on:0});if(r!=null)vib(r)}
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
 function initUI(){readCol();initNT();initTH();initVT();
 tap($('M'),e=>{const d=e.target.closest('#M>div');if(d){const k=d.dataset.k;if(U.mj[k])delete U.mj[k];else U.mj[k]=1;met()}});tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});tap($('bsys'),()=>show(6));tap($('bback'),()=>show(0));
 tap($('swg'),()=>{if(SW.run)swStop();else swStart()});tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});tap($('orn'),optStart);tap($('vrn'),vmStart);tap($('vap'),vmApply);tap($('vun'),()=>{undo();vmText()});tap($('vmc'),e=>vmTap(e.clientX,e.clientY));tap($('oap'),optApply);tap($('oun'),()=>{undo();optText()});tap($('swo'),e=>{const b=e.target.closest('button[data-o]');if(b)swSet(b.dataset.o,b.dataset.v)});tap($('swc'),()=>{SW.ref=null;swText()});tap($('sws'),e=>{const b=e.target.closest('button');if(b)swSub([...$('sws').children].indexOf(b))});
 tap($('b1'),startTap);tap($('b2'),()=>live.stop());
-tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;Sim.w0=null;Sim.rs=NaN;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});sndLbl();
-document.addEventListener('visibilitychange',()=>{if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
+tap($('sp'),e=>{const b=e.target.closest('button[data-v]');if(b){Sim.spd=+b.dataset.v;Sim.w0=null;Sim.rs=NaN;sp()}});tap($('mp'),()=>{U.mpg^=1;$('mp').textContent=U.mpg?'指標2':'指標1'});tap($('snd'),()=>{SND.on^=1;sndLbl();if(SND.on)sndEnsure()});tap($('hap'),()=>{if(!hapOK())return;U.hap^=1;hapBtn();if(!U.hap)hapTick(performance.now())});hapBtn();sndLbl();
+document.addEventListener('visibilitychange',()=>{if(document.hidden)hapTick(performance.now());if(!SND.ctx)return;if(document.hidden)SND.ctx.suspend().catch(()=>{});else if(SND.on)SND.ctx.resume().catch(()=>{})});
 ['p-V','p-θ','弁','吸気','トルク','ECU','動力計','バルブタイミング'].forEach(t=>$('sg').insertAdjacentHTML('beforeend',`<button>${t}</button>`));
 tap($('sg'),e=>{const b=e.target.closest('button');if(b)setSub([...$('sg').children].indexOf(b))});
 tap($('lin'),()=>{U.log=0;pvo()});tap($('lg'),()=>{U.log=1;pvo()});tap($('bs2'),()=>{Base.set(live)});
@@ -206,7 +212,7 @@ buildDoc();buildToc();tap($('toc'),e=>{const a=e.target.closest('[data-go]');if(
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
 let last=performance.now(),lastDraw=0,slow=0;
 function loop(now){requestAnimationFrame(loop);const el=(now-last)/1e3;last=now;if(document.hidden)return;
-if(!U.busy){advance(Sim,live,el,Sim.spd===Infinity?FB.mx:FB.n);spdTick(now);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();
+if(!U.busy){advance(Sim,live,el,Sim.spd===Infinity?FB.mx:FB.n);spdTick(now);swTick(8);optTick(12);vmTick(12);lossTick(6);vpTick(8)}axUpdate(live,AX,now);sndTick();hapTick(now);
 if(now-lastDraw<15)return;lastDraw=now;if(U.busy&&!U.uiDraw)return;
 if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===8)drawLossT();else if(U.tab===7){drawOpt();if(++slow%6===0||OP.run)optText();if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()}else if(U.tab===2&&U.pg!==0){drawPv();if(camPg()||++slow%6===0)pvText();liveVals()}}
 requestAnimationFrame(loop)}
