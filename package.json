@@ -6,9 +6,10 @@
     "build": "python3 src/build.py",
     "test": "npm run check && npm run build && node tests/headless.js",
     "wav": "node tools/wav_demo.js",
-    "check": "node tools/dev/index.js && node tools/dev/check_docs.js && node tools/dev/unused.js",
+    "check": "node --expose-internals tools/dev/fmt.js --check && node tools/dev/index.js && node tools/dev/check_docs.js && node tools/dev/unused.js",
     "test:one": "npm run build && node tools/dev/run.js",
-    "index": "node tools/dev/index.js"
+    "index": "node tools/dev/index.js",
+    "fmt": "node --expose-internals tools/dev/fmt.js"
   },
   "devDependencies": {
     "playwright": "1.63.0"
