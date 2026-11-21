@@ -941,7 +941,7 @@ if(!RUN.ui){
  tapEl(b);t0=performance.now();while(!Array.isArray(log[log.length-1])&&performance.now()-t0<1000)yield 'frame';U.busy=1;yield 'frame';yield 'frame';const n2=log.length;q.push(log[n2-1]===0);U.busy=0;
  t0=performance.now();while(!Array.isArray(log[log.length-1])&&performance.now()-t0<1000)yield 'frame';Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));q.push(log[log.length-1]===0);delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));
  tapEl(b);U.busy=b0;navigator.vibrate=undefined;hapBtn();q.push(b.disabled);if(own)navigator.vibrate=v0;else delete navigator.vibrate;hapBtn();
- const it=ITEMS.find(i=>i.k==='hapt'),pg=PAGES.indexOf('音と振動');q.push(!!it&&it.pg===pg&&it.ch.join()==='実時間,シミュレーション時間'&&it.d===0);U.pg=pg;show(2);rs();pvText();q.push($('pvt').textContent.includes('サイレント'));
+ const it=ITEMS.find(i=>i.k==='hapt'),pg=PAGES.indexOf('音と振動');q.push(!!it&&it.pg===pg&&it.ch.join()==='実時間,再生速度'&&it.d===0);U.pg=pg;show(2);rs();pvText();q.push($('pvt').textContent.includes('サイレント'));
  uiDefault();show(0);live.reset();
- chkB(36,'画面：[振動] が 44 px 以上で文字が収まり既定 OFF．ON で START して 1 s 以内に送る．OFF で直ちに vibrate(0)，その後は送らない．テストの実行中とページの非表示で vibrate(0)．API が無いと無効．設定「音と振動」に「振動の時間」（実時間・シミュレーション時間，既定 実時間）と，説明に「サイレント」',q.every(x=>x),q.map(x=>x?1:0).join(''))}
+ chkB(36,'画面：[振動] が 44 px 以上で文字が収まり既定 OFF．ON で START して 1 s 以内に送る．OFF で直ちに vibrate(0)，その後は送らない．テストの実行中とページの非表示で vibrate(0)．API が無いと無効．設定「音と振動」に「振動の時間」（実時間・再生速度，既定 実時間）と，説明に「サイレント」',q.every(x=>x),q.map(x=>x?1:0).join(''))}
 };
