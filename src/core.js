@@ -96,7 +96,7 @@ const ITEMS=[
  {k:'Id',n:'I_dyno',u:'kg·m²',f:1,lo:.01,hi:.5,st:.01,d:.05,c:'i',pg:7},
  {k:'Kpd',n:'K_pd',u:'N·m/rpm',f:1,lo:.01,hi:2,st:.01,d:.2,c:'i',pg:7},
  {k:'Kid',n:'K_id',u:'N·m/(rpm·s)',f:1,lo:.05,hi:5,st:.05,d:.6,c:'i',pg:7},
- {k:'sol',n:'ソルバ',u:'',ch:['RK4','DOPRI5(4)'],d:1,c:'i',pg:8},
+ {k:'sol',n:'ソルバ',u:'',ch:['RK4','DOPRI5(4)','BS3(2)'],d:2,c:'i',pg:8},
  {k:'dth',n:'RK4刻み Δθ',u:'°CA',f:D,lo:.01,hi:5,st:.01,d:.25,c:'i',pg:8},
  {k:'rtol',n:'RK45 rtol',u:'',ch:['1e-4','1e-5','1e-6'],vals:[1e-4,1e-5,1e-6],d:1,c:'i',pg:8},
  {k:'vol',n:'音量',u:'%',f:.01,lo:0,hi:100,st:5,d:60,c:'i',pg:9},
@@ -735,6 +735,29 @@ function dp45c(o,y,h,k0){
  for(let q=0;q<n;q++){const i=X[q];y4[i]=y[i]+c0*k0[i]+c1*k1[i]+c2*k2[i]+c3*k3[i]+c4*k4[i]+c5*k5[i]+c6*k6[i]}
  o.r5=y5
 }
+/* BS3(2)：Bogacki–Shampine の 3 次と 2 次の対（SPEC-13 の 8）．k0 = f(y)．o.r5 に 3 次の解，o.r4 に 2 次の解（誤差の見積もり用），kn に最後の段 f(o.r5) を書く．
+   最後の段は，受理されれば次のステップの最初の段に使う（FSAL）．そのとき，右辺の診断の値（o.X）も次のステップのはじめの値になるので，最後の段だけ o.wx = 1 で呼ぶ */
+const BS3={rt:4e-5,cap:5,ht:2e-3,kI:.7/3,kP:.4/3};
+function bs3c(o,y,h,k0,kn){
+ const N=y.length,
+  n=NSX,
+  X=SIX,
+  B=o.kb||(o.kb=[1,2,3,4,5,6].map(()=>new Array(N).fill(0))),
+  yy=o.yy||(o.yy=new Array(N).fill(0)),
+  y2=o.r4||(o.r4=new Array(N).fill(0)),
+  y3=new Array(N);
+ {const a=h/2;for(let q=0;q<n;q++){const i=X[q];yy[i]=y[i]+a*k0[i]}}
+ const k1=o.f(yy,B[0]);
+ {const a=h*.75;for(let q=0;q<n;q++){const i=X[q];yy[i]=y[i]+a*k1[i]}}
+ const k2=o.f(yy,B[1]),b0=h*2/9,b1=h/3,b2=h*4/9;
+ for(let i=0;i<N;i++)y3[i]=y[i]+b0*k0[i]+b1*k1[i]+b2*k2[i];
+ o.wx=1;
+ const k3=o.f(y3,kn);
+ o.wx=0;
+ const c0=h*7/24,c1=h/4,c2=h/3,c3=h/8;
+ for(let q=0;q<n;q++){const i=X[q];y2[i]=y[i]+c0*k0[i]+c1*k1[i]+c2*k2[i]+c3*k3[i]}
+ o.r5=y3
+}
 function dp45(f,y,h,k1){
  const k=[k1||f(y)];
  for(let s=0;s<6;s++){
@@ -775,6 +798,13 @@ class Core{
   this.ea=0;
   this.wx=1;
   this.atS=0;
+  this.cpS=0;
+  this.kF=null;
+  this.kG=null;
+  this.kFy=null;
+  this.kFs=0;
+  this.kFX=null;
+  this.pv=null;
   this.trO=null;
   this.trA=null;
   this.fixw=0;
@@ -793,6 +823,8 @@ class Core{
    exOn:P.exs,
    clp:0,
    nfa:0,
+   nfe:0,
+   eP:1,
    eve:0,
    evn:[0,0,0,0,0,0],
    ig:0,
@@ -1608,7 +1640,9 @@ else{
    const k1=this.f(y0);
    X0=this.X;
    this.wx=0;
+   s.nfe++;
    for(let it=0;;it++){
+    s.nfe+=3;
     const k2=this.f(axpy(y0,k1,h/2)),k3=this.f(axpy(y0,k2,h/2)),k4=this.f(axpy(y0,k3,h));
     y1=y0.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
     if(!hit)break;
@@ -1618,15 +1652,65 @@ else{
    }
    dt=h
   }
-else{
-   let h=Math.min(s.h,.5*D/om,1e-3);
-   const aS=this.atS||1,k1=this.f(y0,this.k0b||(this.k0b=new Array(NY).fill(0)));
+else if(P.sol===2){
+/* BS3(2)，最後の段の使い回し（FSAL），刻みの PI 制御（SPEC-13 の 8）．使い回せるのは，前のステップの後で状態が書き換えられていないときだけ（配列が同じで，成分の和が同じ） */
+   let h=Math.min(s.h,BS3.cap*D/om,BS3.ht),ys=0;
+   for(let q=0;q<NSX;q++)ys+=y0[SIX[q]];
+   const aS=this.atS||1,fs=this.kFy===y0&&this.kFs===ys;
+   if(!this.kF){this.kF=new Array(NY).fill(0);this.kG=new Array(NY).fill(0)}
+   const k1=fs?this.kF:this.f(y0,this.kF),kn=this.kG;
+   if(fs)this.X=this.kFX;else s.nfe++;
    X0=this.X;
    this.wx=0;
    for(let n=0;;n++){
     let he=h,isEv=0;
     if(ed<=w0*h*1.02){he=ed/w0;isEv=1}
+    bs3c(this,y0,he,k1,kn);
+    s.nfe+=3;
+    const r5=this.r5,r4=this.r4;
+    let E=0;
+    for(let q=0;q<EIX.length;q++){
+     const i=EIX[q];
+     E=Math.max(E,Math.abs(r5[i]-r4[i])/(ATOL[i]*aS+BS3.rt*Math.max(Math.abs(y0[i]),Math.abs(r5[i]))))
+    }
+    const pi=Math.pow(Math.max(s.eP,1e-4),BS3.kP);
+    if(E<=1)s.eP=E;
+    const fac=E===E?Math.min(2.5,Math.max(.2,pi*.9*Math.pow(Math.max(E,1e-10),-BS3.kI))):.2;
+    if(E<=1||n>12||he<1e-8){
+     if(!(E<=1))s.nfa++;
+     if(isEv){
+      for(let it=0;it<4;it++){
+       const dl=ea-this.r5[0];
+       if(Math.abs(dl)<=1e-9)break;
+       he+=dl/Math.max(this.r5[1],1e-9);
+       bs3c(this,y0,he,k1,kn);
+       s.nfe+=3
+      }
+      hit=1
+     }
+     y1=this.r5;
+     dt=he;
+     s.h=isEv?Math.max(h,he*fac):he*fac;
+     break
+    }
+    h=he*fac
+   }
+   this.kG=this.kF;
+   this.kF=kn;
+   this.kFX=this.X;
+   this.kFy=y1
+  }
+else{
+   let h=Math.min(s.h,(this.cpS||.5)*D/om,1e-3);
+   const aS=this.atS||1,k1=this.f(y0,this.k0b||(this.k0b=new Array(NY).fill(0)));
+   X0=this.X;
+   this.wx=0;
+   s.nfe++;
+   for(let n=0;;n++){
+    let he=h,isEv=0;
+    if(ed<=w0*h*1.02){he=ed/w0;isEv=1}
     dp45c(this,y0,he,k1);
+    s.nfe+=6;
     const r5=this.r5,r4=this.r4;
     let E=0;
     for(let q=0;q<EIX.length;q++){
@@ -1641,7 +1725,8 @@ else{
        const dl=ea-this.r5[0];
        if(Math.abs(dl)<=1e-9)break;
        he+=dl/Math.max(this.r5[1],1e-9);
-       dp45c(this,y0,he,k1)
+       dp45c(this,y0,he,k1);
+       s.nfe+=6
       }
       hit=1
      }
@@ -1655,12 +1740,14 @@ else{
   }
 /* 射影（REQ-13 7）．通常の運転では働かない */
 /* 成分の質量（m_b,in，m_b,p，m_f，m_bf，m_l，m_f,in，m_f,p）は 0 で切る．−MEPS より下へ出たときだけ回数に数える（流れの向きが変わるステップでは，誤差の許容内で 0 をわずかに下回ることがある） */
-  for(let q=0;q<7;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-ATOL[i])s.clp++;y1[i]=0}} /* 数えるのはその成分の絶対許容誤差より下へ出たときだけ（SPEC-13 の 7） */
-  if(y1[38]>y1[4]&&y1[4]>=0){if(y1[38]-y1[4]>MEPS)s.clp++;y1[38]=y1[4]}
+  let dty=0;
+  for(let q=0;q<7;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-ATOL[i])s.clp++;y1[i]=0;dty=1}} /* 数えるのはその成分の絶対許容誤差より下へ出たときだけ（SPEC-13 の 7） */
+  if(y1[38]>y1[4]&&y1[4]>=0){if(y1[38]-y1[4]>MEPS)s.clp++;y1[38]=y1[4];dty=1}
 /* 余剰エンタルピーの下限 0 は γ のモデルだけ（化学平衡のモデルでは，直噴の気化で T_in より冷えた筒内ガスの逆流が負の余剰を運ぶ） */
   const SPC=P.gam===2;
   if(y1[3]<1e-7||y1[14]<1e3||y1[15]<1e3||y1[9]<1e3||y1[4]<0||y1[4]>y1[3]||y1[1]<0||y1[2]<1e3||(!SPC&&(y1[16]<0||y1[17]<0))){
    s.clp++;
+   dty=1;
    y1[3]=Math.max(y1[3],1e-7);
    y1[14]=Math.max(y1[14],1e3);
    y1[15]=Math.max(y1[15],1e3);
@@ -1709,11 +1796,20 @@ else{
     X.Q/om*D,
     X.k.dV/G.Ap*y0[1]
    ];
-  let j=s.li<0||md4((i-s.li)*.5*D)>8*D?i:(s.li+1)%1440;
-  for(let n=0;n<16;n++){for(let q=0;q<18;q++)trA[q][j]=vals[q];if(j===i)break;j=(j+1)%1440}
+  const nb=s.li<0?0:(i-s.li+1440)%1440,pv=this.pv;
+  if(P.sol===2&&pv&&nb>1&&nb<=16){
+/* BS3 は刻みが 0.5° より大きいので，前のステップのはじめの値との間を線形に補間して升を埋める（SPEC-13 の 8） */
+   for(let m=1;m<=nb;m++){const j=(s.li+m)%1440,w=m/nb;for(let q=0;q<18;q++)trA[q][j]=pv[q]+w*(vals[q]-pv[q])}
+  }
+else{
+   let j=s.li<0||md4((i-s.li)*.5*D)>8*D?i:(s.li+1)%1440;
+   for(let n=0;n<16;n++){for(let q=0;q<18;q++)trA[q][j]=vals[q];if(j===i)break;j=(j+1)%1440}
+  }
+  this.pv=vals;
   s.li=i;
   s.t+=dt;
-  if(hit||(ed<Infinity&&y1[0]>=ea-1e-9)){s.eve=Math.max(s.eve,Math.abs(ea-y1[0]));this.doEv(y1,ea)}
+  if(hit||(ed<Infinity&&y1[0]>=ea-1e-9)){s.eve=Math.max(s.eve,Math.abs(ea-y1[0]));this.doEv(y1,ea);dty=1}
+  if(P.sol===2){if(dty)this.kFy=null;else{let ys=0;for(let q=0;q<NSX;q++)ys+=y1[SIX[q]];this.kFs=ys}}
   this.ecu(dt,y1[1]);
   if(s.t>=s.hn*.05){
    s.hn++;

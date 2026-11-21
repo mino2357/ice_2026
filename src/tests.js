@@ -1,5 +1,6 @@
 /* ===== verification suite (all in-app) ===== */
-const mkPT=()=>({...mkP(),cvar:0,mode:0}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;
+/* テストの機関：サイクル変動なし，スロットル制御，DOPRI5（判定値は DOPRI5 で求めたもの．既定の解法 BS3 の精度は TEST-13 項目 14〜 で DOPRI5 の参照解と比べて確かめる．SPEC-20 C） */
+const mkPT=()=>({...mkP(),cvar:0,mode:0,sol:1}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;
 let TR={};
 const TST={},
  NT=36,
@@ -1038,7 +1039,7 @@ TST[13]=function*(){
 /* 13：RK4 の刻みの範囲（REQ-13 の 10） */
  {
   const it=IT.dth,
-   q0=Math.abs(it.lo-.01)<1e-12&&Math.abs(it.hi-5)<1e-12&&Math.abs(it.st-.01)<1e-12&&Math.abs(it.d-.25)<1e-12&&IT.sol.d===1,
+   q0=Math.abs(it.lo-.01)<1e-12&&Math.abs(it.hi-5)<1e-12&&Math.abs(it.st-.01)<1e-12&&Math.abs(it.d-.25)<1e-12&&IT.sol.d===2,
    s2=yield*scen('S2'),
    c=s2.c.clone();
   c.P.sol=0;
@@ -1059,7 +1060,131 @@ TST[13]=function*(){
   while(a.s.cyc<c0+3){hm=Math.max(hm,a.step());if(RUN.over())yield}
   yield*runCyc(b,3);
   const di=Math.abs(a.lastM.imep/b.lastM.imep-1);
-  chkB(13,'RK4 の刻みの範囲：設定は 0.01〜5°（刻み 0.01°，既定 0.25°），既定の解法は DOPRI5．Δθ = 0.01°（S2，200 ステップ）で 1 ステップの角度が 0.01°（相対 1e-3．イベントで切るステップを除く），Δθ = 5°（全開 3000 rpm，3 サイクル）で状態が有限，射影 0 回，刻み ≤ Δt_max，IMEP が既定の解法と 1% 以内',q0&&nk>=190&&dmx<=1+1e-3&&fin(a)&&a.s.clp===cl0&&hm<=K.dtR4*(1+1e-9)&&di<=.01,`範囲 ${it.lo}〜${it.hi}°，0.01° のステップ ${nk}/200（最大 ${dmx.toFixed(5)} 倍），5°：${fin(a)?'有限':'非有限'}，射影 ${a.s.clp-cl0}，最大の刻み ${(hm*1e6).toFixed(1)} μs，IMEP の差 ${(di*100).toFixed(3)} %`)
+  chkB(13,'RK4 の刻みの範囲：設定は 0.01〜5°（刻み 0.01°，既定 0.25°），既定の解法は BS3(2)．Δθ = 0.01°（S2，200 ステップ）で 1 ステップの角度が 0.01°（相対 1e-3．イベントで切るステップを除く），Δθ = 5°（全開 3000 rpm，3 サイクル）で状態が有限，射影 0 回，刻み ≤ Δt_max，IMEP が既定の解法と 1% 以内',q0&&nk>=190&&dmx<=1+1e-3&&fin(a)&&a.s.clp===cl0&&hm<=K.dtR4*(1+1e-9)&&di<=.01,`範囲 ${it.lo}〜${it.hi}°，0.01° のステップ ${nk}/200（最大 ${dmx.toFixed(5)} 倍），5°：${fin(a)?'有限':'非有限'}，射影 ${a.s.clp-cl0}，最大の刻み ${(hm*1e6).toFixed(1)} μs，IMEP の差 ${(di*100).toFixed(3)} %`)
+ }
+/* 13：既定の解法 BS3(2)（REQ-13 の 11〜15．SPEC-13 の 8） */
+ {
+  const CD=[[800,6,17],[1500,15,22],[3000,90,25.9],[7000,90,28.9]],
+   mk=(N,al,sp)=>{
+    const c=new Core({...mkPT(),mode:1,alm:al*D,nt:N,sauto:0,spb:sp});
+    c.fixw=1;
+    c.fixTw=1;
+    c.s.y[5]=c.P.Tw??SWC.Tw;
+    c.s.y[1]=N*PI/30;
+    c.s.Nb=N;
+    c.start();
+    c.s.fired=1;
+    c.s.starter=0;
+    return c
+   },
+   rel=(a,b)=>Math.abs(a/b-1),
+   avg4=function*(c){
+    yield*runCyc(c,3);
+    const H=[];
+    for(let i=0;i<4;i++){yield*runCyc(c,1);H.push(c.lastM)}
+    return m=>H.reduce((a,q)=>a+q[m],0)/4
+   };
+  let e1=0,es=0,bad=0,ms=0,trd=NaN,fsn=0,fsok=0;
+  const nf={bs:0,dp:0,rk:0},er={dp:0,rk:0},o1=[];
+  for(const[N,al,sp]of CD){
+   const b=mk(N,al,sp);
+   yield*runCyc(b,30);
+   const V={bs:b.clone(),ref:b.clone(),dp:b.clone(),rk:b.clone()},F={};
+   V.bs.P.sol=2;
+   V.ref.P.rtol=1e-7;
+   V.ref.atS=.01;
+   V.ref.cpS=.25;
+   V.rk.P.sol=0;
+   for(const k in V){const n0=V[k].s.nfe;yield*runCyc(V[k],1);F[k]=V[k].lastM;if(nf[k]!=null)nf[k]+=V[k].s.nfe-n0}
+   const d1=k=>Math.max(...['imep','phc','ev','pm','xr'].map(m=>rel(F[k][m],F.ref[m])));
+   e1=Math.max(e1,d1('bs'));
+   er.dp=Math.max(er.dp,d1('dp'));
+   er.rk=Math.max(er.rk,d1('rk'));
+   o1.push((d1('bs')*100).toFixed(3));
+   if(N===7000){
+/* 線図の升：BS3 は刻みが 0.5° より大きい．升が抜けず，DOPRI5 の線図との差が小さいこと */
+    const a=V.bs.tr.p,d=V.dp.tr.p,pm=Math.max(...d);
+    trd=0;
+    for(let i=0;i<1440;i++)trd=Math.max(trd,Number.isFinite(a[i])?Math.abs(a[i]-d[i])/pm:Infinity)
+   }
+   const t0=performance.now(),A=yield*avg4(V.bs),tb=performance.now()-t0,R=yield*avg4(V.ref);
+   if(N===3000){
+    ms=tb/7;
+/* 最後の段の使い回し：使い回す値が，同じ状態での右辺と同じ（回転数固定で，制御の入力が変わらない条件） */
+    const c=V.bs,tmp=new Array(NY).fill(0);
+    for(let i=0;i<200;i++){
+     c.step();
+     if(c.kFy===c.s.y){fsn++;c.wx=0;c.f(c.s.y,tmp);c.wx=1;if(SIX.every(j=>tmp[j]===c.kF[j]))fsok++}
+    }
+   }
+   es=Math.max(es,...['imep','pm','ev','tb'].map(m=>rel(A(m),R(m))));
+   bad+=V.bs.s.nfa-b.s.nfa+V.bs.s.clp-b.s.clp+(fin(V.bs)?0:1)
+  }
+  chkB(13,'既定の解法（BS3）の精度：4 条件（800 rpm・開度 6°，1500 rpm・15°，全開 3000，全開 7000 rpm）で，同じ状態から進めた 1 サイクルの IMEP，φ_ig，η_v，p_max，x_r と，その後の定常（4 サイクルの平均）の IMEP，p_max，η_v，T_b が，参照解と相対差 0.1% 以内．強制受理と射影が無い',e1<=1e-3&&es<=1e-3&&bad===0,`1 サイクル ${o1.join('，')} %，定常 ${(es*100).toFixed(3)} %，強制受理・射影 ${bad}`,'≤ 0.1 %');
+  chkB(13,'既定の解法の計算量：同じ 4 条件の 1 サイクルの右辺の評価の回数の合計が，DOPRI5（第26版の既定）の 0.3 倍以下',nf.bs<=.3*nf.dp,`BS3 ${nf.bs}，DOPRI5 ${nf.dp}（${(nf.bs/nf.dp).toFixed(3)} 倍），RK4 ${nf.rk}`,'≤ 0.3 倍');
+  chkB(13,'既定が最良：設定で選べる解法（RK4，DOPRI5，BS3）のうち，1 サイクルの精度（参照解と 0.1% 以内）を満たすものの中で，既定の BS3 の回数が最小',IT.sol.d===2&&IT.sol.ch.join()==='RK4,DOPRI5(4),BS3(2)'&&e1<=1e-3&&['dp','rk'].every(k=>er[k]>1e-3||nf[k]>nf.bs),`誤差 BS3 ${(e1*100).toFixed(3)}，DOPRI5 ${(er.dp*100).toFixed(3)}，RK4 ${(er.rk*100).toFixed(3)} %`);
+  chkB(13,'線図の升（BS3，全開 7000 rpm）：1440 升がすべて有限で，筒内圧の線図の DOPRI5 との差が最高圧の 2% 以下',trd<=.02,`${(trd*100).toFixed(2)} %`,'≤ 2 %');
+  chkB(13,'最後の段の使い回し（BS3，全開 3000 rpm，200 ステップ）：使い回す値が，同じ状態での右辺と浮動小数点数として同じ．使い回せるステップが 9 割以上',fsn>=180&&fsok===fsn,`使い回せる ${fsn}／200，一致 ${fsok}`);
+  chkP(13,'既定の解法の 1 サイクルの計算時間（全開 3000 rpm）',ms,8,'ms',2);
+ }
+/* 13：BS3 の次数（1 ステップの誤差が h⁴，誤差の見積もりが h³） */
+ {
+  const f=(y,out)=>{out=out||new Array(NY).fill(0);out[2]=y[3];out[3]=-y[2];return out},
+   o={f,kb:null,yy:null,r4:null,r5:null,wx:0},
+   e=h=>{
+    const y=new Array(NY).fill(0);
+    y[2]=1;
+    y[3]=.5;
+    bs3c(o,y,h,f(y),new Array(NY).fill(0));
+    const x=[Math.cos(h)+.5*Math.sin(h),-Math.sin(h)+.5*Math.cos(h)];
+    return[Math.hypot(o.r5[2]-x[0],o.r5[3]-x[1]),Math.hypot(o.r5[2]-o.r4[2],o.r5[3]-o.r4[3])]
+   },
+   a=e(.1),
+   b=e(.05);
+  chkB(13,'BS3 の次数：刻みを半分にすると 1 ステップの誤差が 1/16，誤差の見積もり（3 次と 2 次の差）が 1/8（±10%）',Math.abs(a[0]/b[0]/16-1)<=.1&&Math.abs(a[1]/b[1]/8-1)<=.1,`${(a[0]/b[0]).toFixed(2)}，${(a[1]/b[1]).toFixed(2)}`,'16，8')
+ }
+/* 13：互換（REQ-13 の 15）：DOPRI5 を選ぶと第26版と同じ値 */
+ {
+  const a=new Core({...mkP(),cvar:0,mode:1,alm:90*D,nt:3000,sol:1}),b=new Core({...mkP(),cvar:0,mode:0,sol:1});
+  a.start();
+  yield*runC(a,2);
+  b.start();
+  yield*runC(b,3);
+  const va=[a.s.t,a.s.y[1],a.s.y[2],a.lastM.imep,a.s.cyc],
+   vb=[b.s.t,b.s.y[1],b.s.y[2],b.lastM.imep,b.s.cyc],
+   ra=[2.000015887898891,313.2795687532501,974098.8214152278,1257308.143025189,46],
+   rb=[3.00007790555914,98.36649849843752,27888.22045771213,-29490.707054431434,29];
+  {
+   const rv=[...ra,...rb],vv=[...va,...vb],e=Math.max(...vv.map((v,i)=>Math.abs(v/rv[i]-1)));
+   chkB(13,'互換：設定で DOPRI5 を選ぶと，第26版と同じ値（動力計制御・全開・目標 3000 rpm の始動から 2 s と，スロットル制御の始動から 3 s の，時刻，ω，p，IMEP，サイクル数．相対 1e-6．処理系が同じならビット単位で同じことは開発時に tools/dev/bitcheck.js で確かめる）',e<=1e-6,'相対差の最大 '+e.toExponential(1),'≤ 1e-6')
+  }
+ }
+/* 13：回転数が自由な運転（アイドル S2，動力計制御 S4）で，BS3 と DOPRI5 の平均回転数と IMEP が合う */
+ {
+  const out=[];
+  let ok=true;
+  for(const id of['S2','S4']){
+   const z=(yield*scen(id)).c,R={};
+   for(const sol of[1,2]){
+    const c=z.clone();
+    c.P.sol=sol;
+    yield*runC(c,2);
+    const t1=c.s.t+2,n0=c.s.nfa+c.s.clp,H=[];
+    let sN=0,sT=0,k=0;
+    while(c.s.t<t1){
+     const cy=c.s.cyc,dt=c.step();
+     sN+=c.s.y[1]*30/PI*dt;
+     sT+=dt;
+     if(c.s.cyc!==cy)H.push(c.lastM.imep);
+     if((++k&3)===0&&RUN.over())yield
+    }
+    R[sol]={N:sN/sT,im:H.reduce((x,y)=>x+y,0)/H.length,bad:c.s.nfa+c.s.clp-n0+(fin(c)?0:1)}
+   }
+   const dN=Math.abs(R[2].N/R[1].N-1),dI=Math.abs(R[2].im/R[1].im-1);
+   ok=ok&&dN<=5e-3&&dI<=1e-2&&R[2].bad===0;
+   out.push(`${id}：N̄ ${R[1].N.toFixed(1)}／${R[2].N.toFixed(1)} rpm，IMEP の差 ${(dI*100).toFixed(3)} %，強制受理・射影 ${R[2].bad}`)
+  }
+  chkB(13,'回転数が自由な運転（S2 のアイドル，S4 の動力計制御．切り替えて 2 s 後からの 2 s）：BS3 と DOPRI5 の平均回転数の差 ≤ 0.5%，IMEP の平均の差 ≤ 1%，強制受理と射影が無い',ok,out.join('；'))
  }
 };
 TST[14]=function*(){
