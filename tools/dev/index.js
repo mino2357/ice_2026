@@ -27,7 +27,7 @@ const o=['# 索引（自動生成）','','`node tools/dev/index.js` が作る．
 for(let i=1;i<=NT;i++){const k=pad(i),it=IT[k];o.push('| '+k+(UIT.has(i)?' [U]':'')+' | '+it.title.replace(/\|/g,'／')+' | '+fl(it.REQ)+' | '+fl(it.SPEC)+' | '+fl(it.TEST)+' | '+(TL[k]?TL[k][0]+'–'+TL[k][1]:'–')+' | '+([...it.refs].sort().join(' ')||'–')+' | '+code(k)+' |')}
 o.push('','## 2. そのほかの節','','| 文書 | 見出し | ファイル | 字数 |','| :--- | :--- | :--- | ---: |');for(const x of OTH)o.push('| '+NAME[x.key]+' | '+x.h+' | `'+x.file.replace(/^docs\//,'')+'` | '+x.n+' |');
 o.push('','## 3. そのほかの文書とコード','','| ファイル | 字数 |','| :--- | ---: |');
-for(const f of['CLAUDE.md','docs/dev-notes.md','docs/verification.md','docs/review_v26.md','docs/history/changes_v25.md','docs/history/changes_v26.md',...SRC.map(f=>'src/'+f)])if(fs.existsSync(path.join(root,f)))o.push('| `'+f+'` | '+[...rd(f)].length+' |');
+for(const f of['CLAUDE.md','docs/dev-notes.md','docs/verification.md','docs/review_v26.md','docs/report_solver.md','docs/history/changes_v25.md','docs/history/changes_v26.md',...SRC.map(f=>'src/'+f)])if(fs.existsSync(path.join(root,f)))o.push('| `'+f+'` | '+[...rd(f)].length+' |');
 {const d=path.join(root,'docs/changes');if(fs.existsSync(d))for(const f of fs.readdirSync(d).sort())o.push('| `docs/changes/'+f+'` | '+[...rd('docs/changes/'+f)].length+' |')}
 const text=o.join('\n')+'\n',dst=path.join(root,'docs/INDEX.md');
 if(process.argv.includes('--check')){const cur=fs.existsSync(dst)?fs.readFileSync(dst,'utf8'):'';if(cur!==text){console.log('[索引] docs/INDEX.md が古い（node tools/dev/index.js で作り直す）');process.exit(1)}console.log('索引は最新')}

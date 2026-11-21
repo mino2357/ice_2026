@@ -124,6 +124,7 @@
 | `docs/dev-notes.md` | 2810 |
 | `docs/verification.md` | 41822 |
 | `docs/review_v26.md` | 34714 |
+| `docs/report_solver.md` | 6454 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
 | `src/core.js` | 82669 |
@@ -132,5 +133,5 @@
 | `src/doc.js` | 57296 |
 | `src/ui.js` | 40762 |
 | `src/tests.js` | 235756 |
-| `docs/changes/2026-11-21-solver.md` | 601 |
+| `docs/changes/2026-11-21-solver.md` | 807 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
