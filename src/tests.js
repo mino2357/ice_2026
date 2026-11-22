@@ -5,7 +5,7 @@ let TR={};
 const TST={},
  NT=36,
  UIT=[8,15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35,36],
- RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0,pj:1};
+ RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0,pj:1,dur:{},at:''};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{
  const e=Math.abs(val-ref)/(Math.abs(ref)||1);
@@ -2704,6 +2704,37 @@ TST[19]=function*(){
  }
 };
 TST[20]=function*(){
+/* 20：結果のテキストとコピー（REQ-20 の 7） */
+ {
+  const e=envInfo(),
+   t=resText(e),
+   ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng'),
+   L=t.split('\n'),
+   np=Object.keys(TR).reduce((s,k)=>s+TR[k].filter(r=>r.perf).length,0),
+   ip=L.indexOf('性能の記録（実測｜上限）：'),
+   okT=/^[0-9a-f]{8}$/.test(BUILD)&&L.includes('ビルド：'+BUILD)&&L.includes('環境：'+navigator.userAgent)&&t.includes('表示領域 '+innerWidth+'×'+innerHeight)&&t.includes('画素の比 ')&&/\n日時：\d{4}-\d\d-\d\dT/.test(t)&&/\n要約：PASS \d+\/\d+/.test(t)&&L.filter(l=>/^\d\d (PASS|FAIL) \d+ \d+\.\d　/.test(l)).length===ids.length&&L.some(l=>l.startsWith('FAIL と上限超え：'))&&ip>0&&L.length-ip-1===np;
+  chkB(20,'結果のテキスト：ビルドの ID（16 進 8 桁），日時，環境（ユーザーエージェント，画面，表示領域，画素の比），要約，実行したテストごとの合否・検査の数・所要，FAIL と上限超え，性能の記録の全件を含む',okT,`${L.length} 行，${t.length} 字，ビルド ${BUILD}，性能の記録 ${np} 件`);
+  show(3);
+  const b=$('rcp'),
+   q=b.getBoundingClientRect(),
+   r={x:q.left,w:q.width,h:q.height},
+   dt0=$('dt').innerHTML,
+   cl=Object.getOwnPropertyDescriptor(navigator,'clipboard'),
+   ex=document.execCommand;
+  let got=null;
+  Object.defineProperty(navigator,'clipboard',{value:{writeText:async x=>{got=x}},configurable:true});
+  const m1=yield copyRes(),l1=b.textContent;
+  Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('x')}},configurable:true});
+  document.execCommand=()=>false;
+  const m2=yield copyRes(),
+   ta=$('dt').querySelector('textarea'),
+   okF=!!ta&&ta.readOnly&&ta.value===resText(e)&&getComputedStyle(ta).userSelect!=='none';
+  if(cl)Object.defineProperty(navigator,'clipboard',cl);else delete navigator.clipboard;
+  document.execCommand=ex;
+  copyRes.done();
+  $('dt').innerHTML=dt0;
+  chkB(20,'[結果をコピー]：ボタンが 44 px 以上で画面の中にある．クリップボードに書けるときは結果のテキストを書き，ボタンが「コピーしました」になる．書けないときは，同じテキストを詳細カードの中の選択できる枠に表示する',r.w>=44&&r.h>=44&&r.x>=0&&r.x+r.w<=innerWidth+.5&&m1==='ok'&&got===t&&l1==='コピーしました'&&m2==='show'&&okF,`ボタン ${r.w.toFixed(0)}×${r.h.toFixed(0)} px，書ける ${m1}／${l1}，書けない ${m2}／枠 ${okF}`)
+ }
  if(RUN.ui)return;
  const a=yield*scen('S1'),b=yield*scen('S2'),j1=a.json,j2=b.json;
  delete SC.S1;
@@ -5306,6 +5337,8 @@ async function runAll(only,ui,pj){
  for(let i=1;i<=NT;i++)ST[i]='';
  const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();
  RUN.maxF=0;
+ RUN.dur={};
+ RUN.at=new Date().toISOString();
  $('rt').textContent='中止';
  let lastF=performance.now();
  for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,20]){
@@ -5313,7 +5346,7 @@ async function runAll(only,ui,pj){
   if(only&&!only.includes(id))continue;
   ST[id]='run';
   rchips(id);
-  const it=TST[id]();
+  const it=TST[id](),tId=performance.now();
   let done=false,send;
   while(!done&&!U.cancel){
    await nextFrame();
@@ -5332,6 +5365,7 @@ async function runAll(only,ui,pj){
    }catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}
   }
   if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31||id===32||id===33||id===34||id===35||id===36)restLive(snap);
+  RUN.dur[id]=(performance.now()-tId)/1e3;
   if(done){
    if(id===20){
     chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);
@@ -5373,8 +5407,47 @@ function rchips(cur){
   pf=ids.reduce((s,k)=>s+TR[k].filter(r=>r.perf).length,0),
   pv=ids.reduce((s,k)=>s+TR[k].filter(r=>r.over).length,0);
  $('sm').innerHTML=U.busy?`実行中… TEST-${pad(cur||0)}（完了 ${ids.length}/${NR}）`:ids.length?`<b class="${np===NR?'ok':'ng'}">PASS ${np}/${NR}${RUN.ui?'（画面のモード）':''}</b>　検証項目 ${ni} 件中 FAIL ${nf} 件　所要 ${RUN.total.toFixed(1)} s${pf?`　性能の記録 ${pf} 件（上限超え ${pv} 件${RUN.pj?'':'．判定しない'}）`:''}`:'未実行です．「全テスト実行」を押してください（運転中の機関は一時停止し，終了後に元の状態へ戻ります）．';
+ $('rcp').disabled=!!U.busy||!ids.length;
  $('cp').innerHTML=Array.from({length:NT},(_,i)=>`<button data-i="${i+1}" class="${ST[i+1]||''}${U.sel===i+1?' sl':''}">${i+1}</button>`).join('');
  dtl()
+}
+/* 検証の結果のテキスト（REQ-20 の 7，SPEC-20 B の 11）：別の端末の結果と並べて貼れる形．e は envInfo() の値 */
+const ENV={hi:null};
+function envInfo(){
+ const n=navigator,d=n.userAgentData,h=ENV.hi;
+ return{
+  ua:n.userAgent,
+  pf:d?[d.platform,h&&h.platformVersion,h&&h.model,h&&h.architecture,d.mobile?'mobile':''].filter(Boolean).join(' '):n.platform||'',
+  scr:screen.width+'×'+screen.height,
+  vp:innerWidth+'×'+innerHeight,
+  dpr:devicePixelRatio,
+  hc:n.hardwareConcurrency||0,
+  mem:n.deviceMemory||0,
+  lang:n.language||'',
+  mj:MJX.st
+ }
+}
+function resText(e){
+ const ids=Object.keys(ST).filter(k=>ST[k]==='ok'||ST[k]==='ng').map(Number).sort((a,b)=>a-b),
+  all=ids.flatMap(k=>TR[k].map(r=>[k,r])),
+  NR=RUN.ui?UIT.length:NT,
+  bad=all.filter(([,r])=>!r.ok||r.over),
+  pf=all.filter(([,r])=>r.perf),
+  L=[
+   'SI機関シミュレータ 検証の結果',
+   'ビルド：'+BUILD,
+   '日時：'+(RUN.at||'–'),
+   '環境：'+e.ua,
+   '　'+(e.pf?e.pf+'，':'')+'画面 '+e.scr+'，表示領域 '+e.vp+'（CSS px），画素の比 '+(+e.dpr.toFixed(3))+(e.hc?'，論理コア '+e.hc:'')+(e.mem?'，メモリ '+e.mem+' GB 以上':'')+'，言語 '+e.lang+'，数式 '+e.mj,
+   '要約：PASS '+ids.filter(k=>ST[k]==='ok').length+'/'+NR+(RUN.ui?'（画面のモード）':'')+'　検証項目 '+all.length+' 件中 FAIL '+all.filter(([,r])=>!r.ok).length+' 件　所要 '+RUN.total.toFixed(1)+' s　性能の記録 '+pf.length+' 件（上限超え '+pf.filter(([,r])=>r.over).length+' 件'+(RUN.pj?'':'．判定しない')+'）　最長フレーム間隔 '+RUN.maxF.toFixed(0)+' ms（TEST-'+pad(RUN.maxId||0)+'）',
+   'テストごと（番号　合否　検査の数　所要 [s]）：'
+  ];
+ for(const k of ids)L.push(pad(k)+' '+(ST[k]==='ok'?'PASS':'FAIL')+' '+TR[k].length+' '+(RUN.dur[k]||0).toFixed(1)+'　'+TNAME[k]);
+ L.push('FAIL と上限超え：'+(bad.length?'':'なし'));
+ for(const[k,r]of bad)L.push('TEST-'+pad(k)+'　'+(r.ok?'上限超え':'FAIL')+'　'+r.n+'｜基準 '+r.ref+'｜実測 '+r.val);
+ L.push('性能の記録（実測｜上限）：');
+ for(const[k,r]of pf)L.push('TEST-'+pad(k)+'　'+r.n.replace('［性能］','')+'：'+r.val+'｜'+r.ref);
+ return L.join('\n')
 }
 function dtl(){
  const r=TR[U.sel],n=pad(U.sel),st=ST[U.sel];

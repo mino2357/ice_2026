@@ -50,4 +50,7 @@ h=r('index.tpl.html').replace('/*CSS*/',r('style.css')).replace('/*JS*/','\n'.jo
 assert h.count('/*DOCS*/')==1;h=h.replace('/*DOCS*/',_dj)
 # C-8：フォントやバイナリを埋め込まない
 assert '@font-face' not in r('style.css') and not re.search(r'data:[^"\'\s)]*;base64,',h),'成果物に @font-face か base64 のデータがあります（C-8）'
+# ビルドの ID（REQ-20 の 7）：成果物の内容（ID を入れる前）の SHA-1 の先頭 8 桁．同じソースと文書なら同じ ID になる
+import hashlib
+assert h.count('__BUILD__')==1;h=h.replace('__BUILD__',hashlib.sha1(h.encode('utf-8')).hexdigest()[:8])
 open(os.path.join(d,'..','dist','engine.html'),'w',encoding='utf-8').write(h);print(len(h))

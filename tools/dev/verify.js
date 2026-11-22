@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 段階 1 の検証：前に検証した状態（verify.lock.json）から変わったファイルを調べ，影響するテストだけを 1〜2 ビューポートで実行する（SPEC-20 B の 11）．
+/* 段階 1 の検証：前に検証した状態（verify.lock.json）から変わったファイルを調べ，影響するテストだけを 1〜2 ビューポートで実行する（仕様書 9 節）．
    使い方： npm run verify            点検 → ビルド → 影響するテスト．すべて PASS なら verify.lock.json を更新
             npm run verify -- --plan  何を実行するかを表示するだけ
             npm run verify -- --all   変更が無くても全項目（360×640）と画面のモード（820×1180）を実行

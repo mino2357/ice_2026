@@ -830,6 +830,36 @@ function lossTick(ms){
 /* [音] と [振動]：文字は変えず，ON のとき選ばれた色（SPEC-21 D の 5，画面の文書 SPEC-36 D の 1） */
 const sndLbl=()=>{const b=$('snd');b.className=SND.on?'on':''};
 /* 振動（SPEC-36）：navigator.vibrate を呼ぶのはここだけ */
+const BUILD='__BUILD__';
+/* 検証の結果をコピーする（REQ-20 の 7）．クリップボードに書けたら 'ok'，書けなければ詳細カードに選択できる枠で表示して 'show' */
+async function copyRes(){
+ const t=resText(envInfo()),b=$('rcp');
+ let ok=false;
+ try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+ if(!ok)try{
+  const a=document.createElement('textarea');
+  a.value=t;
+  a.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(a);
+  a.select();
+  ok=!!document.execCommand('copy');
+  a.remove()
+ }catch(e){}
+ clearTimeout(copyRes.tm);
+ if(ok){b.textContent='コピーしました';copyRes.tm=setTimeout(copyRes.done,1500);return'ok'}
+ $('dt').innerHTML='<textarea readonly class="rtx"></textarea>';
+ const a=$('dt').firstChild;
+ a.value=t;
+ a.focus();
+ a.select();
+ a.scrollTop=0;
+ b.textContent='枠からコピー';
+ copyRes.tm=setTimeout(copyRes.done,4000);
+ return'show'
+}
+copyRes.tm=0;
+copyRes.done=()=>{clearTimeout(copyRes.tm);$('rcp').textContent='結果をコピー'};
+if(navigator.userAgentData&&navigator.userAgentData.getHighEntropyValues)navigator.userAgentData.getHighEntropyValues(['model','platformVersion','architecture']).then(v=>{ENV.hi=v},()=>{});
 const HAPNOTE='振動は，端末のサイレントモードや本体の振動の設定で止まります（画面からは分かりません）';
 const HAP=new Hap(),
  hapOK=()=>typeof navigator.vibrate==='function',
@@ -912,6 +942,7 @@ function initUI(){
  tap($('ap'),applyPend);
  tap($('ds'),()=>{U.pend={};note('保留を破棄しました');rs()});
  tap($('rt'),()=>{U.busy?(U.cancel=1):runAll()});
+ tap($('rcp'),()=>{if(!U.busy)copyRes()});
  tap($('cp'),e=>{
   const b=e.target.closest('button');
   if(b){U.sel=+b.dataset.i;const r=TR[U.sel];U.ix=r?Math.max(0,r.findIndex(q=>!q.ok)):0;dtl()}
