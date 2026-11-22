@@ -86,4 +86,4 @@ npm run test:one -- --only 17,30 --names   # 1 ビューポートで一部のテ
 
 - `src/core.js` を変えたら `node tools/dev/bitcheck.js --chromium`（`npm run verify` が自動で行う）．
 - 成果物は claude.ai のアーティファクトとして公開している（先行版と正式版）．正式版の公開は利用者の確認のうえで行う．
-- main へは push しない．
+- main へは直接 push しない．利用者の指示があるときだけ，プルリクエストで取り込む．

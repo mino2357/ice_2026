@@ -121,7 +121,7 @@
 
 | ファイル | 字数 |
 | :--- | ---: |
-| `CLAUDE.md` | 4331 |
+| `CLAUDE.md` | 4360 |
 | `docs/dev-notes.md` | 2810 |
 | `docs/verification.md` | 41822 |
 | `docs/review_v26.md` | 34714 |
@@ -141,8 +141,9 @@
 | `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
+| `docs/changes/2026-11-22-ci.md` | 1294 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
 | `docs/changes/2026-11-22-operating-map.md` | 6512 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
-| `docs/changes/2026-11-22-valve-timing-search.md` | 4762 |
+| `docs/changes/2026-11-22-valve-timing-search.md` | 5374 |
