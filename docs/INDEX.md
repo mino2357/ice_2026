@@ -139,4 +139,4 @@
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
-| `docs/changes/2026-11-22-result-copy.md` | 5353 |
+| `docs/changes/2026-11-22-result-copy.md` | 5486 |
