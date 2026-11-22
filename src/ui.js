@@ -755,7 +755,7 @@ function optStop(){
  if(!r)return;
  OP.run=null;
  const b=r.best;
- OP.res=b?{x0:r.x0,x:b.x,J:b.J,J0:NaN,ne:r.h.length,nu:r.E.nu,t:r.t/1e3,obj:r.E.obj,N:r.E.N0,al:r.E.al0,part:true}:null;
+ OP.res=b?{x0:r.x0,x:b.x,J:b.J,J0:r.S.J0,ne:r.h.length,nu:r.E.nu,t:r.t/1e3,obj:r.E.obj,N:r.E.N0,al:r.E.al0,part:true}:null;
  optText()
 }
 function optTick(ms){
@@ -782,7 +782,7 @@ function optText(){
  const r=OP.run;
  if(r){
   const n=r.h.length,b=r.best;
-  $('opr').textContent=`探索中：評価 ${n} 回，${(r.t/1e3).toFixed(1)} s，最良 ${b?optFmt(r.E.obj,b.J):'–'}`
+  $('opr').textContent=`${vtStage(r.S)}：評価 ${n} 回，${(r.t/1e3).toFixed(1)} s，最良 ${b?optFmt(r.E.obj,b.J):'–'}`
  }else if(OP.res){
   const q=OP.res;
   $('opr').textContent=`${q.part?'中止':'終了'}：評価 ${q.ne} 回，${q.t.toFixed(1)} s${q.nu?`（判定を満たさない ${q.nu} 回）`:''}${q.local?'，1° の局所最大':''}`

@@ -139,6 +139,7 @@ function*scen(name){
    yield*from('S2',{Ta:0,nt:600},15);
    break;
   case'F3000':
+  case'F4000':
   case'F3500':
   case'F3000G':
    {
@@ -4861,15 +4862,23 @@ TST[32]=function*(){
    a=[-30,239,505,750],
    n2=(x,y)=>x.reduce((s,v,i)=>s+(v-y[i])**2,0),
    J=x=>3*Math.exp(-n2(x,a)/1800)+Math.exp(-n2(x,b)/128),
-   run=()=>{
-    const g=vtSearch(b,()=>true);
+   run=(seed,nmax)=>{
+    const g=vtQuad(b,vtOk,{...OPT,seed,nmax:nmax||OPT.nmax});
     let r=g.next(),bad=0;
     while(!r.done){if(!vtOk(r.value.x))bad++;r=g.next(J(r.value.x))}
     return[r.value,bad]
    },
-   [R,bad]=run(),
-   [R2]=run();
-  chkB(32,'探索器（解析的な関数，最大は a = (−30, 239, 505, 750)，x₀ の近くに局所最大）：結果 = a，評価 ≤ 500 回，作用角の制約を満たす，同じ種で同じ結果',R.x.join()===a.join()&&R.ne<=500&&bad===0&&R2.x.join()===R.x.join()&&R2.ne===R.ne,`${R.x.join('，')}，J ${R.J.toFixed(6)}（x₀ で ${R.J0.toFixed(4)}），評価 ${R.ne} 回，違反 ${bad}`)
+   [R,bad]=run(OPT.seed),
+   [R2]=run(OPT.seed),
+   sd=Array.from({length:19},(_,i)=>i+1).map(k=>run(k)),
+   miss=sd.filter(([q])=>q.x.join()!==a.join()).length,
+   nmx=Math.max(R.ne,...sd.map(([q])=>q.ne)),
+   bd=bad+sd.reduce((v,[,q])=>v+q,0);
+  chkB(32,'探索器（解析的な関数，最大は a = (−30, 239, 505, 750)，x₀ の近くに局所最大）：種 20 通りのすべてで結果 = a，評価 ≤ 200 回，作用角の制約を満たす，同じ種で同じ結果',R.x.join()===a.join()&&miss===0&&nmx<=200&&bd===0&&R2.x.join()===R.x.join()&&R2.ne===R.ne,`${R.x.join('，')}，J ${R.J.toFixed(6)}（x₀ で ${R.J0.toFixed(4)}），評価 ${R.ne} 回（20 通りの最多 ${nmx}），外れ ${miss}，違反 ${bd}`);
+/* 6：評価の上限で打ち切られても，探索の前の値が求まっている */
+  const cut=[20,60,120].map(n=>run(OPT.seed,n)[0]),
+   okc=cut.every(q=>q.stop&&q.ne<=q.hist.length+0&&q.J0===J(b)&&q.J>=q.J0&&vtOk(q.x)&&!q.local);
+  chkB(32,'評価の上限（20，60，120 回）で打ち切られても，探索の前の値 J(x₀) が求まっていて，結果の値がそれ以上',okc,cut.map(q=>`${q.ne} 回：J(x₀) ${q.J0.toFixed(4)}，結果 ${q.J.toFixed(4)}`).join('，'))
  }
  yield;
 /* 3：評価の条件（S4） */
@@ -4900,8 +4909,13 @@ TST[32]=function*(){
   const P={...s4.c.P};
   VTK4.forEach((k,i)=>P[k]=R.x[i]*D);
   const hit=valveHit(P,s4.c.G);
-  chkB(32,'機関での探索（S4，軸トルク最大）：8 近傍の J ≤ J* ＋ 許容の 2 倍，J* ≥ J(x₀)，VALVE HIT なし，評価 ≤ 400 回',nb.every(v=>v<=R.J+tol)&&R.J>=R.J0&&!hit&&R.ne<=400,`${R.x0.join('，')} → ${R.x.join('，')}°，T_b ${R.J0.toFixed(3)} → ${R.J.toFixed(3)} N·m，8 近傍の最大の差 ${(Math.max(...nb)-R.J).toExponential(2)}（許容 ${tol.toExponential(1)}），評価 ${R.ne} 回`);
-  chkP(32,'機関での探索の所要',op.t/1e3,60,'s',1)
+  chkB(32,'機関での探索（S4，軸トルク最大）：8 近傍の J ≤ J* ＋ 許容の 2 倍，J* ≥ J(x₀)，VALVE HIT なし，評価 ≤ 200 回',nb.every(v=>v<=R.J+tol)&&R.J>=R.J0&&!hit&&R.ne<=200,`${R.x0.join('，')} → ${R.x.join('，')}°，T_b ${R.J0.toFixed(3)} → ${R.J.toFixed(3)} N·m，8 近傍の最大の差 ${(Math.max(...nb)-R.J).toExponential(2)}（許容 ${tol.toExponential(1)}），評価 ${R.ne} 回`);
+  chkP(32,'機関での探索の所要',op.t/1e3,60,'s',1);
+/* 全開 4000 rpm（最適点が探索の前の点から遠い）：上限に達せずに終わり，種を変えても同じ値に着く */
+  const f4=yield*scen('F4000'),w=[];
+  for(const seed of[OPT.seed,1]){const o=new VTOpt(f4.c,0,{...OPT,seed});while(!o.run(10))yield;w.push(o.R)}
+  const dj=Math.abs(w[0].J-w[1].J)/Math.abs(w[0].J);
+  chkB(32,'機関での探索（全開 4000 rpm，軸トルク最大）：評価の上限（400 回）に達せずに終わり，種を変えた 2 回の結果の値の差が 0.1% 以下',w.every(q=>q&&!q.stop&&q.local&&q.ne<OPT.nmax&&q.J>q.J0)&&dj<=1e-3,`${w.map(q=>`(${q.x.join('，')}) ${q.J.toFixed(3)} N·m，評価 ${q.ne} 回`).join('／')}，差 ${(dj*100).toFixed(4)}%（前 ${w[0].J0.toFixed(3)} N·m）`)
  }
 /* 5：画面の操作（S4 の機関で [探索] → [中止] → [適用] → [元に戻す]） */
  {
@@ -4926,14 +4940,14 @@ TST[32]=function*(){
    n++
   }
   tapEl($('orn'));
-  const stopped=!OP.run&&!!OP.res&&OP.res.part&&$('otb').textContent.includes(String(OP.res.x[1]));
+  const stopped=!OP.run&&!!OP.res&&OP.res.part&&$('otb').textContent.includes(String(OP.res.x[1]))&&OP.res.J0===OP.res.J0&&OP.res.J0>-Infinity;
   const x=OP.res?OP.res.x:null;
   tapEl($('oap'));
   const ap=!!x&&VTK4.every((k,i)=>LP[k]===x[i]*D)&&!!U.undo;
   tapEl($('oun'));
   const un=VTK4.every((k,i)=>LP[k]===lp0[i]);
   live=sv;
-  chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る',st&&stopped&&ap&&un,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}（${n} フレーム）`);
+  chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点と探索の前の値を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る',st&&stopped&&ap&&un,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}（${n} フレーム）`);
   chkP(32,'探索中のフレームの間隔（最長）',mx,250,'ms',0)
  }
  Object.assign(OP,o0);

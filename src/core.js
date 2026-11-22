@@ -2464,7 +2464,12 @@ const OPT={
  seed:20261119,
  cmin:4,
  cmax:30,
- tol:{mc:{r:1e-3,a:.01,s:.1},fine:{r:1e-4,a:1e-3,s:.01}}
+ tol:{mc:{r:1e-3,a:.01,s:.1},fine:{r:1e-4,a:1e-3,s:.01}},
+ d0:8,
+ dmax:32,
+ nitq:60,
+ eps:1e-4,
+ sep2:16
 };
 const VTK4=['ivo','ivc','evo','evc'];
 /* 種を固定した擬似乱数（mulberry32．SPEC-21 と同じ） */
@@ -2479,7 +2484,7 @@ function mb32(seed){
 }
 /* 作用角の制約（1〜719°） */
 const vtOk=x=>{const di=x[1]-x[0],de=x[3]-x[2];return di>=1&&di<=719&&de>=1&&de<=719};
-/* 探索器（SPEC-32 C．VVT マップの最適点では 2 変数，モンテカルロなし，O.dur = false で作用角の制約なし．SPEC-34 B の 3）．generator：yield {x, cls} で評価を求め，next(J) で値を受け取る．feas(x)：作用角以外の制約（VALVE HIT）．
+/* 勾配の探索器（SPEC-34 B の 3．VVT マップの最適点を詰めるのに使う：2 変数，モンテカルロなし，O.dur = false で作用角の制約なし．バルブタイミングの探索は vtQuad）．generator：yield {x, cls} で評価を求め，next(J) で値を受け取る．feas(x)：作用角以外の制約（VALVE HIT）．
    cls は評価の許容の種類（'mc'：粗い，'fine'：細かい）．値は種類ごとに覚え，同じ点を 2 度評価しない */
 function* vtSearch(x0,feas,O){
  O=O||OPT;
@@ -2561,6 +2566,188 @@ function* vtSearch(x0,feas,O){
  const J0=yield*ev(x0,'fine');
  return Object.assign(R,{x,J,J0,local:!R.stop})
 }
+/* ===== 2 次のモデルを使う信頼領域法（SPEC-32 C） ===== */
+/* 連立 1 次方程式 A x = b（部分ピボットの消去法）．特異なら null */
+function lsolve(A,b){
+ const n=b.length,M=A.map((r,i)=>[...r,b[i]]);
+ for(let c=0;c<n;c++){
+  let p=c;
+  for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+  if(Math.abs(M[p][c])<1e-14)return null;
+  [M[c],M[p]]=[M[p],M[c]];
+  for(let r=c+1;r<n;r++){const f=M[r][c]/M[c][c];if(f)for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]}
+ }
+ const x=Array(n).fill(0);
+ for(let r=n-1;r>=0;r--){let v=M[r][n];for(let k=r+1;k<n;k++)v-=M[r][k]*x[k];x[r]=v/M[r][r]}
+ return x
+}
+/* 2 次式 m(s) = c + g·s + ½ sᵀHs の重み付きの最小二乗の当てはめ（SPEC-32 C の 5）．pts：[{s（n 成分），J，w（重み）}]．full：H の全部（係数 (n+1)(n+2)/2 個）か，対角だけ（2n+1 個）か．点が係数より少なければ null */
+function fitQuad(pts,n,full){
+ const idx=[];
+ for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)idx.push([i,j]);
+ const np=1+2*n+(full?idx.length:0);
+ if(pts.length<np)return null;
+ const phi=q=>{const v=[1,...q,...q.map(a=>.5*a*a)];if(full)for(const [i,j] of idx)v.push(q[i]*q[j]);return v},
+  A=[...Array(np)].map(()=>Array(np).fill(0)),
+  b=Array(np).fill(0);
+ for(const p of pts){
+  const v=phi(p.s);
+  for(let i=0;i<np;i++){b[i]+=p.w*v[i]*p.J;for(let j=0;j<np;j++)A[i][j]+=p.w*v[i]*v[j]}
+ }
+ let tr=0;
+ for(let i=0;i<np;i++)tr+=A[i][i];
+ for(let i=1;i<np;i++)A[i][i]+=1e-9*tr/np;
+ const c=lsolve(A,b);
+ if(!c)return null;
+ const g=c.slice(1,1+n),H=[...Array(n)].map(()=>Array(n).fill(0));
+ for(let i=0;i<n;i++)H[i][i]=c[1+n+i];
+ if(full)idx.forEach(([i,j],k)=>{H[i][j]=H[j][i]=c[1+2*n+k]});
+ return{c:c[0],g,H,val:q=>{let v=c[0];for(let i=0;i<n;i++){v+=g[i]*q[i];for(let j=0;j<n;j++)v+=.5*q[i]*H[i][j]*q[j]}return v}}
+}
+/* 箱の中の 2 次式の最大（SPEC-32 C の 6）：max m(s)，lo ≤ s ≤ hi．各変数を「下端・上端・自由」に分けた 3^n 通りで，自由な変数の停留点を解き，箱の中にあるものの最大を取る（頂点の組は必ず残る） */
+function boxMaxQ(m,lo,hi){
+ const n=lo.length;
+ let best=null;
+ const rec=(i,st)=>{
+  if(i<n){for(const k of[0,1,2])rec(i+1,[...st,k]);return}
+  const fr=[],q=Array(n).fill(0);
+  st.forEach((k,j)=>{if(k===0)q[j]=lo[j];else if(k===1)q[j]=hi[j];else fr.push(j)});
+  if(fr.length){
+   const z=lsolve(fr.map(a=>fr.map(b=>m.H[a][b])),fr.map(a=>{let v=-m.g[a];for(let j=0;j<n;j++)if(!fr.includes(j))v-=m.H[a][j]*q[j];return v}));
+   if(!z)return;
+   for(let k=0;k<fr.length;k++){if(z[k]<lo[fr[k]]-1e-9||z[k]>hi[fr[k]]+1e-9)return;q[fr[k]]=z[k]}
+  }
+  const v=m.val(q);
+  if(!best||v>best.v)best={s:q,v}
+ };
+ rec(0,[]);
+ return best
+}
+/* 探索器（SPEC-32 C）．generator：yield {x, cls} で評価を求め，next(J) で値を受け取る（vtSearch と同じ約束）．feas(x)：制約（作用角，VALVE HIT）．
+   R は進み具合の入れ物（呼ぶ側が渡せば，探索の途中も読める）：stage（'x0'，'mc'，'tr'，'chk'），nst（何番目の始点か），hist（評価した点 {x, J, stage, k, c（そのときの中心），d（そのときの Δ）}），path（中心の移った経路 {x, J, d, k, ne（それまでの評価の回数），st}），tr（いまの中心 x と Δ） */
+function* vtQuad(x0,feas,O,R){
+ O=O||OPT;
+ R=Object.assign(R||{},{x0:x0.slice(),hist:[],path:[],ne:0,stop:false,stage:'',nst:0,mg:0,tr:null,J0:NaN});
+ const n=x0.length,
+  rnd=mb32(O.seed),
+  gau=()=>{let u=0;while(u===0)u=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*PI*rnd())},
+  memo=new Map,
+  dist=(a,b)=>Math.max(...a.map((v,i)=>Math.abs(v-b[i])));
+ /* F：いまの信頼領域の探索で使う，細かい許容の点（始点ごとに作り直す．前の探索の点は，同じ点を求めたときだけ，評価し直さずに加わる） */
+ let F=[],Fk=new Set,xc=x0.slice(),Jc=NaN,d=O.d0;
+ const ev=function*(x,cls){
+   const k=cls+':'+x.join(','),
+    put=J=>{if(cls==='fine'&&J>-Infinity&&!Fk.has(k)){Fk.add(k);F.push({x:x.slice(),J})}return J};
+   if(memo.has(k))return put(memo.get(k));
+   let J=-Infinity;
+   if(feas(x)){
+    if(R.ne>=O.nmax){R.stop=true;return-Infinity}
+    R.ne++;
+    J=yield{x:x.slice(),cls};
+    R.hist.push({x:x.slice(),J,stage:R.stage,k:R.nst,c:xc.slice(),d})
+   }
+   memo.set(k,J);
+   return put(J)
+  },
+  seen=x=>Fk.has('fine:'+x.join(','));
+ /* 1．探索の前の点（細かい許容．上限で打ち切られても値が残るように，最初に評価する） */
+ R.stage='x0';
+ R.J0=yield*ev(x0,'fine');
+ /* 2．標本（粗い許容） */
+ R.stage='mc';
+ const S=[{x:x0.slice(),J:yield*ev(x0,'mc')}];
+ for(let g=0;g<O.nmc.length&&!R.stop;g++)for(let i=0;i<O.nmc[g]&&!R.stop;i++){
+  let x,k=0;
+  do{x=x0.map(v=>Math.round(v+O.sd[g]*gau()));k++}while((!feas(x)||memo.has('mc:'+x.join(',')))&&k<200);
+  if(k<200)S.push({x,J:yield*ev(x,'mc')})
+ }
+ const Sv=S.filter(p=>p.J>-Infinity).sort((a,b)=>b.J-a.J);
+ Jc=R.J0;
+ /* 軸の上の点 xc ± dd e_i のうち，まだ使っていないものを評価する．中心より良い点があれば true */
+ const axis=function*(dd){
+   let up=false;
+   for(let i=0;i<n&&!R.stop;i++)for(const sg of[1,-1]){const x=xc.slice();x[i]+=sg*dd;if(!seen(x)){const J=yield*ev(x,'fine');if(J>Jc)up=true}}
+   return up
+  },
+  move=(x,J,o)=>{
+   xc=x.slice();
+   Jc=J;
+   R.path.push({x:xc.slice(),J:Jc,d,k:R.nst,ne:R.ne,...o});
+   R.tr={x:xc.slice(),d,k:R.nst}
+  },
+ /* 中心から 2Δ 以内の最良の点へ移る */
+  recenter=()=>{
+   const b=F.filter(p=>dist(p.x,xc)<=2*d).reduce((a,p)=>p.J>a.J?p:a,{J:Jc});
+   if(b.x&&b.J>Jc){move(b.x,b.J);return true}
+   return false
+  },
+ /* 信頼領域の探索（1° の確認まで）．mg：前の結果の点．中心がそこから sep° 以内に入ったら，同じ山とみなしてやめる */
+  tr=function*(mg){
+   d=O.d0;
+   R.stage='tr';
+   move(xc,Jc,{st:1});
+   for(let it=0;it<O.nitq&&!R.stop;it++){
+    if(mg&&dist(xc,mg)<=O.sep){R.mg++;return{x:xc.slice(),J:Jc,mg:true}}
+    R.tr={x:xc.slice(),d,k:R.nst};
+    const near=()=>F.filter(p=>dist(p.x,xc)<=2*d);
+    if(near().length<2*n+1){yield*axis(d);if(recenter())continue}
+    const P=near().map(p=>({s:p.x.map((v,i)=>(v-xc[i])/d),J:p.J,w:1/(1+dist(p.x,xc)/d)})),
+     m=fitQuad(P,n,P.length>=(n+1)*(n+2)/2+3)||fitQuad(P,n,false);
+    let xn=null,pred=0;
+    if(m){
+     let q=boxMaxQ(m,Array(n).fill(-1),Array(n).fill(1)).s.slice();
+     for(let k=0;k<4;k++){const x=xc.map((v,i)=>Math.round(v+d*q[i]));if(feas(x)){xn=x;break}q=q.map(v=>v/2)}
+     if(xn)pred=m.val(xn.map((v,i)=>(v-xc[i])/d))-m.val(Array(n).fill(0))
+    }
+    if(!xn||seen(xn)||!(pred>O.eps*Math.abs(Jc))){
+    /* モデルが増分を見込まない：軸の上の点がそろっていなければ足し，そろっていれば Δ を半分にする */
+     if(yield*axis(d)){recenter();continue}
+     if(d<=1)break;
+     d=Math.max(1,d/2);
+     continue
+    }
+    const Jn=yield*ev(xn,'fine'),rho=(Jn-Jc)/pred;
+    if(Jn>Jc){
+     const st=dist(xn,xc);
+     if(rho>.7&&st>=.9*d)d=Math.min(O.dmax,2*d);
+     move(xn,Jn,{rho})
+    }else{
+    if(d<=1){if(yield*axis(1)){recenter();continue}break}
+    d=Math.max(1,d/2)
+   }
+   }
+  /* 1° の確認：8 近傍のどれも大きくない（大きい点があれば移って繰り返す） */
+   R.stage='chk';
+   d=1;
+   R.tr={x:xc.slice(),d,k:R.nst};
+   for(let more=true;more&&!R.stop;){more=yield*axis(1);if(more)recenter()}
+   return{x:xc.slice(),J:Jc}
+  };
+ /* 3．1 つ目の始点：標本の最良の点（細かい許容で評価し直す）と，探索の前の点の良い方 */
+ R.nst=1;
+ R.stage='tr';
+ if(Sv.length&&!R.stop){const J=yield*ev(Sv[0].x,'fine');if(J>Jc||!(Jc>-Infinity)){xc=Sv[0].x.slice();Jc=J}}
+ const st1=xc.slice();
+ let best=yield*tr(null);
+ /* 4．2 つ目からの始点：標本のうち，それまでの結果から sep2° 以上，1 つ目の始点から sep° 以上離れた最良の点．前の探索の点は使わない */
+ for(const p of Sv){
+  if(R.nst>=O.ns||R.stop)break;
+  if(dist(best.x,p.x)<O.sep2||dist(st1,p.x)<O.sep)continue;
+  R.nst++;
+  F=[];
+  Fk=new Set;
+  R.stage='tr';
+  const J=yield*ev(p.x,'fine');
+  if(!(J>-Infinity))continue;
+  xc=p.x.slice();
+  Jc=J;
+  const r=yield*tr(best.x);
+  if(!r.mg&&r.J>best.J)best=r
+ }
+ R.stage='end';
+ R.tr={x:best.x.slice(),d:1,k:0};
+ return Object.assign(R,{x:best.x,J:best.J,local:!R.stop})
+}
 /* 評価器（SPEC-32 B）：運転中の機関を複製し，回転数・開度・壁温を固定して，弁時期 x の周期定常の値を求める．run(ms) は値が出たら true */
 class VTEval{
  constructor(c0,obj,O,ks){
@@ -2625,6 +2812,8 @@ class VTEval{
   return false
  }
 }
+/* 段階の名前（画面の表示．SPEC-32 A の 2） */
+const vtStage=S=>S.stage==='x0'?'探索の前の点':S.stage==='mc'?'標本':S.stage==='chk'?`確認 ${S.nst}`:S.stage==='tr'?`探索 ${S.nst}`:'終了';
 /* 探索の進行（評価器と探索器をつなぐ．時間を区切って進める） */
 class VTOpt{
  constructor(c0,obj,O){
@@ -2632,7 +2821,8 @@ class VTOpt{
   this.h=[];
   this.E=new VTEval(c0,obj,this.O);
   this.x0=VTK4.map(k=>Math.round(c0.P[k]/D));
-  this.g=vtSearch(this.x0,x=>this.E.feas(x),this.O);
+  this.S={};
+  this.g=vtQuad(this.x0,x=>vtOk(x)&&this.E.feas(x),this.O,this.S);
   this.req=this.g.next();
   this.done=false;
   this.R=null;
@@ -2648,7 +2838,7 @@ class VTOpt{
   while(!this.done&&performance.now()-t0<ms){
    if(this.E.run(Math.max(1,ms-(performance.now()-t0)))){
     const J=this.E.J,q=this.req.value;
-    this.h.push({J,cls:q.cls});
+    this.h.push({J,cls:q.cls,x:q.x,stage:this.S.stage,k:this.S.nst});
     if(J>-Infinity&&(!this.best||J>this.best.J))this.best={x:q.x,J};
     if(this.stop){this.g.return();this.fin(null);break}
     this.req=this.g.next(J);
