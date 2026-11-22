@@ -1,5 +1,5 @@
 /* ===== sound: crank-angle wavetable + exhaust-pipe resonator (pure DSP, shared by AudioWorklet / fallback / tests) ===== */
-const AU={NT:1440,G:.04,tauN:.05,tauA:.03,Nmin:30,kd:.7,Tex:800};
+const AU={NT:1440,G:.04,tauN:.05,tauA:.03,Nmin:30,kd:.7,Tex:800,Lmx:3,cmn:330};
 const cEx=()=>Math.sqrt(gmB(AU.Tex,0)*R*AU.Tex);                 /* speed of sound in exhaust [m/s] */
 const pipeF=(L,n)=>(2*n-1)*cEx()/(4*L);                          /* quarter-wave resonances [Hz] */
 function mkEnv(me){return Float32Array.from(me,v=>v===v?Math.abs(v)*1e-3:0)}
@@ -106,7 +106,8 @@ class Synth{
   this.c=556.7;
   this.cv=1;
   this.seed=12345;
-  this.buf=new Float64Array(4096);
+/* 遅延線の長さ：排気管の往復の遅れ 2 L / c（L は設定の上限 3 m，c は下限 330 m/s として）が収まる 2 の冪．48 kHz では 4096（REQ-21 の 3） */
+  this.buf=new Float64Array(Math.max(4096,2**Math.ceil(Math.log2(2*AU.Lmx/AU.cmn*fs+4))));
   this.w=0;
   this.lp=0;
   this.wraps=0;
@@ -119,6 +120,8 @@ class Synth{
   this.ac=1;
   this.sc=1;
   this.st=0;
+/* 検査のための記録（サイクルごとの周期と振幅）．o.rec を与えたときだけ取る．音を鳴らす経路では取らない（REQ-21 の 9） */
+  this.rec=!!(o&&o.rec);
   this.periods=[];
   this.amps=[];
   this.env=new Float32Array(1440);
@@ -232,9 +235,9 @@ class Synth{
     this.wraps++;
     if(this.nxEnv){this.env=this.nxEnv;this.nxEnv=null}
     if(this.nx){this.tab=this.nx;this.nx=null;this.swapAt=this.cnt}
-    this.periods.push(this.cnt);
+    if(this.rec)this.periods.push(this.cnt);
     this.newCycle();
-    this.amps.push(this.ac)
+    if(this.rec)this.amps.push(this.ac)
    }
    let x=0,ev=0;
    const w=N*Math.PI/30,dw=F.dw;
@@ -282,7 +285,7 @@ class Synth{
    out[s]=amp<1e-9&&Math.abs(z)<1e-9?0:ao<=.8?o:Math.sign(o)*(.8+.2*Math.tanh((ao-.8)/.2));
    this.cnt++
   }
-  if(this.periods.length>4096){this.periods=this.periods.slice(-2048);this.amps=this.amps.slice(-2048)}
+  if(this.rec&&this.periods.length>4096){this.periods=this.periods.slice(-2048);this.amps=this.amps.slice(-2048)}
  }
  process(out){
   if(this.fm)return this.processF(out);
@@ -292,7 +295,7 @@ class Synth{
    M=bf.length,
    b=this.loop(),
    D=Math.max(2,2*this.L/this.c*fs-b/(1-b)),
-   di=Math.floor(D),
+   di=Math.min(Math.floor(D),M-2),
    df=D-di,
    g0=ACON.gc,
    V=this.vol*1.6,
@@ -307,9 +310,9 @@ class Synth{
     this.wraps++;
     if(this.nxEnv){this.env=this.nxEnv;this.nxEnv=null}
     if(this.nx){this.tab=this.nx;this.nx=null;this.swapAt=this.cnt}
-    this.periods.push(this.cnt);
+    if(this.rec)this.periods.push(this.cnt);
     this.newCycle();
-    this.amps.push(this.ac)
+    if(this.rec)this.amps.push(this.ac)
    }
    const i=Math.floor(this.ph),
     f=this.ph-i,
@@ -328,7 +331,7 @@ class Synth{
    out[s]=this.amp<1e-9&&Math.abs(y)<1e-12?0:au<=.8?u:Math.sign(u)*(.8+.2*Math.tanh((au-.8)/.2));
    this.cnt++
   }
-  if(this.periods.length>4096){this.periods=this.periods.slice(-2048);this.amps=this.amps.slice(-2048)}
+  if(this.rec&&this.periods.length>4096){this.periods=this.periods.slice(-2048);this.amps=this.amps.slice(-2048)}
  }
 }
 const WSRC=()=>`const FLV=${JSON.stringify(FLV)};${bqC.toString()}${bqP.toString()}const AN=${AN},R=${R},PI=Math.PI,ACON=${JSON.stringify(ACON)};const AU=${JSON.stringify(AU)};${loopMag.toString()}${loopFit.toString()}${onePoleB.toString()}${Comp.toString()}${Synth.toString()}
@@ -342,12 +345,14 @@ async function addWorklet(ctx){
 /* 音と振動の既定は OFF（SPEC-21 D の 5，画面の文書 SPEC-36 D の 1） */
 const SND0=0,HAP0=0;
 const SND={ctx:null,node:null,path:'',on:SND0,cyc:-1,err:''};
+/* 音を鳴らす合成器に渡す値（AudioWorklet も，その代わりの経路も同じ）．検査のための記録 rec は求めない（REQ-21 の 9） */
+const sndOpt=()=>({Nt:0,vol:0,L:LP.Lex,d:LP.dex,cv:LP.cvar,fl:LP.fl,fm:LP.sm,ld:0,c:cEx()});
 async function sndEnsure(){
  if(SND.ctx){if(SND.ctx.state!=='running')try{await SND.ctx.resume()}catch(e){}return}
  const AC=window.AudioContext||window.webkitAudioContext;
  if(!AC){SND.path='なし';return}
  const ctx=SND.ctx=new AC({latencyHint:'interactive'});
- const o={Nt:0,vol:0,L:LP.Lex,d:LP.dex,cv:LP.cvar,fl:LP.fl,fm:LP.sm,ld:0,c:cEx()};
+ const o=sndOpt();
  try{
   const how=await addWorklet(ctx);
   SND.node=new AudioWorkletNode(ctx,'eng',{numberOfInputs:0,outputChannelCount:[1],processorOptions:o});

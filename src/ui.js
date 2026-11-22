@@ -5,7 +5,7 @@ const LP=mkP();
 let live=new Core(LP),AX=mkAX();
 const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 /* spd：再生速度（Infinity = 最速）．rs：速さの倍率（最速のときに表示．SPEC-15 F の 4），w0，t0：その計測の区間の始まり */
-const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24};
+const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24,el:.05};
 const Base={
  ref:null,
  tl:-1e9,
@@ -46,7 +46,7 @@ function tap(el,fn){
 const atRest=c=>!!c.s&&!c.s.fired&&!c.s.starter&&c.s.y[1]===0;
 function advance(st,c,el,budget){
  const mx=st.spd===Infinity&&!atRest(c);
- if(mx){st.debt=Infinity;budget=budget||FB.mx}else st.debt+=Math.min(el,.05)*(st.spd===Infinity?1:st.spd);
+ if(mx){st.debt=Infinity;budget=budget||FB.mx}else st.debt+=Math.min(el,FB.el)*(st.spd===Infinity?1:st.spd);
  const t0=performance.now();
  let n=0;
  while(st.debt>0){
@@ -323,10 +323,10 @@ function swCond(){
   dg=r=>f(r/D,0)+'°',
   row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`,
   C=SWC.crit[SW.crit];
- $('swa').innerHTML=`<table><tr><th colspan="2">固定する条件</th></tr>${row('スロットル開度',`<b data-c="al">${SW.als.join('・')}</b>°（90° = 全開）`)}${row('回転数の保持','速度一定の理想動力計（dω/dt = 0）')}${row('点火・変動','MBT（CA50 = 10° ATDC），サイクル変動 OFF')}${row('壁温 T_w',`<b data-c="Tw">${SWC.Tw}</b> K 固定`)}
+ $('swa').innerHTML=`<table><tr><th colspan="2">固定する条件</th></tr>${row('スロットル開度',`<b data-c="al">${SW.als.join('・')}</b>°（90° = 全開）`)}${row('回転数の保持','速度一定の理想動力計（dω/dt = 0）')}${row('点火・変動','MBT（CA50 = 10° ATDC），サイクル変動 OFF')}${row('壁温 T_w',`<b data-c="Tw">${swTw(P)}</b> K 固定`)}
 <tr><th colspan="2">回転数の点</th></tr>${row('範囲・刻み',`<b data-c="st">${st}</b>, ${2*st}, …, ${SWC.N1} rpm（<b data-c="n">${n}</b> 点）`)}${row('手順',SWC.procs[SW.proc]+(SW.proc==='up'?'（前の点から継続）':SW.proc==='updown'?'（上りと下りの平均）':'（各点を単独に開始）'))}
 <tr><th colspan="2">収束の判定：${C.n}（直近 <b data-c="last">${SWC.last}</b> サイクルの幅）</th></tr>${row('T_b',`≤ <b data-c="tolR">${f(C.tolR*100,1)}</b>%·|T_b| + <b data-c="tolA">${C.tolA}</b> N·m`)}${row('MBT・流量',`≤ <b data-c="tolS">${C.tolS}</b>°，${SW.flow?`η_v・ṁ_th・p_in ≤ ${f(C.tolR*100,1)}%`:'流量・状態量は判定しない'}`)}${row('サイクル数',`最少 <b data-c="nmin">${SW.nmin}</b>，最多 <b data-c="nmax">${SW.nmax}</b>，最後の値を採る`)}
-<tr><th colspan="2">${R?'<span data-c="run">計測中の設定</span>':'現在の設定（次の計測に使う）'}${old?'<br><span data-c="old">表示中の曲線は変更前の設定で計測（再計測で更新）</span>':''}${pend?'<br><span data-c="pend">保留中の変更は [適用] の後に使う</span>':''}</th></tr>${row('大気圧・φ',`${f(P.pa/1e3,1)} kPa，${f(P.phi,2)}`)}${row('ε・B×S',`<b data-c="eps">${f(P.eps,1)}</b>，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('カム・リフト・弁径',`<b data-c="cam">${IT.cam.ch[P.cam]}</b>，<b data-c="Lv">${f(P.Lv*1e3,1)}</b> mm，${f(P.dv*1e3,0)} mm`)}${row('IVO・IVC・EVO・EVC',`<b data-c="ivo">${dg(V.i.o)}</b>・<b data-c="ivc">${dg(V.i.c)}</b>・${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('排気系',P.exs?`ON，L_e ${f(P.Lex,2)} m，d_e ${f(P.dex*1e3,0)} mm`:`OFF，圧損 ${f(P.dpx/1e3,1)} kPa`)}${row('補機負荷',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`
+<tr><th colspan="2">${R?'<span data-c="run">計測中の設定</span>':'現在の設定（次の計測に使う）'}${old?'<br><span data-c="old">表示中の曲線は変更前の設定で計測（再計測で更新）</span>':''}${pend?'<br><span data-c="pend">保留中の変更は [適用] の後に使う</span>':''}</th></tr>${row('大気圧・φ',`${f(P.pa/1e3,1)} kPa，${f(P.phi,2)}`)}${row('ε・B×S',`<b data-c="eps">${f(P.eps,1)}</b>，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('カム・リフト・弁径',`<b data-c="cam">${IT.cam.ch[P.cam]}</b>，<b data-c="Lv">${f(P.Lv*1e3,1)}</b> mm，吸 <b data-c="dv">${f(P.dv*1e3,0)}</b>／排 <b data-c="dve">${f(P.dve*1e3,0)}</b> mm`)}${row('IVO・IVC・EVO・EVC',`<b data-c="ivo">${dg(V.i.o)}</b>・<b data-c="ivc">${dg(V.i.c)}</b>・${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('排気系',P.exs?`ON，L_e ${f(P.Lex,2)} m，d_e ${f(P.dex*1e3,0)} mm`:`OFF，圧損 ${f(P.dpx/1e3,1)} kPa`)}${row('補機負荷',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`
 }
 function swText(){
  const r=$('swt').children,R=SW.run;
@@ -740,7 +740,9 @@ function optObj(o){
  [...$('oob').children].forEach(b=>b.className=+b.dataset.o===o?'on':'');
  optText()
 }
-const optReady=()=>live.s.fired&&live.s.Nb>=300;
+/* 探索・マップ・内訳は運転中の機関の状態を引き継ぐので，燃料を噴いて回っているときだけ始める（REQ-32 の 9，REQ-33 の 7，REQ-34 の 6） */
+const optReady=()=>!!(live.s.fired&&live.s.fuel&&live.s.Nb>=300),
+ optWhy=()=>live.s.fired&&!live.s.fuel?'燃料を噴いていません（燃料カット中は計算しません）':'運転タブで START してください';
 /* 表示の切替（0：結果の表と評価の履歴，1：弁時期の図，2：探索の軌跡．SPEC-32 A の 3） */
 function optView(n){
  OP.v=n;
@@ -758,7 +760,7 @@ function optFig(){
 }
 function optStart(){
  if(OP.run){optStop();return}
- if(!optReady()){$('opr').textContent='運転タブで START してください';return}
+ if(!optReady()){$('opr').textContent=optWhy();return}
  OP.run=new VTOpt(live,OP.obj);
  OP.rs=OP.run;
  OP.h=OP.run.h;
@@ -794,7 +796,7 @@ function optText(){
  $('oun').disabled=!U.undo;
  $('oap').disabled=!OP.res||!!OP.run;
  [...$('oob').children].forEach(b=>b.className=+b.dataset.o===OP.obj?'on':'');
- $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:'運転タブで START してください';
+ $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:optWhy();
  {
   const q=OP.run||OP.rs,
    sg=q?vtSegs(q.S):[],
@@ -835,18 +837,20 @@ function drawOpt(){
  return null
 }
 /* 熱効率タブ（SPEC-33 C） */
+/* 熱効率の図が出せないときに図に書く文 */
+const lossMsg=()=>LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?optWhy():'計算中';
 function drawLossT(){
  {
   const q=prep($('olc'));
   if(!q)return;
-  const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';
+  const msg=lossMsg();
   drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)
  }
 }
 /* ===== VVT マップ（SPEC-34） ===== */
 function vmStart(){
  if(OP.vm&&!OP.vm.done){vmStop();return}
- if(!optReady()){$('vpr').textContent='運転タブで START してください';return}
+ if(!optReady()){$('vpr').textContent=optWhy();return}
  OP.vm=new VVTMap(live);
  OP.vp0=OP.vm.p0;
  OP.vsel=null;
@@ -878,7 +882,7 @@ function vmText(){
  $('vrn').textContent=run?'中止':'計算';
  $('vap').disabled=!OP.vsel||run;
  $('vun').disabled=!U.undo;
- $('vst').textContent=optReady()?`運転状態：N̄ ${(m?m.E.N0:live.s.Nb).toFixed(0)} rpm，開度 ${((m?m.E.al0:live.s.al)/D).toFixed(1)}°（固定して評価．作用角は固定）`:'運転タブで START してください';
+ $('vst').textContent=optReady()?`運転状態：N̄ ${(m?m.E.N0:live.s.Nb).toFixed(0)} rpm，開度 ${((m?m.E.al0:live.s.al)/D).toFixed(1)}°（固定して評価．作用角は固定）`:optWhy();
  if(m)$('vpr').textContent=`${run?m.stage:m.stop?'中止':'終了'}：評価 ${m.ne} 回，${(m.t/1e3).toFixed(1)} s`;else if(!$('vpr').textContent.includes('START'))$('vpr').textContent='';
  const f=(x,v)=>`(${x[0]}, ${x[1]})：${v.tb.toFixed(2)} N·m，${v.be===v.be?v.be.toFixed(0)+' g/kWh':'出力なし'}`;
  if(m){
@@ -910,7 +914,7 @@ function drawVMT(){
   C,
   p0:m?m.p0:[Math.round(LP.phin/D),Math.round(LP.phex/D)],
   sel:OP.vsel,
-  msg:!optReady()?'運転タブで START してください':m&&!m.done?`計算中（${m.stage}）`:'[計算] でマップを作ります'
+  msg:!optReady()?optWhy():m&&!m.done?`計算中（${m.stage}）`:'[計算] でマップを作ります'
  },COL)
 }
 /* タップ：★ ◆ の印から 12 px 以内ならその点，それ以外は 1° に丸めた点（範囲の外は端に寄せる） */
@@ -989,9 +993,13 @@ const HAP=new Hap(),
  vib=p=>{if(!hapOK())return;try{navigator.vibrate(p)}catch(e){}};
 function hapBtn(){const b=$('hap');b.disabled=!hapOK();if(b.disabled)U.hap=0;b.className=U.hap?'on':''}
 /* 燃焼の時刻を取り出して Hap に渡す（tS：このフレームの積分の前のシミュレーションの時刻，el：実経過 [s]） */
+/* 振動の判断に渡す値：機関 c がこのフレームで tS から進んだ間の燃焼を，実際に進めた時間に当たる長さ（経過 el を advance と同じ上限 FB.el で切ったもの）の中に置く（REQ-36 の 7） */
+function hapIn(c,on,tS,el){
+ const ev=c.igT.splice(0),t1=c.s.t;
+ return on&&tS!=null&&t1>=tS?{on:1,ev,t0:tS,t1,dt:Math.min(el,FB.el)*1e3}:{on:on?1:0,ev:[],t0:0,t1:0,dt:0}
+}
 function hapTick(now,tS,el){
- const ev=live.igT.splice(0),t1=live.s.t,on=U.hap&&!U.busy&&!document.hidden&&hapOK();
- const r=HAP.tick(now,on&&tS!=null&&t1>=tS?{on:1,ev,t0:tS,t1,dt:el*1e3}:{on:on?1:0,ev:[],t0:0,t1:0,dt:0});
+ const r=HAP.tick(now,hapIn(live,U.hap&&!U.busy&&!document.hidden&&hapOK(),tS,el));
  if(r!=null)vib(r)
 }
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});

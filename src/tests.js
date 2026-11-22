@@ -2,6 +2,12 @@
 /* テストの機関：サイクル変動なし，スロットル制御，DOPRI5（判定値は DOPRI5 で求めたもの．既定の解法 BS3 の精度は TEST-13 項目 14〜 で DOPRI5 の参照解と比べて確かめる．SPEC-20 C） */
 const mkPT=()=>({...mkP(),cvar:0,mode:0,sol:1}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;
 let TR={};
+/* テストが一時的に書き換える共有の値の復元（REQ-20 の 8）：書き換えたら onEnd に戻し方を登録する．runAll は，テストが終わったとき，中止されたとき，例外で止まったときに endAll で全部戻す（新しいものから）．
+   generator の中の try/finally は，中止のとき genStop（return）で走らせる */
+const UNDO=[],
+ onEnd=f=>{UNDO.push(f)},
+ endAll=()=>{let n=0;while(UNDO.length){n++;try{UNDO.pop()()}catch(e){}}return n},
+ genStop=it=>{try{it.return()}catch(e){}};
 const TST={},
  NT=37,
  UIT=[8,15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35,36,37],
@@ -1127,6 +1133,64 @@ TST[13]=function*(){
   chkB(13,'最後の段の使い回し（BS3，全開 3000 rpm，200 ステップ）：使い回す値が，同じ状態での右辺と浮動小数点数として同じ．使い回せるステップが 9 割以上',fsn>=180&&fsok===fsn,`使い回せる ${fsn}／200，一致 ${fsok}`);
   chkP(13,'既定の解法の 1 サイクルの計算時間（全開 3000 rpm）',ms,8,'ms',2);
  }
+/* 13：不連続な変更の直後は最後の段を使い回さない（REQ-13 の 17．SPEC-13 の 8） */
+ {
+  const c0=new Core({...mkPT(),gam:2,inj:0,mode:1,alm:90*D,nt:3000,sol:2});
+  c0.start();
+  yield*runCyc(c0,40);
+/* probe：使い回せる状態（pre も満たす）まで進め，変更 chg を加えて 1 ステップ進める．re：そのステップの最初の右辺の評価がステップのはじめの状態で行われた（＝使い回していない．1 段目と表示の値は，変更後の入力での右辺そのもの）．dif：変更の前後で右辺が違う */
+  const probe=(chg,pre)=>{
+    const c=c0.clone(),a=new Array(NY).fill(0),b=new Array(NY).fill(0);
+    let g=0;
+    c.step();
+    while((c.kFy!==c.s.y||(pre&&!pre(c)))&&g++<4000)c.step();
+    const y0=c.s.y,ok0=c.kFy===y0;
+    c.wx=0;
+    c.f(y0,a);
+    chg(c);
+    c.updV();
+    c.syncSw();
+    c.f(y0,b);
+    c.wx=1;
+    let first=null;
+    const F=c.f;
+    c.f=function(y,o){if(first===null)first=y===y0;return F.call(this,y,o)};
+    c.step();
+    return{re:ok0&&first===true,keep:ok0&&first===false,dif:SIX.some(j=>a[j]!==b[j])}
+   },
+   ivOpen=c=>Aeff(c.V.i,md4(c.s.y[0]),c.P.cam)>0,
+   CH=[
+    ['φ',c=>{c.P.phi=1.1}],
+    ['C_w',c=>{c.P.cw=.5}],
+    ['p_a',c=>{c.P.pa=9e4}],
+    ['T_aux',c=>{c.P.Ta=5}],
+    ['φ_in',c=>{c.P.phin=10*D},ivOpen],
+    ['T_w',c=>{c.P.Tw=450}],
+    ['ランナ OFF',c=>{c.P.run=0},ivOpen],
+    ['排気系 OFF',c=>{c.P.exs=0}],
+    ['熱物性',c=>{c.P.gam=0}],
+    ['停止（燃料カット）',c=>c.stop(),c=>c.s.C.on&&c.X.Q>0]
+   ],
+   bad=[];
+  for(const[n,chg,pre]of CH){const r=probe(chg,pre);if(!(r.re&&r.dif))bad.push(n+(r.dif?'':'（右辺が変わらない）'));if(RUN.over())yield}
+/* 始動：右辺が変わらなくても使い回さない */
+  const rs=probe(c=>c.start());
+  if(!rs.re)bad.push('始動');
+/* 状態の 2 成分を，和が変わらないように直接書き換える */
+  let cmp='和が同じになる書き換えを作れなかった';
+  {
+   const sum=y=>{let q=0;for(let i=0;i<NSX;i++)q+=y[SIX[i]];return q};
+   for(const d of[1e-7,2e-7,5e-8,1e-6,3e-7]){
+    let same=false;
+    const r=probe(c=>{const y=c.s.y,q0=sum(y);y[7]+=d;y[10]-=d;same=sum(y)===q0&&y[10]>0});
+    if(same){cmp=r.re&&r.dif?'':'和が同じ書き換えを見逃した';break}
+   }
+   if(cmp)bad.push(cmp)
+  }
+/* 対照：右辺が使わない設定（開度の設定，最大開度）と，変更なしでは使い回しが続く */
+  const ct=[['開度の設定',c=>{c.P.alm=60*D}],['最大開度',c=>{c.P.amax=80*D}],['変更なし',()=>{}]].filter(([,chg])=>{const r=probe(chg);return!(r.keep&&!r.dif)}).map(q=>q[0]);
+  chkB(13,'不連続な変更の直後は最後の段を使い回さない（BS3，全開 3000 rpm）：設定（φ，C_w，p_a，T_aux，φ_in，T_w），切替（ランナ，排気系，熱物性），停止，始動，和の変わらない状態の書き換えの直後のステップで，1 段目を変更後の入力で計算し直す（変更で右辺が実際に変わることも確かめる）．右辺が使わない設定（開度の設定，最大開度）と変更なしでは使い回しが続く',bad.length===0&&ct.length===0,bad.length||ct.length?`使い回した：${bad.join('，')||'なし'}／計算し直した：${ct.join('，')||'なし'}`:'成立')
+ }
 /* 13：BS3 の次数（1 ステップの誤差が h⁴，誤差の見積もりが h³） */
  {
   const f=(y,out)=>{out=out||new Array(NY).fill(0);out[2]=y[3];out[3]=-y[2];return out},
@@ -1383,6 +1447,7 @@ TST[15]=function*(){
  const b=$('sp').querySelector('button[data-v="1"]'),[x,y]=ctr(b),s0=Sim.spd,now0=NOW;
  let ft=1e6;
  NOW=()=>ft;
+ onEnd(()=>{NOW=now0;Sim.spd=s0});
  Sim.spd=.1;
  sp();
  pev(b,'pointerdown',x,y);
@@ -2707,6 +2772,23 @@ TST[19]=function*(){
  }
 };
 TST[20]=function*(){
+/* 9：テストが書き換える共有の値の復元（REQ-20 の 8）．中止は genStop（generator の finally を走らせる）と endAll（登録した復元を実行する）で行う．runAll はこの 2 つを，終了・中止・例外のどれでも呼ぶ */
+ {
+  const fr=K.fr,ze=K.ze,g=(function*(){const a=K.fr,b=K.ze;K.fr=0;K.ze=0;try{yield;yield}finally{K.fr=a;K.ze=b}})();
+  g.next();
+  const mid=K.fr===0&&K.ze===0;
+  genStop(g);
+  const r1=K.fr===fr&&K.ze===ze&&g.next().done;
+  const n0=UNDO.length,box={v:1};
+  box.v=2;
+  onEnd(()=>{box.v=1});
+  const r2=UNDO.length===n0+1&&(UNDO.pop()(),box.v===1);
+  const src=k=>TST[k].toString(),
+   ra=runAll.toString(),
+   r3=[15,20,26,36].every(k=>src(k).includes('onEnd('))&&[25,27].every(k=>src(k).includes('finally{K.fr=fr;K.ze=ze}'))&&src(36).includes('delete document.hidden')&&/if\(!done\)genStop\(it\);\s*endAll\(\)/.test(ra),
+   r4=Math.abs(NOW()-performance.now())<50&&typeof GAS.warm==='function'&&GAS.warm(0)!==undefined&&!Object.prototype.hasOwnProperty.call(document,'hidden');
+  chkB(20,'共有の値の復元：管の摩擦と入口損失の係数を書き換えて止まっている generator を中止の手順で止めると元の値に戻る．登録した復元が実行される．共有の値を書き換えるテスト（15，20，25，26，27，36）が復元を登録していて，全テストの実行は終了・中止・例外のどれでも復元を行う．この時点で時計，表の作成，ページの非表示の値が元のまま',mid&&r1&&r2&&r3&&r4,`${mid?1:0}${r1?1:0}${r2?1:0}${r3?1:0}${r4?1:0}`)
+ }
 /* 20：結果のテキストとコピー（REQ-20 の 7） */
  {
   const e=envInfo(),
@@ -2725,6 +2807,10 @@ TST[20]=function*(){
    cl=Object.getOwnPropertyDescriptor(navigator,'clipboard'),
    ex=document.execCommand;
   let got=null;
+  onEnd(()=>{
+   if(cl)Object.defineProperty(navigator,'clipboard',cl);else delete navigator.clipboard;
+   document.execCommand=ex
+  });
   Object.defineProperty(navigator,'clipboard',{value:{writeText:async x=>{got=x}},configurable:true});
   const m1=yield copyRes(),l1=b.textContent;
   Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('x')}},configurable:true});
@@ -2807,6 +2893,45 @@ TST[21]=function*(){
    yield
   }
   chkB(21,'共鳴の極大位置が (2n−1)c/4L と 2% 以内，極大/極小 ≥ 理論値 (1+|H|)/(1−|H|) の 75%（L=1, 0.5 m, n=1〜3）．反射率の設定が無い',rb.length===0&&!ITEMS.some(i=>i.k==='rex'),rb.length?rb.join(' | '):'6 / 6','6 / 6');
+/* 27：遅延が最も長い組合せ（L = 3 m，384 kHz）．往復の遅れは約 4140 サンプルで，48 kHz のときの遅延線の長さ 4096 を超える */
+  {
+   const FS=384000,L=3,f0=pipeF(L,1),ff=f0/Math.round(f0/5),Pn=FS/ff,i0=Math.round(1.5*FS),nw=Math.round(5*Pn),n=i0+nw+10;
+   const s=new Synth(FS,{vol:1e-4,L,d:.04,cv:0,fl:0,c,tab:imp,Nt:120*ff}),y=new Float32Array(n);
+   for(let i=0;i<n;i+=96000){s.process(y.subarray(i,Math.min(n,i+96000)));yield}
+   const A=f=>dftAbs(y,i0,nw,f,FS);
+   let bf=0,bm=-1,mx=0,fin=true;
+   for(let k=Math.ceil(f0*.9/ff);k*ff<=f0*1.1;k++){const m=A(k*ff);if(m>bm){bm=m;bf=k*ff}}
+   for(let i=0;i<n;i++){const v=y[i];if(!(v===v))fin=false;else if(Math.abs(v)>mx)mx=Math.abs(v)}
+   chkB(21,'遅延が最も長い組合せ（L = 3 m，384 kHz）：出力が有限で |y| ≤ 1，第 1 共鳴が c/4L と 2% 以内．遅延線が往復の遅れより長い',fin&&mx<=1&&mx>0&&Math.abs(bf/f0-1)<=.02&&s.buf.length>2*L/c*FS+2,`極大 ${bf.toFixed(2)}／${f0.toFixed(2)} Hz，最大 ${mx.toExponential(2)}，遅延線 ${s.buf.length}（遅れ ${(2*L/c*FS).toFixed(0)} サンプル）`)
+  }
+/* 28：検査のための記録は求めたときだけ（計算の音と演出の音） */
+  {
+   const out=[];
+   let ok=true;
+   for(const fm of[0,1]){
+    const o={tab:T4,Nt:24000,vol:.6,L:1,d:.04,cv:1,seed:3,c,fm,ld:1,fl:.2},
+     a=new Synth(48000,o),
+     b=new Synth(48000,{...o,rec:1}),
+     pa=a.periods,
+     aa=a.amps,
+     ya=new Float32Array(24000),
+     yb=new Float32Array(24000);
+    let same=true,nb=0;
+    for(let k=0;k<46;k++){
+     a.process(ya);
+     b.process(yb);
+     for(let i=0;i<24000;i++)if(ya[i]!==yb[i]){same=false;break}
+     nb=Math.max(nb,b.periods.length);
+     if(RUN.over())yield
+    }
+    const q=a.wraps>=4200&&a.periods===pa&&a.amps===aa&&pa.length===0&&aa.length===0&&same&&nb>0&&b.periods.length<=4096;
+    if(!q)ok=false;
+    out.push(`${fm?'演出':'計算'}：${a.wraps} サイクル，記録 ${pa.length}／${aa.length}（求めた側は最大 ${nb}），出力 ${same?'一致':'不一致'}`)
+   }
+   const w=new Synth(48000,sndOpt());
+   w.set({Nt:3000,vol:.5,tab:T4});
+   chkB(21,'検査のための記録は求めたときだけ：記録を求めない合成器は，計算の音と演出の音のどちらでも 4200 サイクル回して記録の配列が空のまま（同じ配列），記録を求めた合成器と出力が全サンプルで一致．音を鳴らす経路の合成器は記録を求めない',ok&&!w.rec&&!('rec'in sndOpt()),out.join('；'))
+  }
   const s3=yield*scen('S3'),me=s3.c.last.me,T3=mkTable(me);
   let mx=0,mean=0,fin3=1;
   for(const v of T3){if(!isFinite(v))fin3=0;mx=Math.max(mx,Math.abs(v));mean+=v}
@@ -2950,7 +3075,7 @@ TST[21]=function*(){
 /* C: cycle-to-cycle variation */
   {
    const run=function*(cv,seed){
-     const s=new Synth(48000,{tab:T4,Nt:1500,vol:.6,L:1,d:.04,cv,seed,c}),y=new Float32Array(480000);
+     const s=new Synth(48000,{tab:T4,Nt:1500,vol:.6,L:1,d:.04,cv,seed,c,rec:1}),y=new Float32Array(480000);
      for(let i=0;i<480000;i+=24000){s.process(y.subarray(i,i+24000));yield}
      return{s,y}
     },
@@ -3640,7 +3765,7 @@ TST[25]=function*(){
   chkB(25,'慣性過給：L_r = 450 mm の Δη_v の最大 ≥ 0.02',Math.max(...d1)>=.02,Math.max(...d1).toFixed(3)+` @ ${n1} rpm`);
   chkB(25,'L_r = 900 mm で Δη_v 最大の回転数が下がる',n9<n1,`${n1} → ${n9} rpm（最大 ${Math.max(...d9).toFixed(3)}）`);
   {
-   const c=new Core({...mkPT(),run:0});
+   const c=new Core({...mkPT(),gam:0,run:0});
    c.start();
    c.run(.3);
    const y=c.s.y;
@@ -3649,7 +3774,32 @@ TST[25]=function*(){
    c.P.run=1;
    c.syncSw();
    const pin=y[6],mi=pin*c.P.Vin/(R*TI),mp=pin*.5*PI/4*c.P.dr**2*c.P.Lr/(R*TI);
-   chkB(25,'運転中に OFF → ON：ṁ_r = 0，p_p = p_in，m_b,p = Y_b,in m_p，E_p = ε_in m_p から始める',y[8]===0&&y[9]===pin&&Math.abs(y[10]-2e-6/mi*mp)<=1e-12*y[10]&&Math.abs(y[17]-.4/mi*mp)<=1e-12*y[17],`m_b,p ${y[10].toExponential(3)} kg，E_p ${y[17].toExponential(3)} J`)
+   chkB(25,'運転中に OFF → ON（γ(T)）：ṁ_r = 0，p_p = p_in，m_b,p = Y_b,in m_p，E_p = ε_in m_p から始める',y[8]===0&&y[9]===pin&&Math.abs(y[10]-2e-6/mi*mp)<=1e-12*y[10]&&Math.abs(y[17]-.4/mi*mp)<=1e-12*y[17],`m_b,p ${y[10].toExponential(3)} kg，E_p ${y[17].toExponential(3)} J`)
+  }
+/* 8：化学平衡のモデルで運転中に OFF → ON（REQ-25 の 5）．ポートの組成と余剰は，右辺 fS の吸気側の式（成分ごとの気体定数）で読んで，マニホールドの値と比べる */
+  {
+   const out=[];
+   let ok=true;
+   for(const[nm,inj,E]of[['ポート噴射',0,.4],['直噴・余剰が負',1,-.3]]){
+    const c=new Core({...mkPT(),gam:2,inj,run:0});
+    c.start();
+    c.run(.3);
+    const y=c.s.y,A=GAS,Z=c.zc(),Vp=.5*PI/4*c.P.dr**2*c.P.Lr;
+    y[7]=2e-6;
+    y[41]=inj?0:3e-6;
+    y[16]=E;
+    y[42]=9e-9; /* OFF の間に残っていた値（マニホールドの組成と合わない） */
+    c.P.run=1;
+    c.syncSw();
+    const comp=(pk,Vk,mb,mf)=>{const ma=(pk*Vk/TI-mb*Z.RbI-mf*A.Rf)/A.Ra,m=ma+mb+mf;return{m,Yb:mb/m,Yf:mf/m}},
+     I=comp(y[6],c.P.Vin,y[7],y[41]),
+     Pt=comp(y[9],Vp,y[10],y[42]),
+     rl=(a,b)=>a===b?0:Math.abs(a-b)/Math.max(Math.abs(a),Math.abs(b)),
+     e=Math.max(rl(Pt.Yb,I.Yb),rl(Pt.Yf,I.Yf),rl(y[17]/Pt.m,y[16]/I.m));
+    if(!(y[8]===0&&y[9]===y[6]&&e<=1e-12&&Math.sign(y[17])===Math.sign(E)&&Pt.m>0))ok=false;
+    out.push(`${nm}：組成と余剰の相対差 ${e.toExponential(1)}，E_p ${y[17].toExponential(3)} J`)
+   }
+   chkB(25,'運転中に OFF → ON（化学平衡）：ポートの既燃ガスと燃料蒸気の質量分率，単位質量あたりの余剰がマニホールドと同じ（相対 1e-12．質量は成分ごとの気体定数）．余剰が負のときも符号を保つ',ok,out.join('；'))
   }
  }
  {
@@ -3813,10 +3963,26 @@ TST[26]=function*(){
   const A=$('swa'),
    g=k=>{const e=A.querySelector(`[data-c="${k}"]`);return e?e.textContent:''},
    C=SWC.crit[SW.crit],
-   okv=g('al')===SW.als.join('・')&&+g('Tw')===SWC.Tw&&+g('st')===SW.step&&+g('n')===swN(SW.step).length&&Math.abs(+g('tolR')-C.tolR*100)<1e-9&&+g('tolA')===C.tolA&&+g('tolS')===C.tolS&&+g('nmin')===SW.nmin&&+g('nmax')===SW.nmax&&+g('last')===SWC.last&&Math.abs(+g('Ta')-LP.Ta)<1e-9,
+   okv=g('al')===SW.als.join('・')&&+g('Tw')===swTw(LP)&&+g('st')===SW.step&&+g('n')===swN(SW.step).length&&Math.abs(+g('tolR')-C.tolR*100)<1e-9&&+g('tolA')===C.tolA&&+g('tolS')===C.tolS&&+g('nmin')===SW.nmin&&+g('nmax')===SW.nmax&&+g('last')===SWC.last&&Math.abs(+g('Ta')-LP.Ta)<1e-9,
    th=A.querySelector('table').offsetHeight;
   const exr=[...A.querySelectorAll('tr')].map(r=>r.textContent).find(t=>t.startsWith('排気系'))||'',
    okx=!/NaN|undefined/.test(A.textContent)&&exr.includes('L_e')&&exr.includes('d_e');
+  {
+/* 壁温は計測に使う値（REQ-26 の 8）：化学平衡のモデルでは設定の壁温，ほかは定数表の値．計測の機関の壁温と同じ．弁径は吸気と排気 */
+   const tw0=LP.Tw,g0=LP.gam,q=[];
+   LP.gam=2;
+   LP.Tw=420;
+   swSub(5);
+   q.push(g('Tw')==='420'&&new Sweep({...LP},[3000],90).c.s.y[5]===420);
+   LP.gam=0;
+   swSub(5);
+   q.push(+g('Tw')===SWC.Tw&&new Sweep({...LP},[3000],90).c.s.y[5]===SWC.Tw);
+   LP.gam=g0;
+   LP.Tw=tw0;
+   swSub(5);
+   q.push(+g('dv')===+(LP.dv*1e3).toFixed(0)&&+g('dve')===+(LP.dve*1e3).toFixed(0)&&LP.dv!==LP.dve);
+   chkB(26,'前提画面：壁温は計測に使う値（化学平衡では設定の壁温 420 K，γ(T) では定数表の値）で，計測の機関の壁温と同じ．弁径は吸気と排気の両方',q.every(x=>x),q.map(x=>x?1:0).join(''))
+  }
   chkB(26,'前提画面：数値が定数表・選択・設定に一致（NaN が無く，排気系の行に L_e と d_e），表の高さ ≤ 95%',okv&&okx&&th<=.95*A.clientHeight&&sec.scrollHeight<=sec.clientHeight+1,`値 ${okv}，排気系「${exr}」，高さ ${th}/${A.clientHeight} px`);
   const s0=SW.step,lh=[];
   for(const v of SWC.steps){
@@ -3951,6 +4117,7 @@ TST[26]=function*(){
   const ref=GAS.node(40),
    same=!!tb&&['e','c','R','Q'].every(k=>tb[k].length===ref[k].length&&tb[k].every((v,j)=>Object.is(v,ref[k][j])));
   const w0=GAS.warm,S0=new Sweep({...mkPT()},swN(500)),tA=S0.c.s.t;
+  onEnd(()=>{GAS.warm=w0});
   GAS.warm=()=>false;
   const r0=S0.run(8),hold=r0===false&&S0.c.s.t===tA;
   GAS.warm=w0;
@@ -4386,6 +4553,37 @@ TST[29]=function*(){
    e1=Math.abs(lo.e-(l0.e-10*l0.eT))/Math.abs(l0.e),
    e2=Math.abs(hi.e-(h0.e+100*h0.eT))/Math.abs(h0.e);
   chkB(29,'表の温度の範囲の外：φ_r = 1，100 kPa で，240 K の c_v,b が 250 K の値と一致して正，e_b(240) = e_b(250) − 10 c_v,b(250)．3600 K でも e_b(3600) = e_b(3500) + 100 c_v,b(3500)（相対 1e-12）',lo.eT===l0.eT&&lo.eT>0&&e1<=1e-12&&hi.eT===h0.eT&&e2<=1e-12,`c_v,b ${lo.eT.toFixed(2)}／${l0.eT.toFixed(2)}，${hi.eT.toFixed(2)}／${h0.eT.toFixed(2)} J/(kg·K)，差 ${e1.toExponential(1)}，${e2.toExponential(1)}`)
+ }
+/* 11：平衡の解の収束と，解けない連立方程式（REQ-29 の 9） */
+ {
+  const ec=K.etac,g0=T.stat.sg,sg=T.solve([[1,2],[2,4]],[1,2],2),r2=T.solve([[2,1],[1,3]],[3,5],2),cnt=T.stat.sg-g0;
+  T.stat.sg=g0;
+  let nb=0,n=0;
+  for(const ph of[.5,.75,1,1.25,1.5])for(const Tk of[T.Tfr,1500,2500,3500])for(const p of[2e4,1e5,2e6,2e7]){n++;if(!T.eq(Tk,p,T.phi2z(ph/ec),ec).ok)nb++}
+  chkB(29,`平衡の解の収束：表の範囲の標本 ${n} 点（φ_r 0.5〜1.5，${T.Tfr}〜3500 K，20 kPa〜20 MPa）ですべて収束．特異な行列は「解けない」と返して数える．正則な行列は解く`,nb===0&&sg===null&&cnt===1&&!!r2&&Math.abs(r2[0]-.8)<=1e-12&&Math.abs(r2[1]-1.4)<=1e-12,`未収束 ${nb}／${n}，特異：${sg===null?'解けない':'解いた'}`)
+ }
+/* 12：運転中に熱物性を切り替えたサイクルは平均に入れない（REQ-29 の 10） */
+ {
+  const out=[];
+  let ok=true;
+  for(const[g0,g1]of[[2,0],[0,2]]){
+   const c=new Core({...mkPT(),gam:g0,mode:1,alm:90*D,nt:3000});
+   c.start();
+   yield*runCyc(c,14);
+   const n0=c.s.Mh.length;
+   let g=0;
+   while(!(md4(c.s.y[0])>2*PI&&md4(c.s.y[0])<2*PI+1)&&g++<20000)c.step();
+   c.P.gam=g1;
+   const end=()=>{const cb=c.s.cyc;let q=0;while(c.s.cyc===cb&&q++<20000)c.step()};
+   end();
+   const a=c.s.Mx===null&&c.s.Mh.length===0;
+   yield;
+   end();
+   const b=c.s.Mx!==null&&c.s.Mh.length===1;
+   if(!(n0>=2&&a&&b))ok=false;
+   out.push(`${g0} → ${g1}：切替の前 ${n0} サイクル，切り替えたサイクルの後 ${a?'平均なし':'平均あり'}，次のサイクルの後 ${c.s.Mh.length} サイクル`)
+  }
+  chkB(29,'熱物性を運転中に切り替えたサイクルは平均に入れない（全開 3000 rpm，サイクルの途中で化学平衡 → γ(T)，γ(T) → 化学平衡）：そのサイクルの終わりに平均が空，次のサイクルから数える',ok,out.join('；'))
  }
 };
 TST[30]=function*(){
@@ -4952,6 +5150,21 @@ TST[32]=function*(){
   const ap=!!x&&VTK4.every((k,i)=>LP[k]===x[i]*D)&&!!U.undo;
   tapEl($('oun'));
   const un=VTK4.every((k,i)=>LP[k]===lp0[i]);
+/* 8：燃料を噴いていない運転では探索を始めない（REQ-32 の 9） */
+  {
+   const fc=s4.c.clone(),rs0=OP.rs,res0=OP.res;
+   fc.s.fuel=0;
+   live=fc;
+   const a=!OP.run&&fc.s.fired&&fc.s.Nb>=300&&!optReady();
+   tapEl($('orn'));
+   const b=!OP.run&&$('opr').textContent===optWhy()&&optWhy().includes('燃料');
+   optText();
+   const c2=$('ost').textContent.includes('燃料');
+   if(OP.run)optStop();
+   OP.rs=rs0;
+   OP.res=res0;
+   chkB(32,'燃料を噴いていない運転（S4 の機関を燃料カットにしたもの）では [探索] を押しても始まらず，燃料を噴いていない旨を表示する',a&&b&&c2,`${a?1:0}${b?1:0}${c2?1:0}，「${$('opr').textContent}」`)
+  }
   live=sv;
   chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点と探索の前の値を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る',st&&stopped&&ap&&un,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}（${n} フレーム）`);
   chkP(32,'探索中のフレームの間隔（最長）',mx,250,'ms',0)
@@ -5111,6 +5324,24 @@ TST[33]=function*(){
    for(let i=0;i<30;i++){const q2=prep($('olc'));drawLoss(q2.g,q2.W,q2.H,r,COL)}
    dm=(performance.now()-t2)/30
   }
+/* 7：燃料を噴いていない運転では内訳を計算しない（REQ-33 の 7） */
+  {
+   const fc=s4.c.clone(),r0=OP.lres;
+   fc.s.fuel=0;
+   live=fc;
+   OP.lb=null;
+   OP.lt=-1e9;
+   for(let i=0;i<5;i++){lossTick(6);drawLossT()}
+   const a=U.tab===8&&LP.gam===2&&OP.lb===null&&!optReady()&&lossMsg().includes('燃料');
+   live=s4.c.clone();
+   OP.lt=-1e9;
+   OP.lcy=-1;
+   lossTick(6);
+   const b=OP.lb!==null;
+   OP.lb=null;
+   OP.lres=r0;
+   chkB(33,'燃料を噴いていない運転（S4 の機関を燃料カットにしたもの）では内訳の計算を始めず，図に燃料を噴いていない旨を書く．燃料を噴いていれば始まる',a&&b,`${a?1:0}${b?1:0}，「${lossMsg()}」`)
+  }
   live=sv;
   chkB(33,'画面：上のタブの 4 番目が「熱効率」．表示すると 3 s 以内に図が出る，12 行の名前と値が Canvas の中',ok1&&inside,`図 ${ok1}（${n} フレーム），配置 ${inside}`);
   chkP(33,'熱効率の図が出るまでのフレームの間隔（最長）',mx,250,'ms',0);
@@ -5255,6 +5486,20 @@ TST[34]=function*(){
   const dm=(performance.now()-t2)/30;
   chkB(34,'描画：○ ★ ◆ ＋ と凡例の帯が Canvas の中',ins,`印 ${S2.mk.length} 個，${ins}`);
   chkP(34,'VVT マップの描画（色の画像を作った後の 30 回の平均）',dm,6,'ms',2);
+/* 7：燃料を噴いていない運転ではマップの計算を始めない（REQ-34 の 6） */
+  {
+   const fc=s4.c.clone(),m0=OP.vm;
+   fc.s.fuel=0;
+   live=fc;
+   if(OP.vm&&!OP.vm.done)vmStop();
+   const mA=OP.vm;
+   tapEl($('vrn'));
+   const a=OP.vm===mA&&$('vpr').textContent===optWhy()&&optWhy().includes('燃料');
+   vmText();
+   const b=$('vst').textContent.includes('燃料')||!!OP.vm;
+   OP.vm=m0;
+   chkB(34,'燃料を噴いていない運転（S4 の機関を燃料カットにしたもの）では [計算] を押してもマップの計算が始まらず，燃料を噴いていない旨を表示する',a&&b,`${a?1:0}${b?1:0}，「${$('vpr').textContent}」`)
+  }
   live=sv
  }
 /* 6：出力の無い点（φin < 0 で T_b < 0，η_b が未定義．約 10000 rpm の全開の形） */
@@ -5466,6 +5711,8 @@ async function runAll(only,ui,pj){
     }
    }catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}
   }
+  if(!done)genStop(it);
+  endAll();
   if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31||id===32||id===33||id===34||id===35||id===36||id===37)restLive(snap);
   RUN.dur[id]=(performance.now()-tId)/1e3;
   if(done){
@@ -5486,6 +5733,7 @@ async function runAll(only,ui,pj){
      delete TR[99];
      chkB(20,'性能の記録：上限を超えた値は，判定しない実行では記録だけ（PASS．上限超えの印），判定する実行では FAIL．上限以下は PASS',a.length===3&&a.every(r=>r.perf)&&a[0].ok&&a[0].over&&!a[1].ok&&a[1].over&&a[2].ok&&!a[2].over,a.map(r=>(r.ok?'PASS':'FAIL')+(r.over?'・超え':'')).join('，'))
     }
+    chkB(20,'既燃ガスの表を作るときの化学平衡：全テストの実行の終わりに，収束しなかった解が 0，解けなかった連立方程式が 0',GAS.stat.nc===0&&GAS.stat.sg===0,`未収束 ${GAS.stat.nc}，解けない ${GAS.stat.sg}`);
     chkP(20,'テスト実行中の最長フレーム間隔',RUN.maxF,250,'ms',1,'（TEST-'+pad(RUN.maxId)+'）');
     chkP(20,'総所要時間',RUN.total,480,'s',1)
    }
@@ -5690,6 +5938,21 @@ TST[36]=function*(){
     nb=B.calls.filter(q=>Array.isArray(q.p)).length;
    chkB(36,'燃焼しないときは振動しない：FUEL CUT（駆動）の 0.2 s 後から 1 s，クランキングの 1 s でパターンを送らない',na===0&&nb===0&&A.exp.length===0&&B.exp.length===0,`FUEL CUT ${na} 回（燃焼 ${A.exp.length}），クランキング ${nb} 回（燃焼 ${B.exp.length}）`)
   }
+/* 8：長いフレーム（REQ-36 の 7）：経過 0.3 s のフレームでも，進める時間は 0.05 s．振動は，その 50 ms の中に置く */
+  {
+   const s3=yield*scen('S3'),c=s3.c.clone(),st={debt:0,spd:1},h=new Hap();
+   c.igT.length=0;
+   const tS=c.s.t;
+   advance(st,c,.3,0);
+   const adv=c.s.t-tS,
+    n=c.igT.length,
+    i=hapIn(c,1,tS,.3),
+    p=h.tick(1000,i),
+    tl=Array.isArray(p)?hapTL([{t:1000,p}]):[],
+    last=tl.length?tl[tl.length-1][0]-1000:NaN,
+    off=hapIn(c,0,tS,.3);
+   chkB(36,'長いフレーム：経過 0.3 s のフレームで進める時間は 0.05 s で，その間の燃焼の振動はすべてフレームの時刻から 50 ms 以内に始まる．OFF では空',Math.abs(adv-.05)<=2e-3&&n>=1&&i.dt===50&&tl.length>=1&&last<=50&&last>=0&&off.on===0&&off.dt===0,`進めた時間 ${(adv*1e3).toFixed(1)} ms，燃焼 ${n}，振動 ${tl.length}，最後の開始 ${last.toFixed(1)} ms，dt ${i.dt} ms`)
+  }
 /* 7：計算に影響しない */
   {
    const s2=yield*scen('S2'),ys=[];
@@ -5705,6 +5968,12 @@ TST[36]=function*(){
    log=[],
    b0=U.busy,
    Bx=e=>e.getBoundingClientRect();
+  onEnd(()=>{
+   delete document.hidden;
+   if(own)navigator.vibrate=v0;else delete navigator.vibrate;
+   U.busy=b0;
+   hapBtn()
+  });
   navigator.vibrate=p=>{log.push(Array.isArray(p)?p.slice():p);return true};
   hapBtn();
   show(0);

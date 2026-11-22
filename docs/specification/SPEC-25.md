@@ -16,7 +16,7 @@
 5. **共鳴の目安**：弁が閉じているとき，摩擦を無視して線形化すると $\frac{d^2\dot m_r}{dt^2} = \frac{A_r}{L_r}\left(\frac{dp_{\text{in}}}{dt} - \frac{dp_p}{dt}\right) = -\frac{A_r}{L_r}\left(\frac{RT_{\text{in}}}{V_{\text{in}}} + \frac{\gamma_0 RT_{\text{in}}}{V_p}\right)\dot m_r$ なので，$\dot m_r$ は角振動数
    $$\omega_H = \sqrt{\frac{A_r}{L_r}\left(\frac{\gamma_0 RT_{\text{in}}}{V_p} + \frac{RT_{\text{in}}}{V_{\text{in}}}\right)}$$
    で振動する．弁が開くと筒内の容積が加わって振動数が下がり，その周期が吸気行程と合う回転数で充填が増える．
-6. **設定**（ページ「吸気ランナ」）：ランナ ON／OFF（既定 ON），$L_r$（$100$〜$1000\ \text{mm}$，既定 $450$），$d_r$（$20$〜$60\ \text{mm}$，既定 $40$）．運転中に OFF から ON にしたときは $\dot m_r = 0$，$p_p = p_{\text{in}}$，$m_{b,p} = Y_{b,\text{in}}m_p$，$E_p = \varepsilon_{\text{in}}m_p$ から始める．OFF では $\dot m_r$，$p_p$，$m_{b,p}$，$E_p$ の時間微分を $0$ とし，吸気弁はマニホールドに直接つながる．
+6. **設定**（ページ「吸気ランナ」）：ランナ ON／OFF（既定 ON），$L_r$（$100$〜$1000\ \text{mm}$，既定 $450$），$d_r$（$20$〜$60\ \text{mm}$，既定 $40$）．運転中に OFF から ON にしたときは $\dot m_r = 0$，$p_p = p_{\text{in}}$，$m_{b,p} = Y_{b,\text{in}}m_p$，$E_p = \varepsilon_{\text{in}}m_p$ から始める．化学平衡のモデル（SPEC-29 C）では，燃料蒸気も $m_{f,p} = Y_{f,\text{in}}m_p$ とし，$m_p$ は成分ごとの気体定数で $m_p = \dfrac{p_{\text{in}}V_p}{T_{\text{in}}\left((1 - Y_{b,\text{in}} - Y_{f,\text{in}})R_a + Y_{f,\text{in}}R_f + Y_{b,\text{in}}R_b(T_{\text{in}})\right)}$，余剰 $E_{\text{in}}$ は負の値もそのまま分ける（直噴の気化で冷えたガスの逆流が負の余剰を運ぶ）．$\gamma$ のモデルでは $m_p = \dfrac{p_{\text{in}}V_p}{RT_{\text{in}}}$，$Y_{b,\text{in}}$ は $[0, 1]$ に，$E_{\text{in}}$ は $0$ 以上に切る（REQ-25 の 5）．OFF では $\dot m_r$，$p_p$，$m_{b,p}$，$E_p$ の時間微分を $0$ とし，吸気弁はマニホールドに直接つながる．
 
 #### 仮定と限界
 * 管内の圧力波の往復は解かず，質量とばねで近似する．2 次以上の同調と，排気側の脈動との干渉は表せない．
