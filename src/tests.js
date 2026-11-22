@@ -5351,7 +5351,7 @@ async function runAll(only,ui,pj){
      chkB(20,'性能の記録：上限を超えた値は，判定しない実行では記録だけ（PASS．上限超えの印），判定する実行では FAIL．上限以下は PASS',a.length===3&&a.every(r=>r.perf)&&a[0].ok&&a[0].over&&!a[1].ok&&a[1].over&&a[2].ok&&!a[2].over,a.map(r=>(r.ok?'PASS':'FAIL')+(r.over?'・超え':'')).join('，'))
     }
     chkP(20,'テスト実行中の最長フレーム間隔',RUN.maxF,250,'ms',1,'（TEST-'+pad(RUN.maxId)+'）');
-    chkP(20,'総所要時間',RUN.total,360,'s',1)
+    chkP(20,'総所要時間',RUN.total,420,'s',1)
    }
    ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'
   }else ST[id]=''

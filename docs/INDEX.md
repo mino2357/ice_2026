@@ -16,20 +16,20 @@
 | 04 | オリフィスの圧縮性流れ（順流・逆流・チョーク） | `requirements/REQ-04.md`（546） | `specification/SPEC-04.md`（2212） | `specification/TEST-04.md`（646） | 357–375 | 02 05 13 27 | `core.js`:215 |
 | 05 | スロットルと吸気マニホールド | `requirements/REQ-05.md`（1026） | `specification/SPEC-05.md`（3730） | `specification/TEST-05.md`（1990） | 376–436 | 02 04 07 10 14 25 27 30 | `core.js`:943 |
 | 06 | 筒内の組成（未燃ガスと既燃ガス） | `requirements/REQ-06.md`（318） | `specification/SPEC-06.md`（1024） | `specification/TEST-06.md`（370） | 437–447 | 05 07 | – |
-| 07 | 燃焼（乱流火炎伝播に連動する単一 Wiebe モデル） | `requirements/REQ-07.md`（1279） | `specification/SPEC-07.md`（4017） | `specification/TEST-07.md`（1775） | 448–544 | 29 | – |
+| 07 | 燃焼（乱流火炎伝播に連動する単一 Wiebe モデル） | `requirements/REQ-07.md`（958） | `specification/SPEC-07.md`（4017） | `specification/TEST-07.md`（1775） | 448–544 | 29 | – |
 | 08 [U] | 壁面熱伝達と壁温 | `requirements/REQ-08.md`（780） | `specification/SPEC-08.md`（2684） | `specification/TEST-08.md`（965） | 545–561 | 26 27 | `core.js`:110,820,1394 `ui.js`:150 |
 | 09 | 筒内圧の式（開いた系の熱力学第一法則） | `requirements/REQ-09.md`（710） | `specification/SPEC-09.md`（2523） | `specification/TEST-09.md`（1347） | 617–657 | 02 05 06 | `core.js`:974 |
 | 10 | 回転運動，摩擦，スターター | `requirements/REQ-10.md`（627） | `specification/SPEC-10.md`（2268） | `specification/TEST-10.md`（816） | 658–690 | 11 12 | – |
 | 11 | 電動式動力計と運転モード | `requirements/REQ-11.md`（2062） | `specification/SPEC-11.md`（4497） | `specification/TEST-11.md`（2802） | 691–692 | 10 12 13 18 22 31 35 | `core.js`:262,1960,1986 `ui.js`:156 |
 | 12 | ECU（スロットル開度の PI 制御と点火時期の自動最適化） | `requirements/REQ-12.md`（1055） | `specification/SPEC-12.md`（2696） | `specification/TEST-12.md`（1936） | 814–876 | 07 13 | `core.js`:264 |
-| 13 | 数値積分 | `requirements/REQ-13.md`（2149） | `specification/SPEC-13.md`（9232） | `specification/TEST-13.md`（4832） | 877–1023 | 03 04 07 08 10 12 14 29 | `core.js`:738,1490,1656,1719,1741,1744… |
+| 13 | 数値積分 | `requirements/REQ-13.md`（2129） | `specification/SPEC-13.md`（9232） | `specification/TEST-13.md`（4832） | 877–1023 | 03 04 07 08 10 12 14 29 | `core.js`:738,1490,1656,1719,1741,1744… |
 | 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（823） | `specification/SPEC-14.md`（2881） | `specification/TEST-14.md`（1481） | 1190–1254 | 11 12 13 15 18 | `core.js`:1024,1831 |
 | 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（1614） | `gui/SPEC-15.md`（6639） | `gui/TEST-15.md`（4122） | 1304–1444 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,53,145,381,400,586 |
 | 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5681） | `gui/TEST-16.md`（3776） | 1642–1831 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
 | 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4577） | `gui/TEST-17.md`（3478） | 2069–2203 | 11 18 26 30 | `plot.js`:18,89,164,294,334 |
 | 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2311–2571 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:87,148,435 |
 | 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1205） | `gui/TEST-19.md`（873） | 2636–2683 | 12 15 23 31 | `plot.js`:787,800 |
-| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（740） | `specification/SPEC-20.md`（5158） | `specification/TEST-20.md`（863） | 2706–2714 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 | – |
+| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（740） | `specification/SPEC-20.md`（5158） | `specification/TEST-20.md`（1031） | 2706–2714 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 | – |
 | 21 [U] | エンジン音 | `requirements/REQ-21.md`（1014） | `specification/SPEC-21.md`（8513） | `specification/TEST-21.md`（4105） | 2730–2897 | 02 18 22 23 27 36 | `core.js`:2279 `audio.js`:15,21,32,44,322,342 `ui.js`:830 |
 | 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3173–3307 | 11 | – |
 | 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 3309–3414 | – | `ui.js`:363,365,368,435,445 |
@@ -135,7 +135,7 @@
 | `src/doc.js` | 57869 |
 | `src/ui.js` | 40762 |
 | `src/tests.js` | 241519 |
-| `docs/changes/2026-11-21-solver.md` | 3224 |
+| `docs/changes/2026-11-21-solver.md` | 3456 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
-| `docs/changes/2026-11-22-burn-dilution.md` | 1448 |
+| `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
