@@ -38,7 +38,7 @@ const readCol=()=>{
 function tap(el,fn){
  let d;
  /* 押した指（pointerId）の入力だけを見る．別の指の接触・離れでは，押した位置も判定も変えない（REQ-15 の 13） */
- el.addEventListener('pointerdown',e=>{if(!d)d={x:e.clientX,y:e.clientY,t:NOW(),id:e.pointerId}});
+ el.addEventListener('pointerdown',e=>{if(!d||e.pointerId===d.id||NOW()-d.t>=500)d={x:e.clientX,y:e.clientY,t:NOW(),id:e.pointerId}}); /* 要素の外で離して pointerup が届かなかった古い押しは捨てる（500 ms を過ぎた押しはタップにならない） */
  el.addEventListener('pointerup',e=>{
   if(!d||e.pointerId!==d.id)return;
   if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);
@@ -172,7 +172,7 @@ function liveVals(){
  }
 }
 function rs(){/* 設定のページは，設定タブを表示している間だけ作り直す（表示したときに show が呼ぶ．ほかのタブでの設定の変更のたびに，見えていないページを作り直さない．SPEC-15 の J） */
- if(U.tab!==2)return;
+ if(U.tab!==2){swFresh();return} /* 性能曲線の「前提」の表と古さの注記は，どのタブでも設定の変更に合わせる */
 /* 設定の行のスライダをドラッグしている間は，行を作り直さずに値だけ書き換える（つまみの要素を保つ） */
  if(U.sld&&$('tsr')){
   const b=$('Pg').querySelector('b[data-v="alm"]');
@@ -515,7 +515,7 @@ function initVT(){
   kn.addEventListener('pointerdown',e=>{
    e.preventDefault();
    e.stopPropagation();
-   if(VTD.k)return;
+   if(VTD.k&&e.pointerId!==VTD.id)return;
    VTD.k=k;
    VTD.id=e.pointerId;
    const R=tr.getBoundingClientRect();
@@ -532,7 +532,7 @@ function initVT(){
    up=e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;mv(e);VTD.k=null;kn.classList.remove('on')};
   kn.addEventListener('pointermove',mv);
   kn.addEventListener('pointerup',up);
-  kn.addEventListener('pointercancel',e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;VTD.k=null;kn.classList.remove('on')});
+  for(const t of['pointercancel','lostpointercapture'])kn.addEventListener(t,e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;VTD.k=null;kn.classList.remove('on')});
   for(const b of r.querySelectorAll('button'))tap(b,()=>{if(!b.disabled)vtSet(k,gi(it,LP[k])+(+b.dataset.d))})
  }
 }
@@ -553,7 +553,7 @@ function slBind(tr,kn,get,set){
  kn.addEventListener('pointerdown',e=>{
   e.preventDefault();
   e.stopPropagation();
-  if(on)return;
+  if(on&&e.pointerId!==pid)return;
   on=1;
   pid=e.pointerId;
   U.sld=1;
@@ -570,7 +570,7 @@ function slBind(tr,kn,get,set){
  };
  kn.addEventListener('pointermove',mv);
  kn.addEventListener('pointerup',e=>{if(!on||e.pointerId!==pid)return;mv(e);end()});
- kn.addEventListener('pointercancel',e=>{if(on&&e.pointerId===pid)end()})
+ for(const t of['pointercancel','lostpointercapture'])kn.addEventListener(t,e=>{if(on&&e.pointerId===pid)end()})
 }
 function thRender(){
  const on=dynOn(LP),b=$('thb'),u=thU(),g=LP.alm/D;
@@ -598,7 +598,7 @@ function initNT(){
  k.addEventListener('pointerdown',e=>{
   e.preventDefault();
   e.stopPropagation();
-  if(NTD.on)return;
+  if(NTD.on&&e.pointerId!==NTD.id)return;
   NTD.on=1;
   NTD.id=e.pointerId;
   const R=r.getBoundingClientRect();
@@ -616,7 +616,7 @@ function initNT(){
  const up=e=>{if(!NTD.on||e.pointerId!==NTD.id)return;mv(e);NTD.on=0;k.classList.remove('on')};
  k.addEventListener('pointermove',mv);
  k.addEventListener('pointerup',up);
- k.addEventListener('pointercancel',e=>{if(!NTD.on||e.pointerId!==NTD.id)return;NTD.on=0;k.classList.remove('on')});
+ for(const t of['pointercancel','lostpointercapture'])k.addEventListener(t,e=>{if(!NTD.on||e.pointerId!==NTD.id)return;NTD.on=0;k.classList.remove('on')});
  tap($('ntm'),()=>{if(LP.nt>NTS.lo)ntStep(-1)});
  tap($('ntp'),()=>ntStep(1));
  ntRender()
@@ -1115,7 +1115,7 @@ function initUI(){
  rchips();
  show(0);
  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);
- new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
+ new MutationObserver(readCol).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
  let last=performance.now(),lastDraw=0,slow=0;
  function loop(now){
   requestAnimationFrame(loop);

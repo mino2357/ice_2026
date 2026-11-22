@@ -648,6 +648,29 @@ TST[9]=function*(){
   const z=c.s.y,T1=z[2]*kinV(c.G,z[0])/(z[3]*R),dU=m*(e(T1,0)-e(T0,0)),dW=z[18]-W0;
   chkB(9,`温度依存比熱の閉じた系（${nm}，270°→上死点）：m Δe = −ΔW`,Math.abs(dU+dW)<=1e-6*Math.abs(dW)&&T1>=700&&Math.abs(z[3]-m)<1e-15,`m Δe ${dU.toFixed(4)} J，−ΔW ${(-dW).toFixed(4)} J，終端 ${T1.toFixed(0)} K`,'相対誤差 ≤ 10⁻⁶，終端 ≥ 700 K')
  }
+/* 5：定比熱比のモデルを EngineCore の右辺で（項目 1 は式を手で積分したもので，EngineCore を通らない） */
+ {
+  const c=new Core({...mkPT(),gam:1,cw:0});
+  c.fixw=1;
+  c.fixTw=1;
+  const y=c.s.y,th=270*D,V0=kinV(c.G,th),m=1e5*V0/(R*450);
+  y[0]=th;
+  y[1]=200;
+  y[2]=1e5;
+  y[3]=m;
+  y[4]=m;
+  const W0=y[18];
+  let n=0;
+  while(c.s.y[0]<355*D&&c.s.y[0]>=th){c.step();n++}
+  const z=c.s.y,
+   V1=kinV(c.G,z[0]),
+   pe=1e5*(V0/V1)**K.g0,
+   e1=Math.abs(z[2]/pe-1),
+   dW=z[18]-W0,
+   Wx=(1e5*V0-pe*V1)/(K.g0-1),
+   e2=Math.abs(dW/Wx-1);
+  chkB(9,'定比熱比のモデル（EngineCore の右辺，弁閉，熱損失なし，270°→上死点の手前）：p V^γ が一定（相対 1e-6），仕事が (p₀V₀ − p₁V₁)/(γ − 1) に一致（相対 1e-6）',e1<=1e-6&&e2<=1e-6&&n>10&&Math.abs(z[3]-m)<1e-15,`p の相対差 ${e1.toExponential(1)}，仕事の相対差 ${e2.toExponential(1)}（${n} ステップ）`)
+ }
  for(const nm of['S2G','F3000G']){
   const sc=yield*scen(nm),
    q=sc.c.clone(),
@@ -1133,6 +1156,81 @@ TST[13]=function*(){
   chkB(13,'最後の段の使い回し（BS3，全開 3000 rpm，200 ステップ）：使い回す値が，同じ状態での右辺と浮動小数点数として同じ．使い回せるステップが 9 割以上',fsn>=180&&fsok===fsn,`使い回せる ${fsn}／200，一致 ${fsok}`);
   chkP(13,'既定の解法の 1 サイクルの計算時間（全開 3000 rpm）',ms,8,'ms',2);
  }
+/* 13：イベントの取りこぼしが無い（回転数が速く変わる始動と，イベントが重なる・ごく近い設定）．終わりの時点で，どのイベントの処理の回数も，サイクルの終端の回数と 1 以内 */
+ {
+  const out=[];
+  let ok=true;
+  for(const[nm,o,T]of[
+   ['始動からアイドル（BS3）',{mode:0,sol:2},6],
+   ['始動からアイドル（DOPRI5）',{mode:0,sol:1},6],
+   ['動力計制御 全開 0 → 7000 rpm',{mode:1,nt:7000,alm:90*D,sol:2},4],
+   ['IVC が点火の 0.001° 手前',{mode:1,nt:3000,alm:90*D,sauto:0,spb:20,ivc:(340-.001)*D,sol:2},3],
+   ['IVC = 点火',{mode:1,nt:3000,alm:90*D,sauto:0,spb:20,ivc:340*D,sol:2},3]
+  ]){
+   const c=new Core({...mkP(),cvar:1,...o});
+   c.start();
+   let k=0,cy=c.s.cyc,ev=null,nc=0,ng=0;
+   while(c.s.t<T){
+    c.step();
+    if(c.s.cyc!==cy){
+     cy=c.s.cyc;
+     if(ev){nc++;if(!c.s.evn.every((v,i)=>v-ev[i]===1))ng++}
+     ev=c.s.evn.slice()
+    }
+    if((++k&3)===0&&RUN.over())yield
+   }
+   const q=nc>=20&&ng===0&&fin(c);
+   if(!q)ok=false;
+   out.push(`${nm}：${nc} サイクル，違反 ${ng}`)
+  }
+  chkB(13,'イベントの取りこぼしが無い：始動（BS3，DOPRI5），動力計制御の全開 0 → 7000 rpm，IVC が点火の 0.001° 手前，IVC = 点火 のそれぞれで，どのサイクルでも，サイクルの終端・IVO・IVC・EVO・EVC・点火がちょうど 1 回ずつ処理される（20 サイクル以上）',ok,out.join('；'))
+ }
+/* 13：硬さ（化学平衡のモデルの全状態．項目 10 は γ のモデルと共通の 16 状態だけ）：燃料の質量，液体の燃料，吸気側の燃料蒸気，排気ポートの温度を含む 22 状態のヤコビアン */
+ {
+  const IX=SIX.filter(i=>i!==11&&i!==12),
+   n=IX.length,
+   hs=i=>i===0?1e-7:i===1?1e-4:i===2||i===6||i===9||i===14||i===15?1:i===5||i===49?1e-4:i===8||i===13?1e-7:i===16||i===17?1e-6:1e-11,
+   out=[];
+  let worst=0;
+  for(const[nm,mk]of[
+   ['S2（アイドル）',function*(){return(yield*scen('S2')).c.clone()}],
+   ['全開 3000 rpm・直噴・気化の時定数 0.1 ms',function*(){const q=(yield*scen('W3000')).c.clone();q.P.tev=1e-4;yield*runCyc(q,2);return q}]
+  ]){
+   const q=yield*mk();
+   let lm=0,la=0,next=0,k=0;
+   const c0=q.s.cyc;
+   while(q.s.cyc===c0){
+    const y=q.s.y,dg=y[0]/D;
+    if(dg>=next){
+     next=Math.floor(dg/10)*10+10;
+     q.wx=0;
+     const J=[];
+     for(const i of IX){
+      const h=Math.max(Math.abs(y[i])*1e-6,hs(i)),yp=y.slice(),ym=y.slice();
+      yp[i]+=h;
+      ym[i]-=h;
+      const fp=q.f(yp),fm=q.f(ym);
+      J.push(IX.map(r=>(fp[r]-fm[r])/(2*h)))
+     }
+     let v=new Array(n).fill(1),lam=0;
+     for(let it=0;it<60;it++){
+      const u=new Array(n).fill(0);
+      for(let a=0;a<n;a++)for(let r=0;r<n;r++)u[r]+=J[a][r]*v[a];
+      lam=Math.hypot(...u)/Math.hypot(...v);
+      const nu=Math.hypot(...u)||1;
+      v=u.map(x=>x/nu)
+     }
+     if(lam>lm){lm=lam;la=dg}
+     q.wx=1
+    }
+    q.step();
+    if((++k&3)===0&&RUN.over())yield
+   }
+   worst=Math.max(worst,lm);
+   out.push(`${nm}：max|λ| ${lm.toExponential(2)} 1/s（${la.toFixed(0)}°），|λ|Δt_max = ${(lm*K.dtR4).toFixed(2)}`)
+  }
+  chkB(13,'硬さ（化学平衡のモデルの 22 状態，10° ごと）：アイドルと，全開 3000 rpm・直噴・気化の時定数 0.1 ms で，max|λ| × Δt_max（RK4）≤ 2.79',worst>0&&worst*K.dtR4<=2.79,out.join('；'),'≤ 2.79')
+ }
 /* 13：不連続な変更の直後は最後の段を使い回さない（REQ-13 の 17．SPEC-13 の 8） */
  {
   const c0=new Core({...mkPT(),gam:2,inj:0,mode:1,alm:90*D,nt:3000,sol:2});
@@ -1166,6 +1264,7 @@ TST[13]=function*(){
     ['T_aux',c=>{c.P.Ta=5}],
     ['φ_in',c=>{c.P.phin=10*D},ivOpen],
     ['T_w',c=>{c.P.Tw=450}],
+    ['スロットル径',c=>{c.P.Dt=.03}],
     ['ランナ OFF',c=>{c.P.run=0},ivOpen],
     ['排気系 OFF',c=>{c.P.exs=0}],
     ['熱物性',c=>{c.P.gam=0}],
@@ -1186,6 +1285,31 @@ TST[13]=function*(){
     if(same){cmp=r.re&&r.dif?'':'和が同じ書き換えを見逃した';break}
    }
    if(cmp)bad.push(cmp)
+  }
+/* 右辺が実際に読む設定を Proxy で集め（熱物性・噴射・ランナ・排気系を変えた 6 通りの運転），その 1 つずつについて，値を変えると使い回しを止めること（設定の一覧の書き漏らしを見つける） */
+  const rd=new Set();
+  for(const o of[{gam:2,inj:1},{gam:2,inj:0},{gam:0},{gam:1},{gam:2,run:0,exs:0},{gam:0,run:0,exs:0}]){
+   const c=new Core({...mkPT(),mode:1,alm:40*D,nt:2000,sol:2,...o}),F=c.f;
+   let on=0,k=0;
+   c.start();
+   c.P=new Proxy(c.P,{get(t,q){if(on&&typeof q==='string')rd.add(q);return t[q]}});
+   c.f=function(y,q){on++;const r=F.call(this,y,q);on--;return r};
+   while(c.s.cyc<3){c.step();if((++k&3)===0&&RUN.over())yield}
+  }
+  {
+   const c=c0.clone(),miss=[];
+   for(const k of rd){
+    if(k==='Vm'||k==='At')continue; /* 検査用の内部の値（設定の項目でない） */
+    c.updV();
+    c.fsalP();
+    const v=c.P[k],a=c.fsalP();
+    c.P[k]=IT[k]&&IT[k].ch?(v+1)%IT[k].ch.length:v*1.01+1e-4;
+    c.updV();
+    const b=c.fsalP();
+    c.P[k]=v;
+    if(!(a===true&&b===false))miss.push(k)
+   }
+   if(miss.length||rd.size<15)bad.push('右辺が読むのに見ていない設定：'+(miss.join('，')||'（読んだ設定が '+rd.size+' 個しか無い）'))
   }
 /* 対照：右辺が使わない設定（開度の設定，最大開度）と，変更なしでは使い回しが続く */
   const ct=[['開度の設定',c=>{c.P.alm=60*D}],['最大開度',c=>{c.P.amax=80*D}],['変更なし',()=>{}]].filter(([,chg])=>{const r=probe(chg);return!(r.keep&&!r.dif)}).map(q=>q[0]);
@@ -1481,6 +1605,22 @@ TST[15]=function*(){
   pe(el,'pointerdown',300,300,9);
   pe(el,'pointerup',10,10,7);
   const t3=n===2;
+/* 押したまま要素の外で離した（pointerup が届かない）後も，次のタップが成立する：同じ ID（マウス）でも，別の ID（次の指）でも */
+  const now1=NOW;
+  let tq=1e6;
+  NOW=()=>tq;
+  onEnd(()=>{NOW=now1});
+  pe(el,'pointerdown',10,10,7);
+  tq+=2000;
+  pe(el,'pointerdown',10,10,7);
+  pe(el,'pointerup',10,10,7);
+  const t4=n===3;
+  pe(el,'pointerdown',10,10,7);
+  tq+=2000;
+  pe(el,'pointerdown',10,10,9);
+  pe(el,'pointerup',10,10,9);
+  const t5=n===4;
+  NOW=now1;
   el.remove();
   show(0);
   yield;
@@ -1495,9 +1635,15 @@ TST[15]=function*(){
   const s3=LP.nt!==nt0;
   pe(k,'pointerup',x+.2*W,y,7);
   const s4=NTD.on===0;
+/* つまみの離れを取りこぼしても（捕捉が失われた），次の指でドラッグを始められる */
+  pe(k,'pointerdown',x,y,7);
+  pe(k,'lostpointercapture',x,y,7);
+  pe(k,'pointerdown',x,y,9);
+  const s5=NTD.on===1&&NTD.id===9;
+  pe(k,'pointerup',x,y,9);
   setParam('nt',nt0,1);
   ntRender();
-  chkB(15,'複数の指：タップは，押した指と違う指が離れても成立せず，押した指が離れると成立する（別の指が後から触れても押した位置は変わらない）．目標回転数のつまみのドラッグ中に，別の指の移動・接触・離れでは値が変わらずドラッグも終わらず，始めた指の移動で値が変わる',t1&&t2&&t3&&s1&&s2&&s3&&s4,`${[t1,t2,t3,s1,s2,s3,s4].map(q=>q?1:0).join('')}`)
+  chkB(15,'複数の指：タップは，押した指と違う指が離れても成立せず，押した指が離れると成立する（別の指が後から触れても押した位置は変わらない）．要素の外で離した後も次のタップが成立し，捕捉が失われた後も次の指でドラッグを始められる．目標回転数のつまみのドラッグ中に，別の指の移動・接触・離れでは値が変わらずドラッグも終わらず，始めた指の移動で値が変わる',t1&&t2&&t3&&t4&&t5&&s1&&s2&&s3&&s4&&s5,`${[t1,t2,t3,t4,t5,s1,s2,s3,s4,s5].map(q=>q?1:0).join('')}`)
  }
 /* 19：表示の書き換えは変わったときだけ（SPEC-15 の J）．制御の表示は文字が同じなら要素を作り直さない．設定のページは，設定タブを表示していない間は作り直さず，表示したときに作る */
  {
@@ -4604,6 +4750,17 @@ TST[29]=function*(){
    e1=Math.abs(lo.e-(l0.e-10*l0.eT))/Math.abs(l0.e),
    e2=Math.abs(hi.e-(h0.e+100*h0.eT))/Math.abs(h0.e);
   chkB(29,'表の温度の範囲の外：φ_r = 1，100 kPa で，240 K の c_v,b が 250 K の値と一致して正，e_b(240) = e_b(250) − 10 c_v,b(250)．3600 K でも e_b(3600) = e_b(3500) + 100 c_v,b(3500)（相対 1e-12）',lo.eT===l0.eT&&lo.eT>0&&e1<=1e-12&&hi.eT===h0.eT&&e2<=1e-12,`c_v,b ${lo.eT.toFixed(2)}／${l0.eT.toFixed(2)}，${hi.eT.toFixed(2)}／${h0.eT.toFixed(2)} J/(kg·K)，差 ${e1.toExponential(1)}，${e2.toExponential(1)}`)
+ }
+/* 13：既定の解法（BS3）での周期定常の第一法則（項目 7 は DOPRI5）．アイドル（スロットル制御），動力計制御の部分負荷，全開 */
+ for(const nm of['S2','S4','W3000']){
+  const sc=yield*scen(nm),q=sc.c.clone();
+  q.P.sol=2;
+  yield*runCyc(q,3);
+  const r=yield*runCyc(q,5),
+   dU=q.cyl(r.y1).U-q.cyl(r.y0).U,
+   res=dU+r.d(18)+r.d(32)-r.d(33)+r.d(34)-r.d(43),
+   mfH=r.d(44)*K.Hu;
+  chkB(29,`第一法則の収支（化学平衡，既定の解法 BS3，${nm}，5 サイクル）：|ΔU + ΔW + ΔQ_w − ΔH_i + ΔH_o − ΔH_e| ≤ 10⁻⁴ m_f H_u`,Math.abs(res)<=1e-4*mfH&&mfH>0&&q.s.clp===0&&q.s.nfa===sc.c.s.nfa,`残差 ${res.toExponential(2)} J（m_f H_u ${mfH.toFixed(1)} J，比 ${(res/mfH).toExponential(1)}）`)
  }
 /* 11：平衡の解の収束と，解けない連立方程式（REQ-29 の 9） */
  {
