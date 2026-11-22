@@ -16,6 +16,9 @@ permissions:
 
 env:
   NODE_VERSION: '22'
+  # 失敗したコマンドの出力の末尾を，エラーの注記（annotation）に出す．使い方： eval "$RUN"; run 名前 コマンド…
+  RUN: |
+    run(){ local name="$1"; shift; if "$@" > .ci_out.log 2>&1; then tail -n 5 .ci_out.log; else cat .ci_out.log; local m; m=$(tail -n 20 .ci_out.log | cut -c1-300 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A",$0}'); echo "::error title=${name}::${m}"; return 1; fi; }
 
 jobs:
   check:
@@ -36,11 +39,11 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: 点検（整形，索引，文書とコードの整合，使っていない名前）
-        run: npm run check
+        run: eval "$RUN"; run "npm run check" npm run check
       - name: 索引が追跡中のものと同じか
-        run: git diff --exit-code -- docs/INDEX.md
+        run: eval "$RUN"; run "docs/INDEX.md が追跡中のものと違う" git diff --exit-code -- docs/INDEX.md
       - name: ビルド
-        run: npm run build
+        run: eval "$RUN"; run "npm run build" npm run build
       - name: 成果物が追跡中のものと同じか（違えば警告）
         run: |
           if ! git diff --quiet -- dist/engine.html; then
@@ -81,9 +84,9 @@ jobs:
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: ビルド
-        run: npm run build
+        run: eval "$RUN"; run "npm run build" npm run build
       - name: 計算のビット比較（前の版と同じ結果か）
-        run: node tools/dev/bitcheck.js --chromium
+        run: eval "$RUN"; run "ビット比較" node tools/dev/bitcheck.js --chromium
       - name: 7 通りの検証
         id: headless
         run: |
@@ -97,6 +100,14 @@ jobs:
             grep -E 'PASS|FAIL|性能（|機能の検査|通りの所要' headless.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -eq 1 ]; then
+            m=$(grep -E 'FAIL|Error|error' headless.log | head -n 20 | cut -c1-300 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A",$0}')
+            echo "::error title=段階 2 の FAIL::${m}"
+          fi
+          {
+            m=$(grep -E '^[0-9]+x[0-9]+|通りの所要|機能の検査' headless.log | cut -c1-200 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A",$0}')
+            echo "::notice title=段階 2 の結果::${m}"
+          }
           if [ "$code" -eq 2 ]; then
             echo "::warning title=性能の記録::機能の検査はすべて PASS．性能の記録（時間の検査）だけが上限を超えました．CI の計算機の速さによるので失敗にはしません．要約を見てください．"
             exit 0
