@@ -136,11 +136,11 @@
 | `src/plot.js` | 58835 |
 | `src/doc.js` | 57869 |
 | `src/ui.js` | 45558 |
-| `src/tests.js` | 255598 |
+| `src/tests.js` | 255753 |
 | `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
-| `docs/changes/2026-11-22-operating-map.md` | 3145 |
+| `docs/changes/2026-11-22-operating-map.md` | 4164 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |

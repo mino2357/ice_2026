@@ -5705,7 +5705,7 @@ TST[37]=function*(){
   }
   chkB(37,'ボタン：表示の切替に [マップ]，量のボタンが 5 つ（燃費，排気温，空気量，最大圧，点火）で切り替わる，44 px 以上で文字が収まる，スクロールなし',q.every(x=>x),q.map(x=>x?1:0).join('')+'，Canvas の高さ '+Bx($('mpc')).height.toFixed(0)+' px')
  }
-/* 2：補間と等高線（合成のマップ） */
+/* 2：補間と等高線（合成のマップ）．重い部分の間で yield して，1 フレームを長くしない */
  if(!RUN.ui){
   const M=opSyn(),rel=(a,b)=>Math.abs(a-b)/Math.max(1e-300,Math.abs(b));
   let e1=0,e2=0;
@@ -5719,27 +5719,32 @@ TST[37]=function*(){
    for(const key in opLin)e2=Math.max(e2,r?rel(r[key],opLin[key](N,T)):1)
   }
   const z=M.at(4000,0),
-   out=[M.at(2500,opHi(2500)+.5),M.at(2500,-.1),M.at(500,10),M.at(7001,10)].every(r=>r===null)&&!!z&&z.eb===0&&z.be!==z.be,
-   cv=document.createElement('canvas'),
-   C=opBuild(M,1,340,300,1,cv),
-   ends=C.seg.flatMap(q=>q.s.flatMap(sg=>sg.map(p=>[p,q.L]))),
+   out=[M.at(2500,opHi(2500)+.5),M.at(2500,-.1),M.at(500,10),M.at(7001,10)].every(r=>r===null)&&!!z&&z.eb===0&&z.be!==z.be;
+  chkB(37,'補間：計算した点で一致（1e-12），N と T の 1 次関数の場で一致（1e-9），η_b = T_b ω/(ṁ_f H_u)，T_b = 0 で η_b = 0．領域の外（全開の上，T_b < 0，回転数の範囲の外）は値なし',e1<=1e-12&&e2<=1e-9&&out,`${e1.toExponential(1)}，${e2.toExponential(1)}，領域の外 ${out}`);
+  yield;
+  const cv=document.createElement('canvas'),C=opBuild(M,1,340,300,1,cv);
+  yield;
+  const ends=C.seg.flatMap(q=>q.s.flatMap(sg=>sg.map(p=>[p,q.L]))),
    e3=Math.max(0,...ends.map(([p,Lv])=>Math.abs(opLin.Tx(p[0],p[1])-Lv)/Lv)),
    inn=ends.every(([p])=>M.at(p[0],p[1])!==null),
    im=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
   let bad=0,nc=0,nt=0;
-  for(let py=0;py<cv.height;py++)for(let px=0;px<cv.width;px++){
-   const on=im[4*(py*cv.width+px)+3]>0,r=M.at((px+.5)/cv.width*SWC.N1,(1-(py+.5)/cv.height)*C.ya.mx);
-   if(on)nc++;else nt++;
-   if(on!==(r!==null))bad++
+  for(let py=0;py<cv.height;py++){
+   for(let px=0;px<cv.width;px++){
+    const on=im[4*(py*cv.width+px)+3]>0,r=M.at((px+.5)/cv.width*SWC.N1,(1-(py+.5)/cv.height)*C.ya.mx);
+    if(on)nc++;else nt++;
+    if(on!==(r!==null))bad++
+   }
+   if(py%20===19)yield
   }
   const stp=l=>{
     if(l.length<2)return true;
     const d=l[1]-l[0],m=d/10**Math.floor(Math.log10(d)+1e-9);
     return[1,2,2.5,5].some(x=>Math.abs(m-x)<1e-6)&&l.every((v,k)=>!k||Math.abs(v-l[k-1]-d)<1e-9*Math.abs(d))
    },
-   lv=OPQ.map((_,k)=>opBuild(M,k,340,300,1,document.createElement('canvas')).lev),
-   lvOk=lv.every(l=>l.length>=1&&l.length<=10&&stp(l))&&[[0,.5],[100,137],[1e3,6.1e4],[24.7,33]].every(([a,b])=>{const l=vmNice(a,b,10);return l.length>=1&&l.length<=10&&stp(l)});
-  chkB(37,'補間：計算した点で一致（1e-12），N と T の 1 次関数の場で一致（1e-9），η_b = T_b ω/(ṁ_f H_u)，T_b = 0 で η_b = 0．領域の外（全開の上，T_b < 0，回転数の範囲の外）は値なし',e1<=1e-12&&e2<=1e-9&&out,`${e1.toExponential(1)}，${e2.toExponential(1)}，領域の外 ${out}`);
+   lv=[];
+  for(let k=0;k<OPQ.length;k++){lv.push(opBuild(M,k,340,300,1,document.createElement('canvas')).lev);yield}
+  const lvOk=lv.every(l=>l.length>=1&&l.length<=10&&stp(l))&&[[0,.5],[100,137],[1e3,6.1e4],[24.7,33]].every(([a,b])=>{const l=vmNice(a,b,10);return l.length>=1&&l.length<=10&&stp(l)});
   chkB(37,'等高線：1 次関数の場で端点が値に一致（1e-9）し領域の中，10 本以下で刻みが {1, 2, 2.5, 5} × 10^k（5 つの量と 4 つの範囲），色の画像は領域の中だけ',e3<=1e-9&&inn&&ends.length>0&&C.seg.length>=1&&C.seg.length<=10&&lvOk&&bad===0&&nc>0&&nt>0,`端点 ${ends.length} 点（${e3.toExponential(1)}，領域の中 ${inn}），${C.seg.length} 本（${C.lev.join('，')}），本数 ${lv.map(l=>l.length).join('／')}，色の画素 ${nc}／透明 ${nt}／不一致 ${bad}`)
  }
  yield;
@@ -5817,7 +5822,12 @@ TST[37]=function*(){
   Object.assign(MP,{run:null,cur:M,sel:null});
   mpText();
   const q=[],np0=M.np;
-  for(let k=4;k>=0;k--){tapEl($('mpq').children[k]);const S=drawMp();q.push(!!S&&!!S.lg&&MP.c.qi===k&&!MP.run&&M.np===np0)}
+  for(let k=4;k>=0;k--){
+   tapEl($('mpq').children[k]);
+   const S=drawMp();
+   q.push(!!S&&!!S.lg&&MP.c.qi===k&&!MP.run&&M.np===np0);
+   yield
+  }
   const S=drawMp(),
    c=$('mpc'),
    r=Bx(c),

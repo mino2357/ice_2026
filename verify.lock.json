@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-22T08:37:57.718Z",
-  "plan": "第25版とのビット比較 ＋ 全項目（360×640） ＋ 画面のモード（820×1180）",
+  "at": "2026-11-22T09:01:42.384Z",
+  "plan": "全項目（360×640）",
   "files": {
    "src/audio.js": "450977f79bc6bbe5",
    "src/build.py": "1db8115504beedbf",
@@ -47,7 +47,7 @@
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "3c1f54770401fabc",
+   "src/tests.js#common": "3f276e66f3bb6c43",
    "src/ui.js": "04e765f26feafa95",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
