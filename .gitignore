@@ -67,3 +67,15 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Node / build
+node_modules/
+dist/*.wav
+*.log
+.DS_Store
+dist/flavor_tabs.json
+dist/review_jac.json
+
+# Python
+__pycache__/
+dist/docs/
