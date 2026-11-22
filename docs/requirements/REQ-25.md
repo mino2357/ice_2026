@@ -4,7 +4,7 @@
 
 **受入基準**：
 
-1. 弁が閉じているとき，ランナの流量が角振動数 $\omega_H = \sqrt{\dfrac{A_r}{L_r}\left(\dfrac{\gamma_0 RT_{\text{in}}}{V_p} + \dfrac{RT_{\text{in}}}{V_{\text{in}}}\right)}$ で振動する（周期の相対誤差 $1\%$．TEST-25 項目 1）．
+1. 弁が閉じているとき，ランナの流量が角振動数 $\omega_H = \sqrt{\dfrac{A_r}{L_r}\left(\dfrac{\gamma_p RT_{\text{in}}}{V_p} + \dfrac{RT_{\text{in}}}{V_{\text{in}}}\right)}$ で振動する（周期の相対誤差 $1\%$．TEST-25 項目 1）．
 2. 周期定常で $\Delta M_{\text{th}}$，$\Delta M_r$，$\Delta M_{\text{in}}$ が互いに $1\%$ 以内（項目 4）．
 3. 慣性過給：体積効率の増分 $\Delta\eta_v(N) = \eta_{v,\text{ON}}(N) - \eta_{v,\text{OFF}}(N)$ の最大が $0.02$ 以上で，その回転数がランナを長くすると下がる（項目 5）．
 4. ランナ OFF では $\dot m_r$，$p_p$，$m_{b,p}$，$E_p$ が変わらず，吸気弁がマニホールドに直接つながる（項目 3）．

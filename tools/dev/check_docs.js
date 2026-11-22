@@ -111,4 +111,14 @@ if(V){console.log('TEST の項目数',Object.keys(nT).sort().map(k=>k+':'+nT[k])
  for(const c of code)if(!doc.includes(c))bad('性能の記録','src/tests.js の「'+c+'」が SPEC-20 B の 10 の表に無い');
  if(doc.length<10)bad('性能の記録','SPEC-20 B の 10 の表が読めない（'+doc.length+' 行）');
  for(const d of doc)if(!code.includes(d))bad('性能の記録','SPEC-20 B の 10 の表の「'+d+'」が src/tests.js に無い')}
+/* 8. 解説タブ（src/doc.js）とテストの名前（src/tests.js）に残った古い記述（外部のレビューへの対応の第 2 群．docs/changes/2026-11-23-review-gemini-2.md） */
+{const a=docjs.indexOf('const SYM={'),b=docjs.indexOf('const DOCC='),body=docjs.slice(0,a)+docjs.slice(b);
+ /* 記号表 SYM の記号は，解説の本文か式に 1 回は現れること（使わなくなった記号の定義を残さない） */
+ for(const m of docjs.slice(a,b).matchAll(/'([^']+)':\[/g))if(!body.includes(m[1]))bad('解説タブ','記号表 SYM の「'+m[1]+'」が解説の本文と式に現れない（使わなくなった記号）');
+ const OLD=[[/充水率/,'水ブレーキ式の動力計の語「充水率」（電動式に改めた）'],[/水ブレーキ/,'「水ブレーキ」（電動式に改めた）'],[/最適化タブの熱勘定/,'「最適化タブの熱勘定」（熱効率タブに移した）'],[/出口の反射率 ρ_o|ρ_o H\(f\)/,'音の出口の反射率 ρ_o（設定を廃止した．SPEC-21 B の 1）'],[/\(\{ln 2\|a\}\)\^\{1\|3\}/,'CA50 の式の指数 1/3（Wiebe の形状係数 m_w が設定になった．1/(m_w + 1)）'],[/p_s = tanh\(g G x_c\)/,'音の出力の式 tanh(g G x_c)（区分的な制限に改めた．SPEC-21 B の 3）'],[/1 kHz での値が一致する一次低域フィルタ/,'管内の損失の近似「1 kHz の 1 点」（基本の共鳴と 1 kHz の 2 点に改めた．SPEC-21 B の 2）']];
+ for(const [f,t] of [['src/doc.js',docjs],['src/tests.js',tests]])lines(t).forEach((l,i)=>{if(/充水率の語が無い/.test(l))return;for(const [re,nm] of OLD)if(re.test(l))bad('古い記述',f+':'+(i+1)+' '+nm)});
+ /* 上のタブの構成：熱効率の内訳は「熱効率」タブ（REQ-33）．最適化タブの中の切替ではない */
+ lines(req+'\n'+gui).forEach(l=>{if(/その中のボタンで[^．]*「熱効率の内訳」/.test(l))bad('古い記述','最適化タブの中のボタンに「熱効率の内訳」がある（熱効率タブに移した）：'+l.trim().slice(0,60))});
+ /* 記号 γ_0 は，オリフィスの上流の比熱比（SPEC-04）だけに使う．定比熱比は γ_c，ポートの断熱の剛性は γ_p */
+ for(const [k,S] of [['SPEC',SPEC],['TEST',TEST],['REQ',REQ]])for(const n of Object.keys(S))if(!['04','05','13'].includes(n)&&S[n].body.some(l=>/\\gamma_0/.test(l)))bad('記号',k+'-'+n+' に γ_0 がある（γ_0 はオリフィスの上流の比熱比だけ．定比熱比は γ_c，ポートの剛性は γ_p）')}
 out.forEach(l=>console.log(DS.fix(l)));console.log(out.length?'指摘 '+out.length+' 件':'指摘なし');process.exit(out.length?1:0);

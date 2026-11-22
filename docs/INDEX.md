@@ -25,7 +25,7 @@
 | 13 | 数値積分 | `requirements/REQ-13.md`（2416） | `specification/SPEC-13.md`（9665） | `specification/TEST-13.md`（5324） | 883–1029 | 03 04 07 08 10 12 14 29 | `core.js`:745,1120,1499,1656,1730,1793… |
 | 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（823） | `specification/SPEC-14.md`（3035） | `specification/TEST-14.md`（1481） | 1254–1318 | 11 12 13 15 18 29 | `core.js`:1032,1905 |
 | 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（1614） | `gui/SPEC-15.md`（6674） | `gui/TEST-15.md`（4122） | 1371–1512 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,53,145,476,495,681 |
-| 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5681） | `gui/TEST-16.md`（3776） | 1710–1899 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
+| 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5683） | `gui/TEST-16.md`（3776） | 1710–1899 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
 | 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4577） | `gui/TEST-17.md`（3478） | 2137–2271 | 11 18 26 30 | `plot.js`:18,89,164,294,334 |
 | 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2379–2639 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:87,148,530 |
 | 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1205） | `gui/TEST-19.md`（873） | 2704–2751 | 12 15 23 31 | `plot.js`:787,800 |
@@ -41,7 +41,7 @@
 | 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（1845） | `specification/SPEC-29.md`（16052） | `specification/TEST-29.md`（4889） | 4383–4390 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,398,469,587… |
 | 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 4589–4603 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,662,1087,1254,1538 `plot.js`:480 `ui.js`:149 |
 | 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2883） | `gui/TEST-31.md`（1670） | 4812–4817 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:450 |
-| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2177） | `specification/SPEC-32.md`（5866） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5038–5041 | 03 21 33 34 | `core.js`:2530,2647,2662,2685,2704,2829… `plot.js`:1138,1260 `ui.js`:729,743,746 |
+| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（5866） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5038–5041 | 03 21 33 34 | `core.js`:2530,2647,2662,2685,2704,2829… `plot.js`:1138,1260 `ui.js`:729,743,746 |
 | 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（858） | `specification/TEST-33.md`（1551） | 5256–5284 | 01 03 10 12 14 29 30 32 | `core.js`:451,2940,3001,3027,3037 `plot.js`:1138,1189,1210 `ui.js`:729,743,839 |
 | 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 5372–5376 | 32 | `core.js`:2565,3085,3087 `plot.js`:1448,1500 `ui.js`:743,850 |
 | 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 5543–5546 | 11 18 22 23 26 | `core.js`:238,242,247,2044 `plot.js`:446 `ui.js`:638 |
@@ -98,7 +98,7 @@
 | 用語の定義集 | 2.2 状態ベクトル | `glossary/s2.2.md` | 3166 |
 | 用語の定義集 | 2.3 補助積分 | `glossary/s2.3.md` | 2137 |
 | 用語の定義集 | 2.4 幾何（スライダ・クランク機構と弁） | `glossary/s2.4.md` | 2002 |
-| 用語の定義集 | 2.5 熱力学と物性 | `glossary/s2.5.md` | 1396 |
+| 用語の定義集 | 2.5 熱力学と物性 | `glossary/s2.5.md` | 1544 |
 | 用語の定義集 | 2.5a 化学種の熱物性と噴射（第26版．SPEC-29，SPEC-30） | `glossary/s2.5a.md` | 2288 |
 | 用語の定義集 | 2.6 流れと吸排気系 | `glossary/s2.6.md` | 5065 |
 | 用語の定義集 | 2.7 燃焼 | `glossary/s2.7.md` | 2045 |
@@ -135,9 +135,9 @@
 | `src/core.js` | 101726 |
 | `src/audio.js` | 14689 |
 | `src/plot.js` | 64614 |
-| `src/doc.js` | 57869 |
+| `src/doc.js` | 58233 |
 | `src/ui.js` | 47209 |
-| `src/tests.js` | 273446 |
+| `src/tests.js` | 273444 |
 | `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
@@ -146,5 +146,5 @@
 | `docs/changes/2026-11-22-operating-map.md` | 6512 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
-| `docs/changes/2026-11-22-review-gemini-1.md` | 7219 |
+| `docs/changes/2026-11-22-review-gemini-1.md` | 10415 |
 | `docs/changes/2026-11-22-valve-timing-search.md` | 5374 |
