@@ -29,7 +29,7 @@
 | 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4577） | `gui/TEST-17.md`（3478） | 2069–2203 | 11 18 26 30 | `plot.js`:18,89,164,294,334 |
 | 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2311–2571 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:87,148,435 |
 | 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1205） | `gui/TEST-19.md`（873） | 2636–2683 | 12 15 23 31 | `plot.js`:787,800 |
-| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1052） | `specification/SPEC-20.md`（6139） | `specification/TEST-20.md`（1334） | 2706–2706 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 | `ui.js`:834 |
+| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1238） | `specification/SPEC-20.md`（6139） | `specification/TEST-20.md`（1334） | 2706–2706 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 | `ui.js`:834 |
 | 21 [U] | エンジン音 | `requirements/REQ-21.md`（1014） | `specification/SPEC-21.md`（8513） | `specification/TEST-21.md`（4105） | 2761–2928 | 02 18 22 23 27 36 | `core.js`:2279 `audio.js`:15,21,32,44,322,342 `ui.js`:830 |
 | 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3204–3338 | 11 | – |
 | 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 3340–3445 | – | `ui.js`:363,365,368,435,445 |
@@ -63,7 +63,7 @@
 | 要件定義書 | 3. 状態と記号 | `requirements/s3.md` | 933 |
 | 要件定義書 | 4. 要件 | `requirements/s4.md` | 10 |
 | 要件定義書 | 5. 受入 | `requirements/s5.md` | 10 |
-| 要件定義書 | 5.1 納品条件 | `requirements/s5.1.md` | 608 |
+| 要件定義書 | 5.1 納品条件 | `requirements/s5.1.md` | 657 |
 | 要件定義書 | 5.2 実機目視チェックリスト [M]（Galaxy S26+／Chrome） | `requirements/s5.2.md` | 1532 |
 | 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 3597 |
 | 要件定義書 | 7. 改訂の記録 | `requirements/s7.md` | 13 |
@@ -127,6 +127,7 @@
 | `docs/report_solver.md` | 19042 |
 | `docs/report_egr.md` | 8062 |
 | `docs/report_burn.md` | 4288 |
+| `docs/report_devices.md` | 6946 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
 | `src/core.js` | 85697 |
@@ -139,4 +140,5 @@
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
+| `docs/changes/2026-11-22-perf-scope.md` | 585 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
