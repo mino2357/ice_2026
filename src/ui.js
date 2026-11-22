@@ -3,7 +3,7 @@ const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();
 let live=new Core(LP),AX=mkAX();
-const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
+const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0,ctlH:''};
 /* spd：再生速度（Infinity = 最速）．rs：速さの倍率（最速のときに表示．SPEC-15 F の 4），w0，t0：その計測の区間の始まり */
 const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24,el:.05};
 const Base={
@@ -37,9 +37,14 @@ const readCol=()=>{
 /* ===== input helpers ===== */
 function tap(el,fn){
  let d;
- el.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:NOW()}});
- el.addEventListener('pointerup',e=>{if(d&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);d=0});
- el.addEventListener('pointercancel',()=>d=0)
+ /* 押した指（pointerId）の入力だけを見る．別の指の接触・離れでは，押した位置も判定も変えない（REQ-15 の 13） */
+ el.addEventListener('pointerdown',e=>{if(!d)d={x:e.clientX,y:e.clientY,t:NOW(),id:e.pointerId}});
+ el.addEventListener('pointerup',e=>{
+  if(!d||e.pointerId!==d.id)return;
+  if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);
+  d=0
+ });
+ el.addEventListener('pointercancel',e=>{if(d&&e.pointerId===d.id)d=0})
 }
 /* ===== time advance (frame-rate independent) ===== */
 /* 最速（spd = Infinity）：毎フレーム，上限の時間まで進める．止まっている機関（完爆前でスターターも回っていない，ω = 0）は 1× で進める（計算することが無い） */
@@ -166,7 +171,9 @@ function liveVals(){
   if(l&&l.textContent!==ctlLab(k))l.textContent=ctlLab(k)
  }
 }
-function rs(){/* 設定の行のスライダをドラッグしている間は，行を作り直さずに値だけ書き換える（つまみの要素を保つ） */
+function rs(){/* 設定のページは，設定タブを表示している間だけ作り直す（表示したときに show が呼ぶ．ほかのタブでの設定の変更のたびに，見えていないページを作り直さない．SPEC-15 の J） */
+ if(U.tab!==2)return;
+/* 設定の行のスライダをドラッグしている間は，行を作り直さずに値だけ書き換える（つまみの要素を保つ） */
  if(U.sld&&$('tsr')){
   const b=$('Pg').querySelector('b[data-v="alm"]');
   if(b)b.textContent=disp(IT.alm,LP.alm);
@@ -458,7 +465,7 @@ function drawEng(){
 /* 運転タブの帯の高さ：目標回転数の帯，動力計制御ではスロットル開度の帯を重ねる（SPEC-23 の 6） */
 const bandH=()=>NTB*(dynOn(LP)?2:1);
 /* ===== target-rpm slider (REQ-23) ===== */
-const NTD={on:0,off:0,v:NaN,u:NaN};
+const NTD={on:0,off:0,v:NaN,u:NaN,id:-1};
 const ntW=()=>Math.max(1,$('ntr').clientWidth-44);
 /* SPEC-23 の 2：位置 u と値の対応（u ≤ 0.7 で 500〜8000 rpm，その右で 8000〜40000 rpm） */
 const ntU=v=>Math.max(0,Math.min(1,v<=NTS.mid?NTS.um*(v-NTS.lo)/(NTS.mid-NTS.lo):NTS.um+(1-NTS.um)*(v-NTS.mid)/(NTS.hi-NTS.mid)));
@@ -474,7 +481,7 @@ function ntRender(){
 }
 function ntStep(d){const it=IT.nt,v=gv(it,Math.max(gmin(it),gi(it,LP.nt)+d));if(v!==LP.nt)setParam('nt',v);ntRender()}
 /* ===== バルブタイミングの操作の列（SPEC-15 I）：設定の IVO，IVC，EVO，EVC を，つまみのドラッグと [−][＋] で変える ===== */
-const VTK=['ivo','ivc','evo','evc'],VTD={k:null,off:0,sig:''};
+const VTK=['ivo','ivc','evo','evc'],VTD={k:null,off:0,sig:'',id:-1};
 const vtRow=k=>$('vt').querySelector(`.vtr[data-k="${k}"]`),
  vtW=k=>Math.max(1,vtRow(k).querySelector('.vts').clientWidth-44);
 function vtRender(){
@@ -508,22 +515,24 @@ function initVT(){
   kn.addEventListener('pointerdown',e=>{
    e.preventDefault();
    e.stopPropagation();
+   if(VTD.k)return;
    VTD.k=k;
+   VTD.id=e.pointerId;
    const R=tr.getBoundingClientRect();
    VTD.off=e.clientX-(R.left+22+Math.max(0,Math.min(1,gi(it,LP[k])/gmax(it)))*vtW(k));
    try{kn.setPointerCapture(e.pointerId)}catch(x){}
    kn.classList.add('on')
   });
   const mv=e=>{
-    if(VTD.k!==k)return;
+    if(VTD.k!==k||e.pointerId!==VTD.id)return;
     e.preventDefault();
     const R=tr.getBoundingClientRect(),u=(e.clientX-VTD.off-R.left-22)/vtW(k);
     vtSet(k,Math.round(Math.max(0,Math.min(1,u))*gmax(it)),1)
    },
-   up=e=>{if(VTD.k!==k)return;mv(e);VTD.k=null;kn.classList.remove('on')};
+   up=e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;mv(e);VTD.k=null;kn.classList.remove('on')};
   kn.addEventListener('pointermove',mv);
   kn.addEventListener('pointerup',up);
-  kn.addEventListener('pointercancel',()=>{VTD.k=null;kn.classList.remove('on')});
+  kn.addEventListener('pointercancel',e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;VTD.k=null;kn.classList.remove('on')});
   for(const b of r.querySelectorAll('button'))tap(b,()=>{if(!b.disabled)vtSet(k,gi(it,LP[k])+(+b.dataset.d))})
  }
 }
@@ -539,12 +548,14 @@ function thStep(d){const g=LP.alm/D,n=d>0?Math.floor(g/THS.st+1e-9)+1:Math.ceil(
 const slPos=(tr,kn,u)=>{const x=Math.round(u*Math.max(1,tr.clientWidth-44)*10)/10;kn.style.transform=`translateX(${x}px)`};
 /* つまみから始めたドラッグだけで値を変える（SPEC-23 の 3）．get：現在の位置 [0, 1]，set：位置 [0, 1] を値にする */
 function slBind(tr,kn,get,set){
- let on=0,off=0;
+ let on=0,off=0,pid=-1;
  const W=()=>Math.max(1,tr.clientWidth-44),end=()=>{on=0;U.sld=0;kn.classList.remove('on');if(tr.id==='tsr')rs()};
  kn.addEventListener('pointerdown',e=>{
   e.preventDefault();
   e.stopPropagation();
+  if(on)return;
   on=1;
+  pid=e.pointerId;
   U.sld=1;
   const R=tr.getBoundingClientRect();
   off=e.clientX-(R.left+22+get()*W());
@@ -552,14 +563,14 @@ function slBind(tr,kn,get,set){
   kn.classList.add('on')
  });
  const mv=e=>{
-  if(!on)return;
+  if(!on||e.pointerId!==pid)return;
   e.preventDefault();
   const R=tr.getBoundingClientRect();
   set(Math.max(0,Math.min(1,(e.clientX-off-R.left-22)/W())))
  };
  kn.addEventListener('pointermove',mv);
- kn.addEventListener('pointerup',e=>{if(!on)return;mv(e);end()});
- kn.addEventListener('pointercancel',()=>{if(on)end()})
+ kn.addEventListener('pointerup',e=>{if(!on||e.pointerId!==pid)return;mv(e);end()});
+ kn.addEventListener('pointercancel',e=>{if(on&&e.pointerId===pid)end()})
 }
 function thRender(){
  const on=dynOn(LP),b=$('thb'),u=thU(),g=LP.alm/D;
@@ -587,23 +598,25 @@ function initNT(){
  k.addEventListener('pointerdown',e=>{
   e.preventDefault();
   e.stopPropagation();
+  if(NTD.on)return;
   NTD.on=1;
+  NTD.id=e.pointerId;
   const R=r.getBoundingClientRect();
   NTD.off=e.clientX-(R.left+22+ntU(LP.nt)*ntW());
   try{k.setPointerCapture(e.pointerId)}catch(x){}
   k.classList.add('on')
  });
  const mv=e=>{
-  if(!NTD.on)return;
+  if(!NTD.on||e.pointerId!==NTD.id)return;
   e.preventDefault();
   const R=r.getBoundingClientRect(),u=(e.clientX-NTD.off-R.left-22)/ntW(),v=ntVal(u);
   if(v!==LP.nt)setParam('nt',v);
   ntRender()
  };
- const up=e=>{if(!NTD.on)return;mv(e);NTD.on=0;k.classList.remove('on')};
+ const up=e=>{if(!NTD.on||e.pointerId!==NTD.id)return;mv(e);NTD.on=0;k.classList.remove('on')};
  k.addEventListener('pointermove',mv);
  k.addEventListener('pointerup',up);
- k.addEventListener('pointercancel',()=>{NTD.on=0;k.classList.remove('on')});
+ k.addEventListener('pointercancel',e=>{if(!NTD.on||e.pointerId!==NTD.id)return;NTD.on=0;k.classList.remove('on')});
  tap($('ntm'),()=>{if(LP.nt>NTS.lo)ntStep(-1)});
  tap($('ntp'),()=>ntStep(1));
  ntRender()
@@ -675,8 +688,9 @@ function ctlRender(){
   const lb=dynOn(LP)&&live.s.fired&&!live.s.fuel?'STOP':'FUEL CUT',b=$('b2');
   if(b.textContent!==lb)b.textContent=lb
  }
- const t=ctlText(live);
- $('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')
+ /* 文字が変わったときだけ書き換える（毎フレーム要素を作り直さない．SPEC-15 の J） */
+ const h=ctlText(live).map(x=>`<div>${x||'&nbsp;'}</div>`).join('');
+ if(h!==U.ctlH||!$('ctl').firstChild){U.ctlH=h;$('ctl').innerHTML=h}
 }
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){

@@ -1465,6 +1465,57 @@ TST[15]=function*(){
  chkB(15,'移動量 ≥ 8 px の入力はタップにならない',r1);
  chkB(15,'接触 ≥ 500 ms の入力はタップにならない',r2);
  chkB(15,'接触幅 100 px のタップも受理される',r3);
+/* 18：複数の指（REQ-15 の 13）．タップとドラッグは，始めた指（pointerId）の入力だけを見る */
+ {
+  const pe=(el,type,x,y,id)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,width:20,height:20,pointerId:id,pointerType:'touch',isPrimary:id===7}));
+  const el=document.createElement('button');
+  let n=0;
+  document.body.appendChild(el);
+  tap(el,()=>n++);
+  pe(el,'pointerdown',10,10,7);
+  pe(el,'pointerup',10,10,9);
+  const t1=n===0;
+  pe(el,'pointerup',10,10,7);
+  const t2=n===1;
+  pe(el,'pointerdown',10,10,7);
+  pe(el,'pointerdown',300,300,9);
+  pe(el,'pointerup',10,10,7);
+  const t3=n===2;
+  el.remove();
+  show(0);
+  yield;
+  const k=$('ntk'),[x,y]=ctr(k),nt0=LP.nt,W=ntW();
+  pe(k,'pointerdown',x,y,7);
+  pe(k,'pointermove',x+.4*W,y,9);
+  const s1=LP.nt===nt0;
+  pe(k,'pointerdown',x+.4*W,y,9);
+  pe(k,'pointerup',x+.4*W,y,9);
+  const s2=LP.nt===nt0&&NTD.on===1;
+  pe(k,'pointermove',x+.2*W,y,7);
+  const s3=LP.nt!==nt0;
+  pe(k,'pointerup',x+.2*W,y,7);
+  const s4=NTD.on===0;
+  setParam('nt',nt0,1);
+  ntRender();
+  chkB(15,'複数の指：タップは，押した指と違う指が離れても成立せず，押した指が離れると成立する（別の指が後から触れても押した位置は変わらない）．目標回転数のつまみのドラッグ中に，別の指の移動・接触・離れでは値が変わらずドラッグも終わらず，始めた指の移動で値が変わる',t1&&t2&&t3&&s1&&s2&&s3&&s4,`${[t1,t2,t3,s1,s2,s3,s4].map(q=>q?1:0).join('')}`)
+ }
+/* 19：表示の書き換えは変わったときだけ（SPEC-15 の J）．制御の表示は文字が同じなら要素を作り直さない．設定のページは，設定タブを表示していない間は作り直さず，表示したときに作る */
+ {
+  show(0);
+  ctlRender();
+  const c0=$('ctl').firstChild;
+  ctlRender();
+  const c1=$('ctl').firstChild===c0&&!!c0;
+  show(2);
+  const p0=$('Pg').firstChild;
+  show(0);
+  rs();
+  const p1=$('Pg').firstChild===p0&&!!p0;
+  show(2);
+  const p2=$('Pg').firstChild!==p0&&!!$('Pg').firstChild;
+  show(0);
+  chkB(15,'表示の書き換え：制御の表示は文字が同じなら要素を作り直さない．設定のページは，設定タブを表示していない間は作り直さず，設定タブを表示したときに作り直す',c1&&p1&&p2,`${[c1,p1,p2].map(q=>q?1:0).join('')}`)
+ }
  {
   const nb3=!$('b3')&&![...document.querySelectorAll('button')].some(q=>/RESET/.test(q.textContent));
   show(0);
@@ -5741,6 +5792,7 @@ async function runAll(only,ui,pj){
   }else ST[id]=''
  }
  restLive(snap);
+ SC={}; /* シナリオの控えを手放す（全テストの後に数十 MB を持ち続けない） */
  U.busy=0;
  U.uiDraw=0;
  $('rt').textContent='全テスト実行';

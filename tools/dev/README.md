@@ -23,6 +23,8 @@
 | `vtopt.js` | バルブタイミングの探索（SPEC-32）を Node.js で実行し，結果の 8 近傍を別の評価器で確かめる | Node.js |
 | `lossbk.js` | 熱効率の損失の内訳（SPEC-33）を Node.js で計算する | Node.js |
 | `bench_core.js` | 全開・3000 rpm 固定の 1 サイクルあたりの計算時間とステップ数（熱物性・噴射方式ごと） | Node.js |
+| `alloc.js` | 積分のヒープの割り当て：1 ステップあたりのバイト数と，割り当てた関数ごとの内訳（V8 の標本のヒーププロファイラ）．3 つ目の引数でソースを書き換えて，割り当てを 1 つ外したときの差を測れる（`docs/report_alloc.md`） | Node.js（`--expose-gc`） |
+| `kink.js` | 流量関数 $\Psi$ の折れ目（$r_p = 1 - 10^{-3}$）をまたぐ BS3 の試行と，ステップの棄却の率（`docs/report_alloc.md` の 2 節） | Node.js |
 | `idle.js` | 始動からのアイドルの回転数の偏差（設定の上書きを JSON で渡す） | Node.js |
 
 ## 使い方の例
