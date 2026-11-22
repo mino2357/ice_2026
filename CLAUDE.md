@@ -73,6 +73,17 @@ npm run fmt        # ソースの整形
 npm run test:one -- --only 17,30 --names   # 1 ビューポートで一部のテスト（tools/dev/run.js）
 ```
 
+## CI/CD（GitHub Actions．`.github/workflows/ci.yml`）
+
+- **いつ走るか**：どのブランチへの push でも走る（同じブランチの古い実行は取り消す）．手で始めることもできる（Actions の画面の「Run workflow」）．
+- **点検とビルド**：`npm run check`，索引が追跡中のものと同じか，`npm run build`．ビルドした `dist/engine.html` を成果物（`engine-html`）として保存する．追跡中の `dist/engine.html` と違えば警告を出す（失敗にはしない）．
+- **段階 2（7 通り）**：計算のビット比較（`bitcheck.js --chromium`）と `node tests/headless.js`．機能の検査に FAIL があれば失敗．性能の記録だけが上限を超えたとき（終了コード 2）は，警告を出して成功にする（CI の計算機の速さによるため）．結果の要約は実行の Summary，全部の記録は成果物 `headless-log`．
+- **書体**：文字の幅を測る検査があるので，CI の書体を開発用の計算機と同じにしている（Inter と Noto Sans CJK JP．`tools/ci/fonts.conf`）．
+- **リリース**：`v` で始まるタグを push すると，段階 2 の後に GitHub のリリースを作り，`engine.html` を付ける．
+- **できないこと**：claude.ai のアーティファクト（先行版，正式版）への公開は，CI からはできない（このセッションの中で行う）．また，このセッションからは Actions の実行の結果を読めない（API に届かない）．結果は GitHub の画面で確かめる．
+
+## そのほか
+
 - `src/core.js` を変えたら `node tools/dev/bitcheck.js --chromium`（`npm run verify` が自動で行う）．
 - 成果物は claude.ai のアーティファクトとして公開している（先行版と正式版）．正式版の公開は利用者の確認のうえで行う．
 - main へは push しない．

@@ -1,0 +1,128 @@
+# CI/CD：点検とビルド，段階 2 の検証（7 通り），成果物の保存，版のタグでのリリース．
+# 手順の説明は CLAUDE.md の「CI/CD」．
+name: CI
+
+# プルリクエストは，そのブランチへの push の実行が兼ねる（同じコミットを 2 度実行しない）
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  check:
+    name: 点検とビルド
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: pandoc を入れる
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+      - name: 版の表示
+        run: node --version && python3 --version && pandoc --version | head -1
+      - name: npm install
+        run: npm install --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: 点検（整形，索引，文書とコードの整合，使っていない名前）
+        run: npm run check
+      - name: 索引が追跡中のものと同じか
+        run: git diff --exit-code -- docs/INDEX.md
+      - name: ビルド
+        run: npm run build
+      - name: 成果物が追跡中のものと同じか（違えば警告）
+        run: |
+          if ! git diff --quiet -- dist/engine.html; then
+            echo "::warning title=dist/engine.html::ビルドした成果物が，リポジトリの dist/engine.html と違います（ソースを変えた後にビルドし直していないか，ビルドの環境の違い）．"
+            git diff --stat -- dist/engine.html
+          fi
+          grep -o "const BUILD='[0-9a-f]*'" dist/engine.html
+      - name: 成果物を保存
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-html
+          path: dist/engine.html
+          if-no-files-found: error
+
+  test:
+    name: 段階 2（7 通り）
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # ビット比較が前の版の src/core.js を読む
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: pandoc と書体を入れる（書体は開発用の計算機と同じにする）
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pandoc fonts-inter fonts-noto-cjk
+          mkdir -p ~/.config/fontconfig
+          cp tools/ci/fonts.conf ~/.config/fontconfig/fonts.conf
+          fc-cache -f
+          fc-match "system-ui"
+          fc-match "system-ui:lang=ja"
+      - name: npm install と Chromium
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: ビルド
+        run: npm run build
+      - name: 計算のビット比較（前の版と同じ結果か）
+        run: node tools/dev/bitcheck.js --chromium
+      - name: 7 通りの検証
+        id: headless
+        run: |
+          set +e
+          node tests/headless.js 2>&1 | tee headless.log
+          code=${PIPESTATUS[0]}
+          {
+            echo '### 段階 2（7 通り）'
+            echo
+            echo '```'
+            grep -E 'PASS|FAIL|性能（|機能の検査|通りの所要' headless.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -eq 2 ]; then
+            echo "::warning title=性能の記録::機能の検査はすべて PASS．性能の記録（時間の検査）だけが上限を超えました．CI の計算機の速さによるので失敗にはしません．要約を見てください．"
+            exit 0
+          fi
+          exit "$code"
+      - name: 検証の記録を保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: headless-log
+          path: headless.log
+
+  release:
+    name: リリース（v で始まるタグ）
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-html
+      - name: リリースを作って成果物を付ける
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" engine.html --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
