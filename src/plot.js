@@ -1265,7 +1265,7 @@ const VTC={ex:'#e8590c',in:'#1c7ed6',cur:'#be4bdb'};
 function drawVtClock(g,W,H,S,col){
  const cx=W/2,
   cy=H/2,
-  R=Math.max(34,Math.min(W/2-62,H/2-24)),
+  R=Math.max(34,Math.min(W/2-62,H/2-28)),
   re=R,
   ri=R-Math.max(16,.22*R),
   ph=a=>((a%360+360)%360)*PI/180-PI/2,

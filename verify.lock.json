@@ -1,14 +1,14 @@
 {
  "tier1": {
-  "at": "2026-11-22T11:33:16.337Z",
-  "plan": "第25版とのビット比較 ＋ 全項目（360×640） ＋ 画面のモード（820×1180）",
+  "at": "2026-11-22T12:13:05.553Z",
+  "plan": "TEST-16（360×640） ＋ 画面のモード（360×640） ＋ 画面のモード（820×1180）",
   "files": {
    "src/audio.js": "450977f79bc6bbe5",
    "src/build.py": "1db8115504beedbf",
    "src/core.js": "a8b467c322f95b8e",
    "src/doc.js": "80b842264788a119",
    "src/index.tpl.html": "bef804ba1cd2131b",
-   "src/plot.js": "bfe84f0da6f01eb6",
+   "src/plot.js": "dbce8bfe83c24a0b",
    "src/style.css": "efa48d77876b1eac",
    "src/tests.js#TST-01": "cd51dd89c630bf02",
    "src/tests.js#TST-02": "0f2be5e28eedd0d7",
@@ -188,7 +188,7 @@
    "docs/gui/SPEC-23.md": "7d51c5f5e2bc9e29",
    "docs/gui/SPEC-26B.md": "8f72c6290a84a57a",
    "docs/gui/SPEC-31.md": "4fb08bfa4d8b724e",
-   "docs/gui/SPEC-32A.md": "3f37e1acd2831b37",
+   "docs/gui/SPEC-32A.md": "a98f1f6e2fbc4828",
    "docs/gui/SPEC-33C.md": "1bae65ab19e1e902",
    "docs/gui/SPEC-34A.md": "5e72fa806a6d1b53",
    "docs/gui/SPEC-35D.md": "0585915b77fa30a1",

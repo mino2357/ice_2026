@@ -41,7 +41,7 @@
 | 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（1647） | `specification/SPEC-29.md`（15908） | `specification/TEST-29.md`（4353） | 4216–4223 | 02 04 05 06 07 08 09 13 15 20 25 26 27 30 | `core.js`:162,296,465,582,640,1079… |
 | 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 4391–4405 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,655,1079,1245,1529 `plot.js`:480 `ui.js`:149 |
 | 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2883） | `gui/TEST-31.md`（1670） | 4614–4619 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:450 |
-| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2118） | `specification/SPEC-32.md`（5866） `gui/SPEC-32A.md`（2171） | `specification/TEST-32.md`（2214） | 4840–4843 | 03 21 33 34 | `core.js`:2452,2569,2584,2607,2626,2751… `plot.js`:1138,1260 `ui.js`:729,744 |
+| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2118） | `specification/SPEC-32.md`（5866） `gui/SPEC-32A.md`（2255） | `specification/TEST-32.md`（2214） | 4840–4843 | 03 21 33 34 | `core.js`:2452,2569,2584,2607,2626,2751… `plot.js`:1138,1260 `ui.js`:729,744 |
 | 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1499） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（775） | `specification/TEST-33.md`（1433） | 5043–5071 | 01 03 10 12 14 29 30 | `core.js`:448,2862,2923,2949,2959 `plot.js`:1138,1189,1210 `ui.js`:729,837 |
 | 34 [U] | VVT マップ | `requirements/REQ-34.md`（1317） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1376） | 5141–5145 | 32 | `core.js`:2487,3007,3009 `plot.js`:1448,1500 `ui.js`:846 |
 | 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 5298–5301 | 11 18 22 23 26 | `core.js`:238,242,247,1970 `plot.js`:446 `ui.js`:638 |
@@ -145,4 +145,4 @@
 | `docs/changes/2026-11-22-operating-map.md` | 6512 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
-| `docs/changes/2026-11-22-valve-timing-search.md` | 3868 |
+| `docs/changes/2026-11-22-valve-timing-search.md` | 4762 |
