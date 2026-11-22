@@ -27,6 +27,29 @@
 | `kink.js` | 流量関数 $\Psi$ の折れ目（$r_p = 1 - 10^{-3}$）をまたぐ BS3 の試行と，ステップの棄却の率（`docs/report_alloc.md` の 2 節） | Node.js |
 | `idle.js` | 始動からのアイドルの回転数の偏差（設定の上書きを JSON で渡す） | Node.js |
 
+## 環境
+
+必要なもの：Node.js 22（CI と同じ系列），npm，pandoc 3.1.3（CI の ubuntu-24.04 と同じ版），Python 3，Playwright の Chromium．
+
+管理者の権限があるとき：
+
+```
+sudo apt-get install -y pandoc libnspr4 libnss3 libasound2t64
+npm install && npx playwright install chromium
+```
+
+管理者の権限が無いとき（ホームの下に入れる．2026-11-22 に WSL2 の Ubuntu 26.04 で行った手順）：
+
+1. Node.js：`https://nodejs.org/dist/latest-v22.x/` の `node-v22.*-linux-x64.tar.xz` を `~/.local/opt` に展開し（`SHASUMS256.txt` で確かめる），`node`，`npm`，`npx` を `~/.local/bin` にリンクする．
+2. pandoc：`https://github.com/jgm/pandoc/releases/download/3.1.3/pandoc-3.1.3-linux-amd64.tar.gz` を同じように展開してリンクする．
+3. `npm install`，`npx playwright install chromium`（Chromium は `~/.cache/ms-playwright` に入る）．
+4. Chromium が要るシステムのライブラリ（`libnspr4`，`libnss3`，`libasound2t64`）が無いと，起動に失敗する（`ldd` で `not found` と出る）．`apt` の deb を取って（署名のある `InRelease` → `Packages.xz` のハッシュ → deb のハッシュの順に確かめる），`dpkg-deb -x` で `~/.local/opt/chromium-libs` に展開し，実行のときに `LD_LIBRARY_PATH=$HOME/.local/opt/chromium-libs/usr/lib/x86_64-linux-gnu` を付ける．
+5. 新しく開いた端末では `~/.profile` が `~/.local/bin` を `PATH` に入れる．入っていない殻では `export PATH=$HOME/.local/bin:$PATH` を付ける．
+
+`git fetch`／`git push` が `Permission denied (publickey)` になるとき：鍵にパスフレーズがあり，エージェントに鍵が載っていない．端末で `ssh-add` する（`~/.ssh/config` の `IdentityAgent` の場所のエージェントに載せる）．
+
+この PC（Core i5-8350U）では，性能の記録のうち，TEST-16 のページの切り替えと相互参照の移動，TEST-20 の最長フレーム間隔と総所要時間，TEST-34 の VVT マップの所要が，手を入れる前のコードでも上限を超える（2026-11-23 の実測．`docs/changes/2026-11-22-review-gemini-1.md`）．
+
 ## 使い方の例
 
 ```
