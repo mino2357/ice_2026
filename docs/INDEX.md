@@ -29,7 +29,7 @@
 | 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4577） | `gui/TEST-17.md`（3478） | 2072–2206 | 11 18 26 30 | `plot.js`:18,89,164,294,334 |
 | 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2314–2574 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:87,148,530 |
 | 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1205） | `gui/TEST-19.md`（873） | 2639–2686 | 12 15 23 31 | `plot.js`:787,800 |
-| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1052） | `specification/SPEC-20.md`（6315） | `specification/TEST-20.md`（1334） | 2709–2709 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 37 | `ui.js`:929 |
+| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1052） | `specification/SPEC-20.md`（6315） | `specification/TEST-20.md`（1722） | 2709–2709 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 37 | `ui.js`:929 |
 | 21 [U] | エンジン音 | `requirements/REQ-21.md`（1014） | `specification/SPEC-21.md`（8513） | `specification/TEST-21.md`（4105） | 2764–2931 | 02 18 22 23 27 36 | `core.js`:2470 `audio.js`:15,21,32,44,322,342 `ui.js`:925 |
 | 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3207–3341 | 11 | – |
 | 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 3343–3448 | – | `ui.js`:458,460,463,530,540 |
@@ -45,8 +45,8 @@
 | 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1499） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（775） | `specification/TEST-33.md`（1433） | 4944–4972 | 01 03 10 12 14 29 30 | `core.js`:448,2663,2724,2750,2760 `plot.js`:1138,1189,1210 `ui.js`:729,809 |
 | 34 [U] | VVT マップ | `requirements/REQ-34.md`（1317） | `specification/SPEC-34.md`（981） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1376） | 5042–5046 | 32 | `core.js`:2482,2808,2810 `plot.js`:1260,1312 `ui.js`:818 |
 | 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 5199–5202 | 11 18 22 23 26 | `core.js`:238,242,247,1970 `plot.js`:446 `ui.js`:638 |
-| 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1216） | `specification/SPEC-36.md`（2001） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1621） | 5542–5543 | 07 13 15 | `core.js`:1487 `audio.js`:342,383 `ui.js`:925,927 |
-| 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2439） | 5684–5691 | 26 | `core.js`:2198,2201,2357 `plot.js`:1359 `ui.js`:290,352 |
+| 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1216） | `specification/SPEC-36.md`（2001） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1621） | 5543–5544 | 07 13 15 | `core.js`:1487 `audio.js`:342,383 `ui.js`:925,927 |
+| 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2439） | 5685–5692 | 26 | `core.js`:2198,2201,2357 `plot.js`:1359 `ui.js`:290,352 |
 
 ## 2. そのほかの節
 
@@ -136,11 +136,11 @@
 | `src/plot.js` | 58835 |
 | `src/doc.js` | 57869 |
 | `src/ui.js` | 45558 |
-| `src/tests.js` | 255753 |
+| `src/tests.js` | 255881 |
 | `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
-| `docs/changes/2026-11-22-operating-map.md` | 4164 |
+| `docs/changes/2026-11-22-operating-map.md` | 4592 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |

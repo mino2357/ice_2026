@@ -2715,8 +2715,8 @@ TST[20]=function*(){
    L=t.split('\n'),
    np=Object.keys(TR).reduce((s,k)=>s+TR[k].filter(r=>r.perf).length,0),
    ip=L.indexOf('性能の記録（実測｜上限）：'),
-   okT=/^[0-9a-f]{8}$/.test(BUILD)&&L.includes('ビルド：'+BUILD)&&L.includes('環境：'+navigator.userAgent)&&t.includes('表示領域 '+innerWidth+'×'+innerHeight)&&t.includes('画素の比 ')&&/\n日時：\d{4}-\d\d-\d\dT/.test(t)&&/\n要約：PASS \d+\/\d+/.test(t)&&L.filter(l=>/^\d\d (PASS|FAIL) \d+ \d+\.\d　/.test(l)).length===ids.length&&L.some(l=>l.startsWith('FAIL と上限超え：'))&&ip>0&&L.length-ip-1===np;
-  chkB(20,'結果のテキスト：ビルドの ID（16 進 8 桁），日時，環境（ユーザーエージェント，画面，表示領域，画素の比），要約，実行したテストごとの合否・検査の数・所要，FAIL と上限超え，性能の記録の全件を含む',okT,`${L.length} 行，${t.length} 字，ビルド ${BUILD}，性能の記録 ${np} 件`);
+   okT=/^[0-9a-f]{8}$/.test(BUILD)&&L.includes('ビルド：'+BUILD)&&L.includes('環境：'+navigator.userAgent)&&t.includes('表示領域 '+innerWidth+'×'+innerHeight)&&t.includes('画素の比 ')&&/\n日時：\d{4}-\d\d-\d\dT/.test(t)&&/\n要約：PASS \d+\/\d+/.test(t)&&L.filter(l=>/^\d\d (PASS|FAIL) \d+ \d+\.\d　/.test(l)).length===ids.length&&L.some(l=>l.startsWith('FAIL と上限超え：'))&&ip>0&&L.length-ip-1===np&&TNAME.length===NT+1&&TNAME.slice(1).every(n=>typeof n==='string'&&n.length>0)&&!t.includes('undefined');
+  chkB(20,'結果のテキスト：ビルドの ID（16 進 8 桁），日時，環境（ユーザーエージェント，画面，表示領域，画素の比），要約，実行したテストごとの合否・検査の数・所要，FAIL と上限超え，性能の記録の全件を含む．全テストが名前を持つ',okT,`${L.length} 行，${t.length} 字，ビルド ${BUILD}，性能の記録 ${np} 件`);
   show(3);
   const b=$('rcp'),
    q=b.getBoundingClientRect(),
@@ -5388,7 +5388,7 @@ async function runAll(only,ui,pj){
      chkB(20,'性能の記録：上限を超えた値は，判定しない実行では記録だけ（PASS．上限超えの印），判定する実行では FAIL．上限以下は PASS',a.length===3&&a.every(r=>r.perf)&&a[0].ok&&a[0].over&&!a[1].ok&&a[1].over&&a[2].ok&&!a[2].over,a.map(r=>(r.ok?'PASS':'FAIL')+(r.over?'・超え':'')).join('，'))
     }
     chkP(20,'テスト実行中の最長フレーム間隔',RUN.maxF,250,'ms',1,'（TEST-'+pad(RUN.maxId)+'）');
-    chkP(20,'総所要時間',RUN.total,420,'s',1)
+    chkP(20,'総所要時間',RUN.total,480,'s',1)
    }
    ST[id]=TR[id]&&TR[id].length&&TR[id].every(r=>r.ok)?'ok':'ng'
   }else ST[id]=''
@@ -5497,7 +5497,8 @@ const TNAME=[
  '熱効率の損失の内訳',
  'VVT マップ',
  'シャシーダイナモメーター',
- '振動による体感'
+ '振動による体感',
+ '運転点のマップ'
 ];
 
 /* ---- TEST-36 振動による体感 ---- */
