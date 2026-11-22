@@ -29,7 +29,7 @@
 | 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4577） | `gui/TEST-17.md`（3478） | 2069–2203 | 11 18 26 30 | `plot.js`:18,89,164,294,334 |
 | 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2311–2571 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:87,148,435 |
 | 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1205） | `gui/TEST-19.md`（873） | 2636–2683 | 12 15 23 31 | `plot.js`:787,800 |
-| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（740） | `specification/SPEC-20.md`（5158） | `specification/TEST-20.md`（1031） | 2706–2714 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 | – |
+| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1053） | `specification/SPEC-20.md`（5158） | `specification/TEST-20.md`（1031） | 2706–2714 | 01 10 13 15 16 17 24 26 31 32 33 34 35 36 | – |
 | 21 [U] | エンジン音 | `requirements/REQ-21.md`（1014） | `specification/SPEC-21.md`（8513） | `specification/TEST-21.md`（4105） | 2730–2897 | 02 18 22 23 27 36 | `core.js`:2279 `audio.js`:15,21,32,44,322,342 `ui.js`:830 |
 | 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3173–3307 | 11 | – |
 | 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 3309–3414 | – | `ui.js`:363,365,368,435,445 |
@@ -135,7 +135,8 @@
 | `src/doc.js` | 57869 |
 | `src/ui.js` | 40762 |
 | `src/tests.js` | 241519 |
-| `docs/changes/2026-11-21-solver.md` | 3456 |
+| `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
+| `docs/changes/2026-11-22-result-copy.md` | 416 |
