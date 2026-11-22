@@ -145,4 +145,4 @@
 | `docs/changes/2026-11-22-operating-map.md` | 6512 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
-| `docs/changes/2026-11-22-valve-timing-search.md` | 3241 |
+| `docs/changes/2026-11-22-valve-timing-search.md` | 3868 |
