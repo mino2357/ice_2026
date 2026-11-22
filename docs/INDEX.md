@@ -141,6 +141,6 @@
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
 | `docs/changes/2026-11-22-egr.md` | 414 |
-| `docs/changes/2026-11-22-operating-map.md` | 6508 |
+| `docs/changes/2026-11-22-operating-map.md` | 6512 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
