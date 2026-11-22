@@ -2814,6 +2814,15 @@ class VTEval{
 }
 /* 段階の名前（画面の表示．SPEC-32 A の 2） */
 const vtStage=S=>S.stage==='x0'?'探索の前の点':S.stage==='mc'?'標本':S.stage==='chk'?`確認 ${S.nst}`:S.stage==='tr'?`探索 ${S.nst}`:'終了';
+/* 段階の区間（画面の段階の表示．SPEC-32 A の 4）：評価した点を，段階と始点の番号が同じ続きごとにまとめる．[{nm（段階の名前），n（評価の回数）}] */
+function vtSegs(S){
+ const a=[];
+ for(const h of S.hist||[]){
+  const nm=vtStage({stage:h.stage,nst:h.k}),s=a[a.length-1];
+  if(s&&s.nm===nm)s.n++;else a.push({nm,n:1})
+ }
+ return a
+}
 /* 探索の進行（評価器と探索器をつなぐ．時間を区切って進める） */
 class VTOpt{
  constructor(c0,obj,O){

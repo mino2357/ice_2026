@@ -727,7 +727,7 @@ function setSub(n){
 }
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 /* ===== 最適化タブ（SPEC-32，34）と熱効率タブ（SPEC-33） ===== */
-const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
+const OP={m:0,obj:0,v:0,rs:null,sg:'',run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
 function optSub(m){
  OP.m=m;
  [...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');
@@ -741,10 +741,26 @@ function optObj(o){
  optText()
 }
 const optReady=()=>live.s.fired&&live.s.Nb>=300;
+/* 表示の切替（0：結果の表と評価の履歴，1：弁時期の図，2：探索の軌跡．SPEC-32 A の 3） */
+function optView(n){
+ OP.v=n;
+ [...$('ovb').children].forEach(b=>b.className=+b.dataset.v===n?'on':'');
+ $('otb').style.display=n?'none':'';
+ $('ohc').style.display=n?'none':'';
+ $('ovc').style.display=n?'':'none'
+}
+/* 図に渡す探索の状態：実行中の探索，無ければ直前の探索（終了または中止）．xc は評価中の点（実行中だけ） */
+function optFig(){
+ const r=OP.run||OP.rs,x0=VTK4.map(k=>Math.round(LP[k]/D));
+ if(!r)return{x0,xb:null,xc:null,hist:[],path:[],tr:null};
+ const S=r.S,run=r===OP.run&&!r.done;
+ return{x0:r.x0,xb:r.best?r.best.x:null,xc:run&&r.req&&r.req.value?r.req.value.x:null,hist:S.hist,path:S.path,tr:run?S.tr:null}
+}
 function optStart(){
  if(OP.run){optStop();return}
  if(!optReady()){$('opr').textContent='運転タブで START してください';return}
  OP.run=new VTOpt(live,OP.obj);
+ OP.rs=OP.run;
  OP.h=OP.run.h;
  OP.res=null;
  OP.t0=NOW();
@@ -779,6 +795,13 @@ function optText(){
  $('oap').disabled=!OP.res||!!OP.run;
  [...$('oob').children].forEach(b=>b.className=+b.dataset.o===OP.obj?'on':'');
  $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:'運転タブで START してください';
+ {
+  const q=OP.run||OP.rs,
+   sg=q?vtSegs(q.S):[],
+   tot=sg.reduce((a,s)=>a+s.n,0),
+   h=sg.map((s,k)=>`<i style="flex-grow:${s.n}"${OP.run&&k===sg.length-1?' class="on"':''}>${s.n>=.12*tot?s.nm+' '+s.n:''}</i>`).join('');
+  if(h!==OP.sg){OP.sg=h;$('osg').innerHTML=h}
+ }
  const r=OP.run;
  if(r){
   const n=r.h.length,b=r.best;
@@ -802,9 +825,14 @@ function optText(){
  if($('otb').innerHTML!==h)$('otb').innerHTML=h
 }
 function drawOpt(){
- if(OP.m===2){drawVMT();return}
+ if(OP.m===2){drawVMT();return null}
+ if(OP.v){
+  const q=prep($('ovc'));
+  return q?(OP.v===1?drawVtClock(q.g,q.W,q.H,optFig(),COL):drawVtPlanes(q.g,q.W,q.H,optFig(),COL,performance.now())):null
+ }
  const q=prep($('ohc'));
- if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)
+ if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL);
+ return null
 }
 /* 熱効率タブ（SPEC-33 C） */
 function drawLossT(){
@@ -985,6 +1013,7 @@ function initUI(){
  tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});
  tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});
  tap($('orn'),optStart);
+ tap($('ovb'),e=>{const b=e.target.closest('button[data-v]');if(b)optView(+b.dataset.v)});
  tap($('vrn'),vmStart);
  tap($('vap'),vmApply);
  tap($('vun'),()=>{undo();vmText()});

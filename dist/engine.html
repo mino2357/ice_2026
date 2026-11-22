@@ -77,7 +77,7 @@ section{max-width:1400px;padding:8px 12px;gap:6px}#s3,#s4{max-width:900px}
 .vtv{flex:none;width:40px;text-align:right;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
 /* 最適化タブ（SPEC-32，33） */
 .opv{display:none;flex:1;min-height:0;flex-direction:column;gap:4px}.opv.on{display:flex}
-#otb{flex:none;width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}#otb th,#otb td{padding:1px 4px;text-align:right;border-bottom:1px solid var(--ln);white-space:nowrap}#otb th{color:var(--ac);font-weight:600}#otb td:first-child,#otb th:first-child{text-align:left}
+.stg{display:flex;gap:2px;height:18px;flex:none}.stg i{flex:1 1 0;min-width:3px;font-style:normal;font-size:11px;line-height:18px;text-align:center;background:var(--cd);color:var(--mu);border-radius:4px;overflow:hidden;white-space:nowrap}.stg i.on{background:var(--ac);color:#fff}#otb{flex:none;width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}#otb th,#otb td{padding:1px 4px;text-align:right;border-bottom:1px solid var(--ln);white-space:nowrap}#otb th{color:var(--ac);font-weight:600}#otb td:first-child,#otb th:first-child{text-align:left}
 #opb button{font-size:12px;padding:0 2px}
 .dback{right:92px}
 #s4 a.xr{cursor:pointer;text-decoration:underline}
@@ -91,7 +91,7 @@ section{max-width:1400px;padding:8px 12px;gap:6px}#s3,#s4{max-width:900px}
 <nav id="N"><button data-t="0">運転</button><button data-t="1">線図</button><button data-t="5">性能曲線</button><button data-t="8">熱効率</button><button data-t="7">最適化</button><button data-t="2"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="6" cy="6" r="2.7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>設定</button><button data-t="3">検証</button><button data-t="4">解説</button></nav>
 <section id="s0"><div class="ew" id="ew"><canvas id="eng"></canvas><button id="bsys">全体図</button><div class="ntb thb" id="thb"><button id="thm">−</button><div class="ntv" id="thv"></div><div class="ntr" id="thr"><i></i><div class="ntk" id="thk"><b></b></div></div><button id="thp">＋</button></div><div class="ntb" id="ntb"><button id="ntm">−</button><div class="ntv" id="ntv"></div><div class="ntr" id="ntr"><i></i><div class="ntk" id="ntk"><b></b></div></div><button id="ntp">＋</button></div></div><div class="ctl" id="ctl"></div><div class="gr" id="ops"><button id="b1">START</button><button id="b2">FUEL CUT</button><button id="mp">指標1</button><button id="snd">音</button><button id="hap">振動</button></div><div class="gr g5" id="sp"><button data-v="0.02">0.02×</button><button data-v="0.1">0.1×</button><button data-v="0.5">0.5×</button><button data-v="1">1×</button><button data-v="Infinity">最速</button></div><div class="m" id="M"></div><canvas id="pv0"></canvas></section>
 <section id="s1"><div class="gr sg8" id="sg"></div><div class="gr g3" id="pvo"><button id="lin">Linear</button><button id="lg">log-log</button><button id="bs2">基準を現在に</button></div><canvas id="ch"></canvas><div class="vt" id="vt"></div></section>
-<section id="s7"><div class="gr g2" id="opb"><button data-m="0">バルブタイミング</button><button data-m="2">VVT マップ</button></div><div class="opv" id="o0"><div class="gr g2" id="oob"><button data-o="0">軸トルク</button><button data-o="1">正味熱効率</button></div><div class="ln" id="ost"></div><div class="gr g3" id="oac"><button id="orn">探索</button><button id="oap">適用</button><button id="oun">元に戻す</button></div><div class="ln" id="opr"></div><table id="otb"></table><canvas id="ohc"></canvas></div><div class="opv" id="o2"><div class="ln" id="vst"></div><div class="gr g3" id="vac"><button id="vrn">計算</button><button id="vap">適用</button><button id="vun">元に戻す</button></div><div class="ln" id="vpr"></div><canvas id="vmc"></canvas><div class="ln" id="vrd"></div><div class="ln" id="vrd2"></div><div class="ln" id="vrd3"></div></div></section><section id="s6"><div class="gr"><button id="bback">◀ 運転</button></div><canvas id="sys"></canvas></section><section id="s8"><canvas id="olc"></canvas></section>
+<section id="s7"><div class="gr g2" id="opb"><button data-m="0">バルブタイミング</button><button data-m="2">VVT マップ</button></div><div class="opv" id="o0"><div class="gr g2" id="oob"><button data-o="0">軸トルク</button><button data-o="1">正味熱効率</button></div><div class="ln" id="ost"></div><div class="gr g3" id="oac"><button id="orn">探索</button><button id="oap">適用</button><button id="oun">元に戻す</button></div><div class="ln" id="opr"></div><div class="stg" id="osg"></div><div class="gr g3" id="ovb"><button data-v="0" class="on">結果</button><button data-v="1">弁時期</button><button data-v="2">軌跡</button></div><table id="otb"></table><canvas id="ohc"></canvas><canvas id="ovc" style="display:none"></canvas></div><div class="opv" id="o2"><div class="ln" id="vst"></div><div class="gr g3" id="vac"><button id="vrn">計算</button><button id="vap">適用</button><button id="vun">元に戻す</button></div><div class="ln" id="vpr"></div><canvas id="vmc"></canvas><div class="ln" id="vrd"></div><div class="ln" id="vrd2"></div><div class="ln" id="vrd3"></div></div></section><section id="s6"><div class="gr"><button id="bback">◀ 運転</button></div><canvas id="sys"></canvas></section><section id="s8"><canvas id="olc"></canvas></section>
 <section id="s2"><div class="gr" style="grid-template-columns:44px 1fr 44px"><button id="pp">◀</button><button id="pt"></button><button id="pn">▶</button></div><div id="Pg"></div><div class="gr" id="act"><button id="x10"></button><button id="un">元に戻す</button><button id="df">既定値</button><button id="bs">基準更新</button><button id="ap">適用</button><button id="ds">破棄</button></div><div class="ln" id="ts"></div><div class="ln" id="pvt"></div><canvas id="pv"></canvas><div class="card" id="drv" style="flex:1;font-size:13px;line-height:1.7"></div><div id="pl"></div></section>
 <section id="s3"><div class="gr" style="grid-template-columns:2fr 1fr"><button id="rt">全テスト実行</button><button id="rcp">結果をコピー</button></div><div id="sm" class="card" style="flex:none;font-size:13px"></div><div class="gr g7" id="cp"></div><div id="dt" class="card"></div><div class="gr" style="grid-template-columns:1fr 1fr"><button id="pvb">◀</button><button id="nxb">▶</button></div></section>
 <section id="s4"><div class="gr g5" id="dsw"><button data-d="0">式の解説</button><button data-d="1">要件</button><button data-d="2">仕様</button><button data-d="3">画面</button><button data-d="4">用語</button></div><div id="txs" class="txs"></div><button id="dtop" class="dtop">↑ 先頭</button><button id="dback" class="dtop dback">◀ 戻る</button><div id="dv0"></div><div id="dv1" class="dvw"></div><div id="dv2" class="dvw"></div><div id="dv3" class="dvw"></div><div id="dv4" class="dvw"></div></section><section id="s5"><div class="gr g2"><button id="swg">計測開始</button><button id="swc">基準を消す</button></div><div class="gr g7" id="sws"><button>出力</button><button>η_v</button><button>燃費</button><button>点火</button><button>条件</button><button>前提</button><button>マップ</button></div><div class="ctl" id="swt"><div></div><div></div><div></div></div><canvas id="tc"></canvas><div id="swo" class="swo"></div><div id="swa" class="swa"></div><div class="gr g5" id="mpq" style="display:none"><button class="on">燃費</button><button>排気温</button><button>空気量</button><button>最大圧</button><button>点火</button></div><div class="ctl" id="mpt" style="display:none"><div></div><div></div><div></div><div></div></div><canvas id="mpc" style="display:none"></canvas></section>
@@ -2912,6 +2912,15 @@ class VTEval{
 }
 /* 段階の名前（画面の表示．SPEC-32 A の 2） */
 const vtStage=S=>S.stage==='x0'?'探索の前の点':S.stage==='mc'?'標本':S.stage==='chk'?`確認 ${S.nst}`:S.stage==='tr'?`探索 ${S.nst}`:'終了';
+/* 段階の区間（画面の段階の表示．SPEC-32 A の 4）：評価した点を，段階と始点の番号が同じ続きごとにまとめる．[{nm（段階の名前），n（評価の回数）}] */
+function vtSegs(S){
+ const a=[];
+ for(const h of S.hist||[]){
+  const nm=vtStage({stage:h.stage,nst:h.k}),s=a[a.length-1];
+  if(s&&s.nm===nm)s.n++;else a.push({nm,n:1})
+ }
+ return a
+}
 /* 探索の進行（評価器と探索器をつなぐ．時間を区切って進める） */
 class VTOpt{
  constructor(c0,obj,O){
@@ -4848,6 +4857,193 @@ function drawLoss(g,W,H,r,col,msg){
  lossFoot(r).forEach((t,n)=>g.fillText(t,4,H-35+n*14,W-8));
  return S
 }
+/* ===== バルブタイミングの探索の図（SPEC-32 A の 5，6） ===== */
+/* 色：排気弁，吸気弁，いま評価している点 */
+const VTC={ex:'#e8590c',in:'#1c7ed6',cur:'#be4bdb'};
+/* 円の図（バルブタイミングダイヤグラム）：上が上死点，下が下死点，時計回りにクランク角．外の輪が排気弁，内の輪が吸気弁．
+   S：{x0（探索の前），xb（最良．無ければ x0），xc（いま評価している点．無ければ null）}．描いた弧 [{k（'ex'／'in'），w（'x0'／'xb'／'xc'），a（開く角），b（閉じる角），r}] と文字の枠を返す */
+function drawVtClock(g,W,H,S,col){
+ const cx=W/2,
+  cy=H/2,
+  R=Math.max(34,Math.min(W/2-62,H/2-24)),
+  re=R,
+  ri=R-Math.max(16,.22*R),
+  ph=a=>((a%360+360)%360)*PI/180-PI/2,
+  arcs=[],
+  labs=[];
+ g.font='11px system-ui,sans-serif';
+ g.textBaseline='middle';
+ g.lineWidth=1;
+ g.strokeStyle=col.ln;
+ g.beginPath();
+ g.arc(cx,cy,R+11,0,2*PI);
+ g.stroke();
+ g.beginPath();
+ g.moveTo(cx,cy-R-14);
+ g.lineTo(cx,cy+R+14);
+ g.stroke();
+ g.fillStyle=col.mu;
+ g.textAlign='center';
+ g.fillText('上死点',cx,cy-R-19);
+ g.fillText('下死点',cx,cy+R+19);
+ const arc=(k,w,x,r,c,lw,dash)=>{
+   const a=k==='ex'?x[2]:x[0]+720,b=k==='ex'?x[3]:x[1]+720;
+   arcs.push({k,w,a,b,r});
+   g.strokeStyle=c;
+   g.lineWidth=lw;
+   g.setLineDash(dash||[]);
+   g.beginPath();
+   g.arc(cx,cy,r,ph(a),ph(a)+(b-a)*PI/180);
+   g.stroke();
+   g.setLineDash([]);
+   g.lineWidth=1
+  },
+  lab=(a,r,t)=>{
+   const x=cx+r*Math.cos(ph(a)),
+    y=cy+r*Math.sin(ph(a)),
+    w=g.measureText(t).width,
+    al=x<cx-4?'right':x>cx+4?'left':'center',
+    x0=al==='right'?x-5-w:al==='left'?x+5:x-w/2;
+   g.textAlign=al;
+   g.fillStyle=col.fg;
+   g.fillText(t,x+(al==='right'?-5:al==='left'?5:0),y);
+   labs.push({x:x0,y:y-7,w,h:14})
+  },
+  xb=S.xb||S.x0;
+ arc('ex','x0',S.x0,re,col.mu,1.5,[4,3]);
+ arc('in','x0',S.x0,ri,col.mu,1.5,[4,3]);
+ arc('ex','xb',xb,re,VTC.ex,8);
+ arc('in','xb',xb,ri,VTC.in,8);
+ if(S.xc){arc('ex','xc',S.xc,re+7,VTC.cur,2.5);arc('in','xc',S.xc,ri-7,VTC.cur,2.5)}
+ lab(xb[2],re+15,'EVO '+xb[2]+'°');
+ lab(xb[3],re+15,'EVC '+xb[3]+'°');
+ lab(xb[0]+720,ri-22,'IVO '+xb[0]+'°');
+ lab(xb[1]+720,ri-22,'IVC '+xb[1]+'°');
+ g.fillStyle=col.mu;
+ g.textAlign='center';
+ g.fillText('外：排気　内：吸気',cx,cy-7);
+ g.fillText('重なり '+(xb[3]-(xb[0]+720))+'°',cx,cy+9);
+ return{cx,cy,R,arcs,labs}
+}
+/* 探索の軌跡（2 枚の平面）：左が吸気（IVO，IVC），右が排気（EVO，EVC）．S：{x0，hist（評価した点），path（中心の移った経路），tr（いまの中心と Δ．無ければ null），xb（最良），xc（いま評価している点）}．
+   軸の範囲は，標本の段では評価した点の全部，信頼領域の探索が始まった後は，その探索で動いた範囲（中心 ± Δ と評価した点）と探索の前の点（遠くの標本は範囲に入れず，枠で切る）．目盛の数字は範囲の両端．t は時刻 [ms]（いまの点の輪の大きさを変える） */
+function drawVtPlanes(g,W,H,S,col,t){
+ const NM=['IVO','IVC','EVO','EVC'],
+  gap=12,
+  pw=(W-gap)/2,
+  ml=34,
+  mb=26,
+  mt=8,
+  h=S.hist||[],
+  fin=h.filter(q=>q.J>-Infinity),
+  trs=h.some(q=>q.stage==='tr'||q.stage==='chk'),
+  rng=NM.map((_,k)=>{
+   const a=[S.x0[k]];
+   for(const q of h)if(q.stage==='tr'||q.stage==='chk')a.push(q.x[k],q.c[k]-q.d,q.c[k]+q.d);else if(!trs&&q.J>-Infinity)a.push(q.x[k]);
+   const lo=Math.min(...a),hi=Math.max(...a),p=Math.max(4,.06*(hi-lo));
+   return[Math.floor(lo-p),Math.ceil(hi+p)]
+  }),
+  Js=fin.filter(q=>q.stage!=='mc').map(q=>q.J).sort((a,b)=>a-b),
+  Jhi=Js.length?Js[Js.length-1]:1,
+  Jlo=Js.length?Js[Math.floor(.3*Js.length)]:0,
+  cl=J=>`rgb(${vir((J-Jlo)/Math.max(1e-12,Jhi-Jlo))})`,
+  pl=[],
+  mk=[];
+ let n=0,np=0,box=false;
+ g.font='11px system-ui,sans-serif';
+ g.textBaseline='middle';
+ [[0,1,'吸気'],[2,3,'排気']].forEach(([a,b,nm],k)=>{
+  const x0=k*(pw+gap)+ml,
+   w=pw-ml-2,
+   y0=mt,
+   hh=H-mt-mb,
+   [alo,ahi]=rng[a],
+   [blo,bhi]=rng[b],
+   X=v=>x0+(v-alo)/(ahi-alo)*w,
+   Y=v=>y0+hh-(v-blo)/(bhi-blo)*hh;
+  pl.push({x:x0,y:y0,w,h:hh});
+  g.lineWidth=1;
+  g.strokeStyle=col.ln;
+  g.strokeRect(x0,y0,w,hh);
+  g.fillStyle=col.mu;
+  g.textAlign='center';
+  g.fillText(NM[a]+' [°]',x0+w/2,H-7);
+  g.textAlign='left';
+  g.fillText(alo,x0,y0+hh+9);
+  g.textAlign='right';
+  g.fillText(ahi,x0+w,y0+hh+9);
+  g.fillText(bhi,x0-3,y0+6);
+  g.fillText(blo,x0-3,y0+hh-6);
+  g.save();
+  g.translate(x0-24,y0+hh/2);
+  g.rotate(-PI/2);
+  g.textAlign='center';
+  g.fillText(NM[b]+' [°]',0,0);
+  g.restore();
+  g.save();
+  g.beginPath();
+  g.rect(x0,y0,w,hh);
+  g.clip();
+  for(const q of fin){
+   const x=X(q.x[a]),y=Y(q.x[b]);
+   if(!k)n++;
+   g.beginPath();
+   g.arc(x,y,q.stage==='mc'?2.6:3,0,2*PI);
+   if(q.stage==='mc'){g.strokeStyle=col.mu;g.globalAlpha=.8;g.stroke();g.globalAlpha=1}else{g.fillStyle=cl(q.J);g.fill()}
+  }
+  /* 中心の経路：1 つ目の探索は実線，2 つ目は破線 */
+  for(const kk of[1,2]){
+   const P=(S.path||[]).filter(q=>q.k===kk);
+   if(P.length<1)continue;
+   if(!k)np+=P.length;
+   g.strokeStyle=col.fg;
+   g.lineWidth=1.6;
+   g.setLineDash(kk===1?[]:[5,3]);
+   g.beginPath();
+   P.forEach((q,j)=>j?g.lineTo(X(q.x[a]),Y(q.x[b])):g.moveTo(X(q.x[a]),Y(q.x[b])));
+   g.stroke();
+   g.setLineDash([]);
+   g.lineWidth=1
+  }
+  /* 信頼領域の枠（中心 ± Δ） */
+  if(S.tr&&S.tr.k>0){
+   const c=S.tr.x,d=S.tr.d,bx=X(c[a]-d),by=Y(c[b]+d),bw=X(c[a]+d)-bx,bh=Y(c[b]-d)-by;
+   box=true;
+   g.fillStyle=VTC.cur;
+   g.globalAlpha=.12;
+   g.fillRect(bx,by,bw,bh);
+   g.globalAlpha=1;
+   g.strokeStyle=VTC.cur;
+   g.lineWidth=1.5;
+   g.strokeRect(bx,by,bw,bh);
+   g.lineWidth=1
+  }
+  g.restore();
+  /* 探索の前（○），最良（★），いま評価している点（輪） */
+  const put=(x,sh)=>{
+   const px=Math.max(x0,Math.min(x0+w,X(x[a]))),py=Math.max(y0,Math.min(y0+hh,Y(x[b])));
+   mk.push({sh,x:px,y:py});
+   g.beginPath();
+   if(sh==='o'){g.strokeStyle=col.fg;g.lineWidth=2;g.arc(px,py,5,0,2*PI);g.stroke()}else if(sh==='s'){
+    for(let j=0;j<10;j++){const r=j%2?3.2:7,q=-PI/2+j*PI/5;g.lineTo(px+r*Math.cos(q),py+r*Math.sin(q))}
+    g.closePath();
+    g.fillStyle=col.fg;
+    g.fill();
+    g.strokeStyle=col.cd;
+    g.lineWidth=1;
+    g.stroke()
+   }else{g.strokeStyle=VTC.cur;g.lineWidth=2;g.arc(px,py,6+2*Math.sin((t||0)/160),0,2*PI);g.stroke()}
+   g.lineWidth=1
+  };
+  put(S.x0,'o');
+  if(S.xb)put(S.xb,'s');
+  if(S.xc)put(S.xc,'c');
+  g.fillStyle=col.fg;
+  g.textAlign='left';
+  g.fillText(nm,x0+5,y0+9)
+ });
+ return{pl,mk,n,np,box,rng}
+}
 /* ===== VVT マップ（SPEC-34 A） ===== */
 /* 双一次補間：G[j][i] は (xs[i], ys[j]) の値．範囲の外は端に寄せる．4 隅のどれかが未定義（NaN）なら未定義 */
 function bil2(G,xs,ys,a,b){
@@ -6208,7 +6404,6 @@ function*scen(name){
    yield*from('S2',{Ta:0,nt:600},15);
    break;
   case'F3000':
-  case'F4000':
   case'F3500':
   case'F3000G':
    {
@@ -10980,9 +11175,16 @@ TST[32]=function*(){
   const hit=valveHit(P,s4.c.G);
   chkB(32,'機関での探索（S4，軸トルク最大）：8 近傍の J ≤ J* ＋ 許容の 2 倍，J* ≥ J(x₀)，VALVE HIT なし，評価 ≤ 200 回',nb.every(v=>v<=R.J+tol)&&R.J>=R.J0&&!hit&&R.ne<=200,`${R.x0.join('，')} → ${R.x.join('，')}°，T_b ${R.J0.toFixed(3)} → ${R.J.toFixed(3)} N·m，8 近傍の最大の差 ${(Math.max(...nb)-R.J).toExponential(2)}（許容 ${tol.toExponential(1)}），評価 ${R.ne} 回`);
   chkP(32,'機関での探索の所要',op.t/1e3,60,'s',1);
-/* 全開 4000 rpm（最適点が探索の前の点から遠い）：上限に達せずに終わり，種を変えても同じ値に着く */
-  const f4=yield*scen('F4000'),w=[];
-  for(const seed of[OPT.seed,1]){const o=new VTOpt(f4.c,0,{...OPT,seed});while(!o.run(10))yield;w.push(o.R)}
+/* 全開 4000 rpm（最適点が探索の前の点から遠い）：上限に達せずに終わり，種を変えても同じ値に着く．機関は既定の解法（BS3）で作る（シナリオの DOPRI5 では 2 回の探索に開発用の計算機で約 55 s かかるため） */
+  const c4=new Core({...mkP(),cvar:0,sauto:1,mode:1,alm:90*D,nt:4000}),w=[];
+  c4.fixw=1;
+  c4.fixTw=1;
+  c4.s.y[5]=SWC.Tw;
+  c4.s.y[1]=4000*PI/30;
+  c4.s.Nb=4000;
+  c4.start();
+  for(let n=0;c4.s.cyc<45;){c4.step();if((++n&7)===0&&RUN.over())yield}
+  for(const seed of[OPT.seed,1]){const o=new VTOpt(c4,0,{...OPT,seed});while(!o.run(10))yield;w.push(o.R)}
   const dj=Math.abs(w[0].J-w[1].J)/Math.abs(w[0].J);
   chkB(32,'機関での探索（全開 4000 rpm，軸トルク最大）：評価の上限（400 回）に達せずに終わり，種を変えた 2 回の結果の値の差が 0.1% 以下',w.every(q=>q&&!q.stop&&q.local&&q.ne<OPT.nmax&&q.J>q.J0)&&dj<=1e-3,`${w.map(q=>`(${q.x.join('，')}) ${q.J.toFixed(3)} N·m，評価 ${q.ne} 回`).join('／')}，差 ${(dj*100).toFixed(4)}%（前 ${w[0].J0.toFixed(3)} N·m）`)
  }
@@ -11018,6 +11220,85 @@ TST[32]=function*(){
   live=sv;
   chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点と探索の前の値を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る',st&&stopped&&ap&&un,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}（${n} フレーム）`);
   chkP(32,'探索中のフレームの間隔（最長）',mx,250,'ms',0)
+ }
+/* 7：表示の切替，段階の表示，弁時期の図，探索の軌跡（解析的な関数の探索の途中と終わりの記録で） */
+ {
+  const b=[-10,264,490,730],
+   a=[-30,239,505,750],
+   n2=(x,y)=>x.reduce((s,v,i)=>s+(v-y[i])**2,0),
+   J=x=>3*Math.exp(-n2(x,a)/1800)+Math.exp(-n2(x,b)/128),
+   mk=stop=>{
+    const S={},g=vtQuad(b,vtOk,OPT,S);
+    let r=g.next(),h=[],best=null;
+    while(!r.done&&h.length<stop){
+     const v=J(r.value.x);
+     h.push({J:v,cls:r.value.cls,x:r.value.x});
+     if(!best||v>best.J)best={x:r.value.x,J:v};
+     r=g.next(v)
+    }
+    return{S,h,best,x0:b,req:r,done:r.done,E:{obj:0,nu:0},t:0}
+   },
+   mid=mk(60),
+   end=mk(1e9),
+   sv={run:OP.run,rs:OP.rs,v:OP.v,h:OP.h},
+   q=[];
+  show(7);
+  optSub(0);
+  OP.run=mid;
+  OP.rs=mid;
+  OP.h=mid.h;
+  optText();
+  for(const v of[1,2,0]){
+   tapEl($('ovb').children[v]);
+   yield 'frame';
+   const sc=$('s7');
+   q.push(OP.v===v&&[...$('ovb').children].every((e,k)=>e.className===(k===v?'on':''))&&($('ovc').style.display==='none')===(v===0)&&($('otb').style.display==='none')===(v!==0)&&sc.scrollHeight<=sc.clientHeight+1&&document.documentElement.scrollHeight<=innerHeight+1)
+  }
+  q.push([...$('ovb').children].map(e=>e.textContent).join()==='結果,弁時期,軌跡'&&[...$('ovb').children].every(e=>Bx(e).height>=43.5&&txtW(e)<=.95*room(e)));
+  const hh=Bx($('ohc')).height;
+  q.push(hh>=60);
+  /* 段階の表示 */
+  const sg=vtSegs(mid.S),
+   se=vtSegs(end.S),
+   el=[...$('osg').children],
+   okS=sg.reduce((s,x)=>s+x.n,0)===mid.S.hist.length&&el.length===sg.length&&el[el.length-1].className==='on'&&el.filter(e=>e.className==='on').length===1&&sg.map(x=>x.nm).join()==='探索の前の点,標本,探索 1'&&el[1].textContent==='標本 33'&&se.map(x=>x.nm).join().startsWith('探索の前の点,標本,探索 1')&&se.some(x=>x.nm==='探索 2')&&se.reduce((s,x)=>s+x.n,0)===end.S.hist.length&&Bx($('osg')).height>=14&&el.every(e=>e.scrollWidth<=e.clientWidth+.5);
+  /* 弁時期の図（探索の途中：探索の前，最良，評価中の 3 つ × 排気と吸気） */
+  optView(1);
+  yield 'frame';
+  const c=$('ovc'),
+   W=c.clientWidth,
+   H=c.clientHeight,
+   D1=drawOpt(),
+   xb=mid.best.x,
+   ar=(k,w)=>D1.arcs.find(e=>e.k===k&&e.w===w),
+   okC=!!D1&&D1.arcs.length===6&&ar('ex','xb').a===xb[2]&&ar('ex','xb').b===xb[3]&&ar('in','xb').a===xb[0]+720&&ar('in','xb').b===xb[1]+720&&ar('ex','x0').a===b[2]&&ar('in','x0').b===b[1]+720&&ar('ex','xc').a===mid.req.value.x[2]&&ar('ex','xb').r>ar('in','xb').r&&D1.labs.length===4&&D1.labs.every(e=>e.x>=0&&e.y>=0&&e.x+e.w<=W&&e.y+e.h<=H)&&D1.cy-D1.R-26>=0&&D1.cy+D1.R+26<=H;
+  /* 探索の軌跡（途中：点，経路，信頼領域の枠，3 つの印 × 2 枚） */
+  optView(2);
+  yield 'frame';
+  const D2=drawOpt(),
+   nf=mid.S.hist.filter(e=>e.J>-Infinity).length,
+   okP=!!D2&&D2.n===nf&&D2.np===mid.S.path.length&&D2.np>=1&&D2.box&&D2.pl.length===2&&D2.pl.every(e=>e.x>=0&&e.y>=0&&e.x+e.w<=W&&e.y+e.h+20<=H&&e.w>=80&&e.h>=80)&&D2.mk.length===6&&D2.mk.every((e,k)=>{const p=D2.pl[k<3?0:1];return e.x>=p.x&&e.x<=p.x+p.w&&e.y>=p.y&&e.y<=p.y+p.h});
+  /* 終わった後：評価中の点と信頼領域の枠は消え，経路は 2 つの始点の分 */
+  OP.run=null;
+  OP.rs=end;
+  optText();
+  const D3=drawOpt(),elE=[...$('osg').children];
+  optView(1);
+  const D4=drawOpt(),
+   okE=!D3.box&&D3.mk.length===4&&D3.np===end.S.path.length&&end.S.path.some(e=>e.k===2)&&D4.arcs.length===4&&elE.length===se.length&&elE.every(e=>e.className!=='on');
+  let tm=0;
+  for(const v of[1,2]){
+   optView(v);
+   const t0=performance.now();
+   for(let k=0;k<30;k++)drawOpt();
+   tm=Math.max(tm,(performance.now()-t0)/30)
+  }
+  chkB(32,'表示：[結果][弁時期][軌跡] で切り替わる（44 px 以上，文字が収まる，スクロールなし，評価の履歴の図が 60 px 以上）．段階の表示が，段階ごとの評価の回数と，いまの段階を示す',q.every(x=>x)&&okS,`切替 ${q.map(x=>x?1:0).join('')}，段階 ${okS}（${sg.map(x=>x.nm+' '+x.n).join('｜')}／終わり ${se.map(x=>x.nm+' '+x.n).join('｜')}），履歴の図 ${hh.toFixed(0)} px`);
+  chkB(32,'弁時期の図：探索の前・最良・評価中の点の，排気弁と吸気弁の区間（6 本の弧）が弁時期のとおりで，外が排気，文字 4 つと図が Canvas の中',okC,`弧 ${D1?D1.arcs.length:0} 本，文字 ${D1?D1.labs.length:0} 個，半径 ${D1?D1.R.toFixed(0):'–'} px（Canvas ${W}×${H}）`);
+  chkB(32,'探索の軌跡：評価した点の全部，中心の経路，信頼領域の枠，3 つの印（探索の前・最良・評価中）が 2 枚の平面の中．終わった後は枠と評価中の点が消え，経路が 2 つの始点の分ある',okP&&okE,`途中：点 ${D2?D2.n:0}/${nf}，経路 ${D2?D2.np:0} 点，枠 ${D2&&D2.box}，印 ${D2?D2.mk.length:0}．終わり：枠 ${D3.box}，印 ${D3.mk.length}，経路 ${D3.np} 点，弧 ${D4.arcs.length} 本`);
+  chkP(32,'探索の図の描画（弁時期と軌跡．30 回の平均の大きい方）',tm,6,'ms',2);
+  Object.assign(OP,sv);
+  optView(0)
  }
  Object.assign(OP,o0);
  uiDefault();
@@ -12683,7 +12964,7 @@ function setSub(n){
 }
 const pvo=()=>{$('lin').className=U.log?'':'on';$('lg').className=U.log?'on':''};
 /* ===== 最適化タブ（SPEC-32，34）と熱効率タブ（SPEC-33） ===== */
-const OP={m:0,obj:0,run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
+const OP={m:0,obj:0,v:0,rs:null,sg:'',run:null,res:null,h:[],lb:null,lres:null,lt:-1e9,lcy:-1,maxMs:0,vm:null,vsel:null,vc:null,vkey:'',vcv:null,vp0:[0,0]};
 function optSub(m){
  OP.m=m;
  [...$('opb').children].forEach(b=>b.className=+b.dataset.m===m?'on':'');
@@ -12697,10 +12978,26 @@ function optObj(o){
  optText()
 }
 const optReady=()=>live.s.fired&&live.s.Nb>=300;
+/* 表示の切替（0：結果の表と評価の履歴，1：弁時期の図，2：探索の軌跡．SPEC-32 A の 3） */
+function optView(n){
+ OP.v=n;
+ [...$('ovb').children].forEach(b=>b.className=+b.dataset.v===n?'on':'');
+ $('otb').style.display=n?'none':'';
+ $('ohc').style.display=n?'none':'';
+ $('ovc').style.display=n?'':'none'
+}
+/* 図に渡す探索の状態：実行中の探索，無ければ直前の探索（終了または中止）．xc は評価中の点（実行中だけ） */
+function optFig(){
+ const r=OP.run||OP.rs,x0=VTK4.map(k=>Math.round(LP[k]/D));
+ if(!r)return{x0,xb:null,xc:null,hist:[],path:[],tr:null};
+ const S=r.S,run=r===OP.run&&!r.done;
+ return{x0:r.x0,xb:r.best?r.best.x:null,xc:run&&r.req&&r.req.value?r.req.value.x:null,hist:S.hist,path:S.path,tr:run?S.tr:null}
+}
 function optStart(){
  if(OP.run){optStop();return}
  if(!optReady()){$('opr').textContent='運転タブで START してください';return}
  OP.run=new VTOpt(live,OP.obj);
+ OP.rs=OP.run;
  OP.h=OP.run.h;
  OP.res=null;
  OP.t0=NOW();
@@ -12735,6 +13032,13 @@ function optText(){
  $('oap').disabled=!OP.res||!!OP.run;
  [...$('oob').children].forEach(b=>b.className=+b.dataset.o===OP.obj?'on':'');
  $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:'運転タブで START してください';
+ {
+  const q=OP.run||OP.rs,
+   sg=q?vtSegs(q.S):[],
+   tot=sg.reduce((a,s)=>a+s.n,0),
+   h=sg.map((s,k)=>`<i style="flex-grow:${s.n}"${OP.run&&k===sg.length-1?' class="on"':''}>${s.n>=.12*tot?s.nm+' '+s.n:''}</i>`).join('');
+  if(h!==OP.sg){OP.sg=h;$('osg').innerHTML=h}
+ }
  const r=OP.run;
  if(r){
   const n=r.h.length,b=r.best;
@@ -12758,9 +13062,14 @@ function optText(){
  if($('otb').innerHTML!==h)$('otb').innerHTML=h
 }
 function drawOpt(){
- if(OP.m===2){drawVMT();return}
+ if(OP.m===2){drawVMT();return null}
+ if(OP.v){
+  const q=prep($('ovc'));
+  return q?(OP.v===1?drawVtClock(q.g,q.W,q.H,optFig(),COL):drawVtPlanes(q.g,q.W,q.H,optFig(),COL,performance.now())):null
+ }
  const q=prep($('ohc'));
- if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL)
+ if(q)drawOptH(q.g,q.W,q.H,OP.run?OP.run.h:OP.h,COL);
+ return null
 }
 /* 熱効率タブ（SPEC-33 C） */
 function drawLossT(){
@@ -12881,7 +13190,7 @@ function lossTick(ms){
 /* [音] と [振動]：文字は変えず，ON のとき選ばれた色（SPEC-21 D の 5，画面の文書 SPEC-36 D の 1） */
 const sndLbl=()=>{const b=$('snd');b.className=SND.on?'on':''};
 /* 振動（SPEC-36）：navigator.vibrate を呼ぶのはここだけ */
-const BUILD='e456dee1';
+const BUILD='edffbfc0';
 /* 検証の結果をコピーする（REQ-20 の 7）．クリップボードに書けたら 'ok'，書けなければ詳細カードに選択できる枠で表示して 'show' */
 async function copyRes(){
  const t=resText(envInfo()),b=$('rcp');
@@ -12941,6 +13250,7 @@ function initUI(){
  tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});
  tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});
  tap($('orn'),optStart);
+ tap($('ovb'),e=>{const b=e.target.closest('button[data-v]');if(b)optView(+b.dataset.v)});
  tap($('vrn'),vmStart);
  tap($('vap'),vmApply);
  tap($('vun'),()=>{undo();vmText()});

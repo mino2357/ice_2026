@@ -139,7 +139,6 @@ function*scen(name){
    yield*from('S2',{Ta:0,nt:600},15);
    break;
   case'F3000':
-  case'F4000':
   case'F3500':
   case'F3000G':
    {
@@ -4911,9 +4910,16 @@ TST[32]=function*(){
   const hit=valveHit(P,s4.c.G);
   chkB(32,'機関での探索（S4，軸トルク最大）：8 近傍の J ≤ J* ＋ 許容の 2 倍，J* ≥ J(x₀)，VALVE HIT なし，評価 ≤ 200 回',nb.every(v=>v<=R.J+tol)&&R.J>=R.J0&&!hit&&R.ne<=200,`${R.x0.join('，')} → ${R.x.join('，')}°，T_b ${R.J0.toFixed(3)} → ${R.J.toFixed(3)} N·m，8 近傍の最大の差 ${(Math.max(...nb)-R.J).toExponential(2)}（許容 ${tol.toExponential(1)}），評価 ${R.ne} 回`);
   chkP(32,'機関での探索の所要',op.t/1e3,60,'s',1);
-/* 全開 4000 rpm（最適点が探索の前の点から遠い）：上限に達せずに終わり，種を変えても同じ値に着く */
-  const f4=yield*scen('F4000'),w=[];
-  for(const seed of[OPT.seed,1]){const o=new VTOpt(f4.c,0,{...OPT,seed});while(!o.run(10))yield;w.push(o.R)}
+/* 全開 4000 rpm（最適点が探索の前の点から遠い）：上限に達せずに終わり，種を変えても同じ値に着く．機関は既定の解法（BS3）で作る（シナリオの DOPRI5 では 2 回の探索に開発用の計算機で約 55 s かかるため） */
+  const c4=new Core({...mkP(),cvar:0,sauto:1,mode:1,alm:90*D,nt:4000}),w=[];
+  c4.fixw=1;
+  c4.fixTw=1;
+  c4.s.y[5]=SWC.Tw;
+  c4.s.y[1]=4000*PI/30;
+  c4.s.Nb=4000;
+  c4.start();
+  for(let n=0;c4.s.cyc<45;){c4.step();if((++n&7)===0&&RUN.over())yield}
+  for(const seed of[OPT.seed,1]){const o=new VTOpt(c4,0,{...OPT,seed});while(!o.run(10))yield;w.push(o.R)}
   const dj=Math.abs(w[0].J-w[1].J)/Math.abs(w[0].J);
   chkB(32,'機関での探索（全開 4000 rpm，軸トルク最大）：評価の上限（400 回）に達せずに終わり，種を変えた 2 回の結果の値の差が 0.1% 以下',w.every(q=>q&&!q.stop&&q.local&&q.ne<OPT.nmax&&q.J>q.J0)&&dj<=1e-3,`${w.map(q=>`(${q.x.join('，')}) ${q.J.toFixed(3)} N·m，評価 ${q.ne} 回`).join('／')}，差 ${(dj*100).toFixed(4)}%（前 ${w[0].J0.toFixed(3)} N·m）`)
  }
@@ -4949,6 +4955,85 @@ TST[32]=function*(){
   live=sv;
   chkB(32,'画面の操作：[探索] で始まり，[中止] で止まって最良の点と探索の前の値を表に出す，[適用] で設定の 4 項目が結果になる，[元に戻す] で戻る',st&&stopped&&ap&&un,`開始 ${st}，中止 ${stopped}，適用 ${ap}，戻す ${un}（${n} フレーム）`);
   chkP(32,'探索中のフレームの間隔（最長）',mx,250,'ms',0)
+ }
+/* 7：表示の切替，段階の表示，弁時期の図，探索の軌跡（解析的な関数の探索の途中と終わりの記録で） */
+ {
+  const b=[-10,264,490,730],
+   a=[-30,239,505,750],
+   n2=(x,y)=>x.reduce((s,v,i)=>s+(v-y[i])**2,0),
+   J=x=>3*Math.exp(-n2(x,a)/1800)+Math.exp(-n2(x,b)/128),
+   mk=stop=>{
+    const S={},g=vtQuad(b,vtOk,OPT,S);
+    let r=g.next(),h=[],best=null;
+    while(!r.done&&h.length<stop){
+     const v=J(r.value.x);
+     h.push({J:v,cls:r.value.cls,x:r.value.x});
+     if(!best||v>best.J)best={x:r.value.x,J:v};
+     r=g.next(v)
+    }
+    return{S,h,best,x0:b,req:r,done:r.done,E:{obj:0,nu:0},t:0}
+   },
+   mid=mk(60),
+   end=mk(1e9),
+   sv={run:OP.run,rs:OP.rs,v:OP.v,h:OP.h},
+   q=[];
+  show(7);
+  optSub(0);
+  OP.run=mid;
+  OP.rs=mid;
+  OP.h=mid.h;
+  optText();
+  for(const v of[1,2,0]){
+   tapEl($('ovb').children[v]);
+   yield 'frame';
+   const sc=$('s7');
+   q.push(OP.v===v&&[...$('ovb').children].every((e,k)=>e.className===(k===v?'on':''))&&($('ovc').style.display==='none')===(v===0)&&($('otb').style.display==='none')===(v!==0)&&sc.scrollHeight<=sc.clientHeight+1&&document.documentElement.scrollHeight<=innerHeight+1)
+  }
+  q.push([...$('ovb').children].map(e=>e.textContent).join()==='結果,弁時期,軌跡'&&[...$('ovb').children].every(e=>Bx(e).height>=43.5&&txtW(e)<=.95*room(e)));
+  const hh=Bx($('ohc')).height;
+  q.push(hh>=60);
+  /* 段階の表示 */
+  const sg=vtSegs(mid.S),
+   se=vtSegs(end.S),
+   el=[...$('osg').children],
+   okS=sg.reduce((s,x)=>s+x.n,0)===mid.S.hist.length&&el.length===sg.length&&el[el.length-1].className==='on'&&el.filter(e=>e.className==='on').length===1&&sg.map(x=>x.nm).join()==='探索の前の点,標本,探索 1'&&el[1].textContent==='標本 33'&&se.map(x=>x.nm).join().startsWith('探索の前の点,標本,探索 1')&&se.some(x=>x.nm==='探索 2')&&se.reduce((s,x)=>s+x.n,0)===end.S.hist.length&&Bx($('osg')).height>=14&&el.every(e=>e.scrollWidth<=e.clientWidth+.5);
+  /* 弁時期の図（探索の途中：探索の前，最良，評価中の 3 つ × 排気と吸気） */
+  optView(1);
+  yield 'frame';
+  const c=$('ovc'),
+   W=c.clientWidth,
+   H=c.clientHeight,
+   D1=drawOpt(),
+   xb=mid.best.x,
+   ar=(k,w)=>D1.arcs.find(e=>e.k===k&&e.w===w),
+   okC=!!D1&&D1.arcs.length===6&&ar('ex','xb').a===xb[2]&&ar('ex','xb').b===xb[3]&&ar('in','xb').a===xb[0]+720&&ar('in','xb').b===xb[1]+720&&ar('ex','x0').a===b[2]&&ar('in','x0').b===b[1]+720&&ar('ex','xc').a===mid.req.value.x[2]&&ar('ex','xb').r>ar('in','xb').r&&D1.labs.length===4&&D1.labs.every(e=>e.x>=0&&e.y>=0&&e.x+e.w<=W&&e.y+e.h<=H)&&D1.cy-D1.R-26>=0&&D1.cy+D1.R+26<=H;
+  /* 探索の軌跡（途中：点，経路，信頼領域の枠，3 つの印 × 2 枚） */
+  optView(2);
+  yield 'frame';
+  const D2=drawOpt(),
+   nf=mid.S.hist.filter(e=>e.J>-Infinity).length,
+   okP=!!D2&&D2.n===nf&&D2.np===mid.S.path.length&&D2.np>=1&&D2.box&&D2.pl.length===2&&D2.pl.every(e=>e.x>=0&&e.y>=0&&e.x+e.w<=W&&e.y+e.h+20<=H&&e.w>=80&&e.h>=80)&&D2.mk.length===6&&D2.mk.every((e,k)=>{const p=D2.pl[k<3?0:1];return e.x>=p.x&&e.x<=p.x+p.w&&e.y>=p.y&&e.y<=p.y+p.h});
+  /* 終わった後：評価中の点と信頼領域の枠は消え，経路は 2 つの始点の分 */
+  OP.run=null;
+  OP.rs=end;
+  optText();
+  const D3=drawOpt(),elE=[...$('osg').children];
+  optView(1);
+  const D4=drawOpt(),
+   okE=!D3.box&&D3.mk.length===4&&D3.np===end.S.path.length&&end.S.path.some(e=>e.k===2)&&D4.arcs.length===4&&elE.length===se.length&&elE.every(e=>e.className!=='on');
+  let tm=0;
+  for(const v of[1,2]){
+   optView(v);
+   const t0=performance.now();
+   for(let k=0;k<30;k++)drawOpt();
+   tm=Math.max(tm,(performance.now()-t0)/30)
+  }
+  chkB(32,'表示：[結果][弁時期][軌跡] で切り替わる（44 px 以上，文字が収まる，スクロールなし，評価の履歴の図が 60 px 以上）．段階の表示が，段階ごとの評価の回数と，いまの段階を示す',q.every(x=>x)&&okS,`切替 ${q.map(x=>x?1:0).join('')}，段階 ${okS}（${sg.map(x=>x.nm+' '+x.n).join('｜')}／終わり ${se.map(x=>x.nm+' '+x.n).join('｜')}），履歴の図 ${hh.toFixed(0)} px`);
+  chkB(32,'弁時期の図：探索の前・最良・評価中の点の，排気弁と吸気弁の区間（6 本の弧）が弁時期のとおりで，外が排気，文字 4 つと図が Canvas の中',okC,`弧 ${D1?D1.arcs.length:0} 本，文字 ${D1?D1.labs.length:0} 個，半径 ${D1?D1.R.toFixed(0):'–'} px（Canvas ${W}×${H}）`);
+  chkB(32,'探索の軌跡：評価した点の全部，中心の経路，信頼領域の枠，3 つの印（探索の前・最良・評価中）が 2 枚の平面の中．終わった後は枠と評価中の点が消え，経路が 2 つの始点の分ある',okP&&okE,`途中：点 ${D2?D2.n:0}/${nf}，経路 ${D2?D2.np:0} 点，枠 ${D2&&D2.box}，印 ${D2?D2.mk.length:0}．終わり：枠 ${D3.box}，印 ${D3.mk.length}，経路 ${D3.np} 点，弧 ${D4.arcs.length} 本`);
+  chkP(32,'探索の図の描画（弁時期と軌跡．30 回の平均の大きい方）',tm,6,'ms',2);
+  Object.assign(OP,sv);
+  optView(0)
  }
  Object.assign(OP,o0);
  uiDefault();

@@ -1257,6 +1257,194 @@ function drawLoss(g,W,H,r,col,msg){
  lossFoot(r).forEach((t,n)=>g.fillText(t,4,H-35+n*14,W-8));
  return S
 }
+/* ===== バルブタイミングの探索の図（SPEC-32 A の 5，6） ===== */
+/* 色：排気弁，吸気弁，いま評価している点 */
+const VTC={ex:'#e8590c',in:'#1c7ed6',cur:'#be4bdb'};
+/* 円の図（バルブタイミングダイヤグラム）：上が上死点，下が下死点，時計回りにクランク角．外の輪が排気弁，内の輪が吸気弁．
+   S：{x0（探索の前），xb（最良．無ければ x0），xc（いま評価している点．無ければ null）}．描いた弧 [{k（'ex'／'in'），w（'x0'／'xb'／'xc'），a（開く角），b（閉じる角），r}] と文字の枠を返す */
+function drawVtClock(g,W,H,S,col){
+ const cx=W/2,
+  cy=H/2,
+  R=Math.max(34,Math.min(W/2-62,H/2-24)),
+  re=R,
+  ri=R-Math.max(16,.22*R),
+  ph=a=>((a%360+360)%360)*PI/180-PI/2,
+  arcs=[],
+  labs=[];
+ g.font='11px system-ui,sans-serif';
+ g.textBaseline='middle';
+ g.lineWidth=1;
+ g.strokeStyle=col.ln;
+ g.beginPath();
+ g.arc(cx,cy,R+11,0,2*PI);
+ g.stroke();
+ g.beginPath();
+ g.moveTo(cx,cy-R-14);
+ g.lineTo(cx,cy+R+14);
+ g.stroke();
+ g.fillStyle=col.mu;
+ g.textAlign='center';
+ g.fillText('上死点',cx,cy-R-19);
+ g.fillText('下死点',cx,cy+R+19);
+ const arc=(k,w,x,r,c,lw,dash)=>{
+   const a=k==='ex'?x[2]:x[0]+720,b=k==='ex'?x[3]:x[1]+720;
+   arcs.push({k,w,a,b,r});
+   g.strokeStyle=c;
+   g.lineWidth=lw;
+   g.setLineDash(dash||[]);
+   g.beginPath();
+   g.arc(cx,cy,r,ph(a),ph(a)+(b-a)*PI/180);
+   g.stroke();
+   g.setLineDash([]);
+   g.lineWidth=1
+  },
+  lab=(a,r,t)=>{
+   const x=cx+r*Math.cos(ph(a)),
+    y=cy+r*Math.sin(ph(a)),
+    w=g.measureText(t).width,
+    al=x<cx-4?'right':x>cx+4?'left':'center',
+    x0=al==='right'?x-5-w:al==='left'?x+5:x-w/2;
+   g.textAlign=al;
+   g.fillStyle=col.fg;
+   g.fillText(t,x+(al==='right'?-5:al==='left'?5:0),y);
+   labs.push({x:x0,y:y-7,w,h:14})
+  },
+  xb=S.xb||S.x0;
+ arc('ex','x0',S.x0,re,col.mu,1.5,[4,3]);
+ arc('in','x0',S.x0,ri,col.mu,1.5,[4,3]);
+ arc('ex','xb',xb,re,VTC.ex,8);
+ arc('in','xb',xb,ri,VTC.in,8);
+ if(S.xc){arc('ex','xc',S.xc,re+7,VTC.cur,2.5);arc('in','xc',S.xc,ri-7,VTC.cur,2.5)}
+ lab(xb[2],re+15,'EVO '+xb[2]+'°');
+ lab(xb[3],re+15,'EVC '+xb[3]+'°');
+ lab(xb[0]+720,ri-22,'IVO '+xb[0]+'°');
+ lab(xb[1]+720,ri-22,'IVC '+xb[1]+'°');
+ g.fillStyle=col.mu;
+ g.textAlign='center';
+ g.fillText('外：排気　内：吸気',cx,cy-7);
+ g.fillText('重なり '+(xb[3]-(xb[0]+720))+'°',cx,cy+9);
+ return{cx,cy,R,arcs,labs}
+}
+/* 探索の軌跡（2 枚の平面）：左が吸気（IVO，IVC），右が排気（EVO，EVC）．S：{x0，hist（評価した点），path（中心の移った経路），tr（いまの中心と Δ．無ければ null），xb（最良），xc（いま評価している点）}．
+   軸の範囲は，標本の段では評価した点の全部，信頼領域の探索が始まった後は，その探索で動いた範囲（中心 ± Δ と評価した点）と探索の前の点（遠くの標本は範囲に入れず，枠で切る）．目盛の数字は範囲の両端．t は時刻 [ms]（いまの点の輪の大きさを変える） */
+function drawVtPlanes(g,W,H,S,col,t){
+ const NM=['IVO','IVC','EVO','EVC'],
+  gap=12,
+  pw=(W-gap)/2,
+  ml=34,
+  mb=26,
+  mt=8,
+  h=S.hist||[],
+  fin=h.filter(q=>q.J>-Infinity),
+  trs=h.some(q=>q.stage==='tr'||q.stage==='chk'),
+  rng=NM.map((_,k)=>{
+   const a=[S.x0[k]];
+   if(!trs&&S.xc)a.push(S.xc[k]);
+   for(const q of h)if(q.stage==='tr'||q.stage==='chk')a.push(q.x[k],q.c[k]-q.d,q.c[k]+q.d);else if(!trs&&q.J>-Infinity)a.push(q.x[k]);
+   const lo=Math.min(...a),hi=Math.max(...a),p=Math.max(4,.06*(hi-lo));
+   return[Math.floor(lo-p),Math.ceil(hi+p)]
+  }),
+  Js=fin.filter(q=>q.stage!=='mc').map(q=>q.J).sort((a,b)=>a-b),
+  Jhi=Js.length?Js[Js.length-1]:1,
+  Jlo=Js.length?Js[Math.floor(.3*Js.length)]:0,
+  cl=J=>`rgb(${vir((J-Jlo)/Math.max(1e-12,Jhi-Jlo))})`,
+  pl=[],
+  mk=[];
+ let n=0,np=0,box=false;
+ g.font='11px system-ui,sans-serif';
+ g.textBaseline='middle';
+ [[0,1,'吸気'],[2,3,'排気']].forEach(([a,b,nm],k)=>{
+  const x0=k*(pw+gap)+ml,
+   w=pw-ml-2,
+   y0=mt,
+   hh=H-mt-mb,
+   [alo,ahi]=rng[a],
+   [blo,bhi]=rng[b],
+   X=v=>x0+(v-alo)/(ahi-alo)*w,
+   Y=v=>y0+hh-(v-blo)/(bhi-blo)*hh;
+  pl.push({x:x0,y:y0,w,h:hh});
+  g.lineWidth=1;
+  g.strokeStyle=col.ln;
+  g.strokeRect(x0,y0,w,hh);
+  g.fillStyle=col.mu;
+  g.textAlign='center';
+  g.fillText(NM[a]+' [°]',x0+w/2,H-7);
+  g.textAlign='left';
+  g.fillText(alo,x0,y0+hh+9);
+  g.textAlign='right';
+  g.fillText(ahi,x0+w,y0+hh+9);
+  g.fillText(bhi,x0-3,y0+6);
+  g.fillText(blo,x0-3,y0+hh-6);
+  g.save();
+  g.translate(x0-24,y0+hh/2);
+  g.rotate(-PI/2);
+  g.textAlign='center';
+  g.fillText(NM[b]+' [°]',0,0);
+  g.restore();
+  g.save();
+  g.beginPath();
+  g.rect(x0,y0,w,hh);
+  g.clip();
+  for(const q of fin){
+   const x=X(q.x[a]),y=Y(q.x[b]);
+   if(!k)n++;
+   g.beginPath();
+   g.arc(x,y,q.stage==='mc'?2.6:3,0,2*PI);
+   if(q.stage==='mc'){g.strokeStyle=col.mu;g.globalAlpha=.8;g.stroke();g.globalAlpha=1}else{g.fillStyle=cl(q.J);g.fill()}
+  }
+  /* 中心の経路：1 つ目の探索は実線，2 つ目は破線 */
+  for(const kk of[1,2]){
+   const P=(S.path||[]).filter(q=>q.k===kk);
+   if(P.length<1)continue;
+   if(!k)np+=P.length;
+   g.strokeStyle=col.fg;
+   g.lineWidth=1.6;
+   g.setLineDash(kk===1?[]:[5,3]);
+   g.beginPath();
+   P.forEach((q,j)=>j?g.lineTo(X(q.x[a]),Y(q.x[b])):g.moveTo(X(q.x[a]),Y(q.x[b])));
+   g.stroke();
+   g.setLineDash([]);
+   g.lineWidth=1
+  }
+  /* 信頼領域の枠（中心 ± Δ） */
+  if(S.tr&&S.tr.k>0){
+   const c=S.tr.x,d=S.tr.d,bx=X(c[a]-d),by=Y(c[b]+d),bw=X(c[a]+d)-bx,bh=Y(c[b]-d)-by;
+   box=true;
+   g.fillStyle=VTC.cur;
+   g.globalAlpha=.12;
+   g.fillRect(bx,by,bw,bh);
+   g.globalAlpha=1;
+   g.strokeStyle=VTC.cur;
+   g.lineWidth=1.5;
+   g.strokeRect(bx,by,bw,bh);
+   g.lineWidth=1
+  }
+  g.restore();
+  /* 探索の前（○），最良（★），いま評価している点（輪） */
+  const put=(x,sh)=>{
+   const px=Math.max(x0,Math.min(x0+w,X(x[a]))),py=Math.max(y0,Math.min(y0+hh,Y(x[b])));
+   mk.push({sh,x:px,y:py});
+   g.beginPath();
+   if(sh==='o'){g.strokeStyle=col.fg;g.lineWidth=2;g.arc(px,py,5,0,2*PI);g.stroke()}else if(sh==='s'){
+    for(let j=0;j<10;j++){const r=j%2?3.2:7,q=-PI/2+j*PI/5;g.lineTo(px+r*Math.cos(q),py+r*Math.sin(q))}
+    g.closePath();
+    g.fillStyle=col.fg;
+    g.fill();
+    g.strokeStyle=col.cd;
+    g.lineWidth=1;
+    g.stroke()
+   }else{g.strokeStyle=VTC.cur;g.lineWidth=2;g.arc(px,py,6+2*Math.sin((t||0)/160),0,2*PI);g.stroke()}
+   g.lineWidth=1
+  };
+  put(S.x0,'o');
+  if(S.xb)put(S.xb,'s');
+  if(S.xc)put(S.xc,'c');
+  g.fillStyle=col.fg;
+  g.textAlign='left';
+  g.fillText(nm,x0+5,y0+9)
+ });
+ return{pl,mk,n,np,box,rng}
+}
 /* ===== VVT マップ（SPEC-34 A） ===== */
 /* 双一次補間：G[j][i] は (xs[i], ys[j]) の値．範囲の外は端に寄せる．4 隅のどれかが未定義（NaN）なら未定義 */
 function bil2(G,xs,ys,a,b){
