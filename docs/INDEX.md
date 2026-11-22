@@ -129,7 +129,7 @@
 | `docs/report_egr.md` | 8062 |
 | `docs/report_burn.md` | 4288 |
 | `docs/report_devices.md` | 7019 |
-| `docs/report_vt.md` | 5061 |
+| `docs/report_vt.md` | 8968 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
 | `src/core.js` | 91746 |
@@ -145,3 +145,4 @@
 | `docs/changes/2026-11-22-operating-map.md` | 6512 |
 | `docs/changes/2026-11-22-perf-scope.md` | 591 |
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
+| `docs/changes/2026-11-22-valve-timing-search.md` | 2260 |
