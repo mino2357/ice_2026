@@ -25,6 +25,7 @@ SPEC-33C.md
 SPEC-34A.md
 SPEC-35D.md
 SPEC-36D.md
+SPEC-37A.md
 s4.md
 TEST-15.md
 TEST-16.md

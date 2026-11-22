@@ -3,8 +3,8 @@
 const mkPT=()=>({...mkP(),cvar:0,mode:0,sol:1}),SPD={gam:2,inj:1},SPP={gam:2,inj:0},IMEP25=108073.55662509441;
 let TR={};
 const TST={},
- NT=36,
- UIT=[8,15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35,36],
+ NT=37,
+ UIT=[8,15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35,36,37],
  RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0,pj:1,dur:{},at:''};
 const pad=i=>String(i).padStart(2,'0');
 const chk=(id,n,ref,val,tol)=>{
@@ -1267,7 +1267,10 @@ else if(i===2){
    fn('設定:一覧');
    $('pl').className=''
   }
-else if(i===5){for(let k=0;k<6;k++){swSub(k);if(k<4)drawSw();swText();fn(`性能曲線${k+1}`)}swSub(0)}
+else if(i===5){
+   for(let k=0;k<7;k++){swSub(k);if(k<4)drawSw();if(k===6){drawMp();mpText()}else swText();fn(`性能曲線${k+1}`)}
+   swSub(0)
+  }
 else if(i===7){for(const m of[0,2]){optSub(m);drawOpt();fn(`最適化${m?2:1}`)}optSub(0)}
 else{rchips();dtl();fn('検証')}
   yield
@@ -1932,7 +1935,7 @@ TST[16]=function*(){
   tapEl(sw[0]);
   yield;
   const back=E.offsetHeight>100&&$('dv2').offsetHeight===0&&E.querySelectorAll('h3[data-sec]').length===21;
-  chkB(16,'文書の見出し：全ページを通して要件定義書と画面の文書を合わせて REQ-01〜36，仕様書と画面の文書を合わせて SPEC-01〜36 と TEST-01〜36 が 1 つずつ．[式の解説] で元の表示に戻り，文書ごとに表示中のページと縦スクロール位置を保つ',okH&&back&&Math.abs(p2-300)<=1&&Math.abs(p3-120)<=1&&g2===L2&&g3===L3,`見出し ${okH}，戻る ${back}，ページ ${g2===L2&&g3===L3}，位置 ${p2} / ${p3} px`,'300 / 120 ±1');
+  chkB(16,'文書の見出し：全ページを通して要件定義書と画面の文書を合わせて REQ-01〜37，仕様書と画面の文書を合わせて SPEC-01〜37 と TEST-01〜37 が 1 つずつ．[式の解説] で元の表示に戻り，文書ごとに表示中のページと縦スクロール位置を保つ',okH&&back&&Math.abs(p2-300)<=1&&Math.abs(p3-120)<=1&&g2===L2&&g3===L3,`見出し ${okH}，戻る ${back}，ページ ${g2===L2&&g3===L3}，位置 ${p2} / ${p3} px`,'300 / 120 ±1');
   chkB(16,'ページ：画面にある断片は表示中の 1 ページだけ，[◀ 前] [次 ▶] で 1 ページずつ移動（端では無効，44 px 以上）',one&&navOk,`1 ページだけ ${one}，移動 ${navOk}`);
   chkP(16,'ページの切り替え（4 文書の全ページの最長）',pmax,100,'ms',0);
   for(const k of[1,2,3,4])docPage(k,pg0[k]);
@@ -1971,7 +1974,7 @@ TST[16]=function*(){
    docX=DV.cur,
    tg={},
    sec={},
-   RX=/(?<![A-Za-z0-9])(?:REQ|SPEC|TEST)-(?:0[1-9]|[12]\d|3[0-5])(?![0-9])/,
+   RX=/(?<![A-Za-z0-9])(?:REQ|SPEC|TEST)-(?:0[1-9]|[12]\d|3[0-7])(?![0-9])/,
    KD=['REQ','SPEC','TEST'];
   for(const k of[1,2,3,4])for(const t of DOCS[DOCK[k]].toc){const m=/^((?:REQ|SPEC|TEST)-\d\d)：/.exec(t[2]);if(m&&!tg[m[1]])tg[m[1]]={k,id:t[1]}}
   E.querySelectorAll('h3[data-req]').forEach(h=>h.dataset.req.split(',').forEach(r=>(sec[r]=sec[r]||[]).push('§'+h.dataset.sec)));
@@ -3695,7 +3698,7 @@ TST[26]=function*(){
  swText();
  const rw=[...$('swt').children],ov=rw.filter(r=>r.scrollWidth>r.clientWidth+1).length,sb=fitB($('sws'));
  SW.ref=null;
- chkB(26,'8 タブ・表示ボタン6つ（44 px 以上，文字の余裕），「掃引」無し，4 グラフ表示に単位付き軸名と目盛・スクロール無し，状態表示 3 行が切れない',JSON.stringify(nb.map(b=>b.textContent))==='["運転","線図","性能曲線","熱効率","最適化","設定","検証","解説"]'&&$('sws').children.length===6&&!sb.length&&![...document.querySelectorAll('nav,section:not(#s4)')].some(e=>e.textContent.includes('掃引'))&&bl===0&&ov===0&&rw.length===3,`違反 ${bl}，はみ出し ${ov}，余裕不足 ${sb.join(' ')}`);
+ chkB(26,'8 タブ・表示ボタン7つ（44 px 以上，文字の余裕），「掃引」無し，4 グラフ表示に単位付き軸名と目盛・スクロール無し，状態表示 3 行が切れない',JSON.stringify(nb.map(b=>b.textContent))==='["運転","線図","性能曲線","熱効率","最適化","設定","検証","解説"]'&&$('sws').children.length===7&&!sb.length&&![...document.querySelectorAll('nav,section:not(#s4)')].some(e=>e.textContent.includes('掃引'))&&bl===0&&ov===0&&rw.length===3,`違反 ${bl}，はみ出し ${ov}，余裕不足 ${sb.join(' ')}`);
  yield;
  const p=S.pts,w=o=>2*PI*o.Na/60;
  let A5,A1,UD=null;
@@ -5341,7 +5344,7 @@ async function runAll(only,ui,pj){
  RUN.at=new Date().toISOString();
  $('rt').textContent='中止';
  let lastF=performance.now();
- for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,20]){
+ for(const id of[...Array.from({length:19},(_,i)=>i+1),21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,20]){
   if(U.cancel)break;
   if(only&&!only.includes(id))continue;
   ST[id]='run';
@@ -5364,14 +5367,14 @@ async function runAll(only,ui,pj){
     }
    }catch(e){chkB(id,'例外: '+e.message,false,(e.stack||'').split('\n')[1]||'');done=true}
   }
-  if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31||id===32||id===33||id===34||id===35||id===36)restLive(snap);
+  if((id>=15&&id<=18)||id===22||id===23||(id>=25&&id<=27)||id===30||id===31||id===32||id===33||id===34||id===35||id===36||id===37)restLive(snap);
   RUN.dur[id]=(performance.now()-tId)/1e3;
   if(done){
    if(id===20){
     chkB(20,'運転中の機関の状態と設定が実行前後で一致',JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0);
     RUN.total=(performance.now()-tStart)/1e3;
     const tg=RUN.ui?UIT:Object.keys(TST).map(Number),un=tg.filter(k=>k!=20&&!(TR[k]&&TR[k].length));
-    chkB(20,RUN.ui?'画面のモード：[U] の項目を持つ TEST-'+UIT.filter(k=>k!==20).map(pad).join('，')+' がすべて実行され結果を持つ':'TEST-01〜19，21〜36 がすべて実行され結果を持つ',un.length===0||(!!only&&!RUN.ui),un.length?'未実行: '+un.join(','):`${tg.length-1} / ${tg.length-1}`);
+    chkB(20,RUN.ui?'画面のモード：[U] の項目を持つ TEST-'+UIT.filter(k=>k!==20).map(pad).join('，')+' がすべて実行され結果を持つ':'TEST-01〜19，21〜37 がすべて実行され結果を持つ',un.length===0||(!!only&&!RUN.ui),un.length?'未実行: '+un.join(','):`${tg.length-1} / ${tg.length-1}`);
     {
      const pj0=RUN.pj;
      RUN.pj=0;
@@ -5658,4 +5661,201 @@ TST[36]=function*(){
   live.reset();
   chkB(36,'画面：[振動] が 44 px 以上で文字が収まり既定 OFF．ON にして 1× で START すると 4 s 以内に送る．OFF で直ちに vibrate(0)，その後は送らない．テストの実行中とページの非表示で vibrate(0)．API が無いと無効．設定「音と振動」の説明に「サイレント」',q.every(x=>x),q.map(x=>x?1:0).join(''))
  }
+};
+/* ---- TEST-37 運転点のマップ（SPEC-37） ---- */
+/* 合成のマップ：3 つの回転数に，値が N と T の 1 次関数の点を置く（全開の軸トルクは 40，50，30 N·m．各回転数に T_b < 0 の点を 1 つ） */
+const opLin={mfd:(N,T)=>1e-4+2e-8*N+1e-5*T,Tx:(N,T)=>600+.1*N+2*T,mth:(N,T)=>1e-3+1e-6*N+2e-4*T,pm:(N,T)=>1e6+100*N+1e5*T,spa:(N,T)=>10+2e-3*N-.1*T},
+ opTop=[40,50,30],
+ opHi=N=>N<=4000?40+10*(N-1000)/3000:50-20*(N-4000)/3000;
+function opSyn(){
+ const Ns=[1000,4000,7000],M=new OpMap(mkPT(),Ns),fr=[1,.8,.55,.3,.1,-.15],al=[90,45,28,18,12,8];
+ Ns.forEach((N,i)=>fr.forEach((f,k)=>{
+  const T=opTop[i]*f,q={al:al[k],st:false,ok:true,cyc:6,tb:T,eb:0};
+  for(const key in opLin)q[key]=opLin[key](N,T);
+  M.pt[i].push(q);
+  M.np++;
+  M.ver++
+ }));
+ M.done=true;
+ M.stage='終了';
+ M.sg='';
+ return M
+}
+TST[37]=function*(){
+ const keep={...MP},
+  sub0=SW.sub,
+  Bx=e=>e.getBoundingClientRect(),
+  L=()=>[...$('mpt').children].map(e=>e.textContent),
+  fits=()=>[...$('mpt').children].every(e=>e.scrollWidth<=e.clientWidth+.5);
+ uiDefault();
+ Object.assign(MP,{run:null,cur:null,q:0,sel:null});
+/* 1：ボタン */
+ {
+  show(5);
+  tapEl($('sws').children[6]);
+  yield 'frame';
+  const sec=$('s5'),bs=[...$('sws').children,...$('mpq').children],q=[];
+  q.push(SW.sub===6&&$('sws').children[6].className==='on'&&$('mpc').style.display!=='none'&&$('tc').style.display==='none');
+  q.push([...$('sws').children].map(b=>b.textContent).join()==='出力,η_v,燃費,点火,条件,前提,マップ'&&[...$('mpq').children].map(b=>b.textContent).join()==='燃費,排気温,空気量,最大圧,点火');
+  q.push(bs.every(b=>Bx(b).width>=43.5&&Bx(b).height>=43.5&&txtW(b)<=.95*room(b)));
+  q.push(sec.scrollHeight<=sec.clientHeight+1&&document.documentElement.scrollHeight<=innerHeight+1&&Bx($('mpc')).height>=120);
+  for(let k=4;k>=0;k--){
+   tapEl($('mpq').children[k]);
+   q.push(MP.q===k&&$('mpq').children[k].className==='on'&&[...$('mpq').children].filter(b=>b.className==='on').length===1)
+  }
+  chkB(37,'ボタン：表示の切替に [マップ]，量のボタンが 5 つ（燃費，排気温，空気量，最大圧，点火）で切り替わる，44 px 以上で文字が収まる，スクロールなし',q.every(x=>x),q.map(x=>x?1:0).join('')+'，Canvas の高さ '+Bx($('mpc')).height.toFixed(0)+' px')
+ }
+/* 2：補間と等高線（合成のマップ） */
+ if(!RUN.ui){
+  const M=opSyn(),rel=(a,b)=>Math.abs(a-b)/Math.max(1e-300,Math.abs(b));
+  let e1=0,e2=0;
+  M.Ns.forEach((N,i)=>[1,.8,.55,.3,.1].forEach(f=>{
+   const T=opTop[i]*f,r=M.at(N,T);
+   for(const k in opLin)e1=Math.max(e1,r?rel(r[k],opLin[k](N,T)):1);
+   e1=Math.max(e1,r?rel(r.eb,T*N*PI/30/(opLin.mfd(N,T)*K.Hu)):1)
+  }));
+  for(let k=0;k<200;k++){
+   const N=1000+6000*((k*.618)%1),T=opHi(N)*(.002+.996*((k*.382)%1)),r=M.at(N,T);
+   for(const key in opLin)e2=Math.max(e2,r?rel(r[key],opLin[key](N,T)):1)
+  }
+  const z=M.at(4000,0),
+   out=[M.at(2500,opHi(2500)+.5),M.at(2500,-.1),M.at(500,10),M.at(7001,10)].every(r=>r===null)&&!!z&&z.eb===0&&z.be!==z.be,
+   cv=document.createElement('canvas'),
+   C=opBuild(M,1,340,300,1,cv),
+   ends=C.seg.flatMap(q=>q.s.flatMap(sg=>sg.map(p=>[p,q.L]))),
+   e3=Math.max(0,...ends.map(([p,Lv])=>Math.abs(opLin.Tx(p[0],p[1])-Lv)/Lv)),
+   inn=ends.every(([p])=>M.at(p[0],p[1])!==null),
+   im=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
+  let bad=0,nc=0,nt=0;
+  for(let py=0;py<cv.height;py++)for(let px=0;px<cv.width;px++){
+   const on=im[4*(py*cv.width+px)+3]>0,r=M.at((px+.5)/cv.width*SWC.N1,(1-(py+.5)/cv.height)*C.ya.mx);
+   if(on)nc++;else nt++;
+   if(on!==(r!==null))bad++
+  }
+  const stp=l=>{
+    if(l.length<2)return true;
+    const d=l[1]-l[0],m=d/10**Math.floor(Math.log10(d)+1e-9);
+    return[1,2,2.5,5].some(x=>Math.abs(m-x)<1e-6)&&l.every((v,k)=>!k||Math.abs(v-l[k-1]-d)<1e-9*Math.abs(d))
+   },
+   lv=OPQ.map((_,k)=>opBuild(M,k,340,300,1,document.createElement('canvas')).lev),
+   lvOk=lv.every(l=>l.length>=1&&l.length<=10&&stp(l))&&[[0,.5],[100,137],[1e3,6.1e4],[24.7,33]].every(([a,b])=>{const l=vmNice(a,b,10);return l.length>=1&&l.length<=10&&stp(l)});
+  chkB(37,'補間：計算した点で一致（1e-12），N と T の 1 次関数の場で一致（1e-9），η_b = T_b ω/(ṁ_f H_u)，T_b = 0 で η_b = 0．領域の外（全開の上，T_b < 0，回転数の範囲の外）は値なし',e1<=1e-12&&e2<=1e-9&&out,`${e1.toExponential(1)}，${e2.toExponential(1)}，領域の外 ${out}`);
+  chkB(37,'等高線：1 次関数の場で端点が値に一致（1e-9）し領域の中，10 本以下で刻みが {1, 2, 2.5, 5} × 10^k（5 つの量と 4 つの範囲），色の画像は領域の中だけ',e3<=1e-9&&inn&&ends.length>0&&C.seg.length>=1&&C.seg.length<=10&&lvOk&&bad===0&&nc>0&&nt>0,`端点 ${ends.length} 点（${e3.toExponential(1)}，領域の中 ${inn}），${C.seg.length} 本（${C.lev.join('，')}），本数 ${lv.map(l=>l.length).join('／')}，色の画素 ${nc}／透明 ${nt}／不一致 ${bad}`)
+ }
+ yield;
+/* 3：機関（既定の設定） */
+ if(!RUN.ui){
+  const P0={...mkP()},M=new OpMap(P0);
+  while(!M.run(10))yield;
+  const C=M.cols(),
+   tm=M.tmax(),
+   lim=OPM.dT*tm,
+   nv=C.filter(Boolean).length,
+   nw=M.Ns.filter((_,i)=>M.pos(i,90)).length,
+   nz=C.filter(c=>c&&c.lo===0).length;
+  let gap=0;
+  for(const c of C)if(c)for(let k=0;k+1<c.nd.length;k++)gap=Math.max(gap,c.nd[k+1].T-c.nd[k].T);
+  chkB(37,'機関：全開で T_b > 0 の回転数がすべて列になり（20 以上），どの列も T_b = 0 まであり，隣り合う点の軸トルクの差が全開の軸トルクの最大の 10% 以下',nv===nw&&nv>=20&&nz===nv&&gap<=lim*(1+1e-9)&&M.done&&M.stage==='終了',`列 ${nv}/${M.Ns.length}（T_b = 0 まで ${nz}），差の最大 ${gap.toFixed(3)} N·m（${M.np} 点，T_b 最大 ${tm.toFixed(2)} N·m）`,`≤ ${lim.toFixed(3)} N·m`);
+  const S0=new Sweep(P0,SWN,90,swOpt());
+  while(!S0.run(10))yield;
+  const KS=['tb','eb','spa','mfd','Tx','mth','pm'],
+   wd=S0.pts.filter((q,i)=>{const w=M.pt[i].find(p=>p.al===90);return!w||w.st!==!!q.st||(!q.st&&KS.some(k=>w[k]!==q[k]))}).length;
+  chkB(37,'機関：全開の点が，同じ条件の性能曲線の計測（Sweep）と完全に一致（T_b，η_b，点火時期，ṁ_f，T_X，ṁ_th，p_max）',wd===0&&S0.pts.length===M.Ns.length,`不一致 ${wd} 点 / ${S0.pts.length}`);
+  const PT=[[1125,30],[1875,14],[2625,10],[3375,20],[4625,17],[5875,25]],er=[0,0,0,0,0],info=[];
+  let miss=0;
+  for(const [N,al] of PT){
+   const S=new Sweep(P0,[N],al,swOpt());
+   while(!S.run(10))yield;
+   const q=S.pts[0],r=q.st?null:M.at(N,q.tb);
+   if(!r){miss++;info.push(`${N} rpm ${al}°：範囲外`);continue}
+   const d=[Math.abs(r.eb-q.eb)*100,Math.abs(r.Tx-q.Tx),Math.abs(r.mth/q.mth-1)*100,Math.abs(r.pm/q.pm-1)*100,Math.abs(r.spa-q.spa)];
+   d.forEach((v,k)=>er[k]=Math.max(er[k],v));
+   info.push(`${N} rpm ${q.tb.toFixed(1)} N·m`)
+  }
+  chkB(37,'機関：格子に無い 6 点（回転数と開度を別に選んで直接計算）で，マップの値との差が η_b 0.5 ポイント，T_X 20 K，ṁ_th 3%，p_max 3%，点火時期 1° 以下',miss===0&&er[0]<=.5&&er[1]<=20&&er[2]<=3&&er[3]<=3&&er[4]<=1,`η_b ${er[0].toFixed(3)} ポイント，T_X ${er[1].toFixed(1)} K，ṁ_th ${er[2].toFixed(2)}%，p_max ${er[3].toFixed(2)}%，点火 ${er[4].toFixed(2)}°（${info.join('，')}）`);
+  chkP(37,'運転点のマップの計算の所要',M.t/1e3,60,'s',1);
+  const two=[];
+  for(let k=0;k<2;k++){const m=new OpMap(P0,[3000]);while(!m.run(10))yield;two.push(JSON.stringify(m.pt)+m.np)}
+  chkB(37,'同じ設定の 2 回の計算が完全に一致（3000 rpm の列）',two[0]===two[1]&&two[0].length>100,`${two[0].length} 字`)
+ }
+/* 4：操作（計算の開始と中止） */
+ {
+  show(5);
+  swSub(6);
+  Object.assign(MP,{run:null,cur:null,sel:null});
+  mpText();
+  const js0=JSON.stringify(live.s),jp0=JSON.stringify(LP),idle=L()[0].includes('計測開始');
+  U.swTest=1;
+  swBtn();
+  tapEl($('swg'));
+  const st=!!MP.run&&$('swg').textContent==='中止';
+  let mx=0,t=performance.now(),n=0;
+  while(MP.run&&MP.run.np<2*SWN.length+4&&n<4000){
+   mpTick(12);
+   drawMp();
+   mpText();
+   yield 'frame';
+   const t1=performance.now();
+   mx=Math.max(mx,t1-t);
+   t=t1;
+   n++
+  }
+  const mid=!!MP.run&&L()[0].startsWith('計算中')&&MP.run.cols().some(Boolean);
+  tapEl($('swg'));
+  const m=MP.cur,
+   stopped=!MP.run&&!!m&&m.stop&&!m.done&&$('swg').textContent==='計測開始',
+   left=!!m&&m.cols().some(Boolean)&&L()[0].startsWith('中止')&&!!drawMp().lg,
+   same=JSON.stringify(live.s)===js0&&JSON.stringify(LP)===jp0;
+  U.swTest=0;
+  chkB(37,'操作：[計測開始] で始まり，計算の途中からマップが出る，[中止] で止まって，それまでの範囲のマップが残る．運転中の機関の状態と設定は変わらない',idle&&st&&mid&&stopped&&left&&same,`開始 ${st}，途中 ${mid}，中止 ${stopped}，残る ${left}，不変 ${same}（${m?m.np:0} 点，${n} フレーム）`);
+  chkP(37,'運転点のマップの計算中のフレームの間隔（最長）',mx,250,'ms',0)
+ }
+/* 5，6：表示と描画（合成のマップ） */
+ {
+  const M=opSyn();
+  M.sg=mpSig();
+  Object.assign(MP,{run:null,cur:M,sel:null});
+  mpText();
+  const q=[],np0=M.np;
+  for(let k=4;k>=0;k--){tapEl($('mpq').children[k]);const S=drawMp();q.push(!!S&&!!S.lg&&MP.c.qi===k&&!MP.run&&M.np===np0)}
+  const S=drawMp(),
+   c=$('mpc'),
+   r=Bx(c),
+   tapAt=(N,T)=>{const px=r.left+S.X(N),py=r.top+S.Y(T);pev(c,'pointerdown',px,py);pev(c,'pointerup',px,py)};
+  const l0=L(),f0=fits();
+  tapAt(4000,25);
+  const l1=L(),
+   v=MP.sel?M.at(MP.sel.N,MP.sel.T):null,
+   sel=!!v&&Math.abs(MP.sel.N-4000)<=30&&Math.abs(MP.sel.T-25)<=.5&&l1[1].includes(MP.sel.N+' rpm')&&l1[2].includes('η_b '+(v.eb*100).toFixed(1)+' %')&&l1[2].includes(v.be.toFixed(0)+' g/kWh')&&l1[2].includes(v.spa.toFixed(1)+'°BTDC')&&l1[3].includes(v.Tx.toFixed(0)+' K')&&l1[3].includes((v.mth*1e3).toFixed(2)+' g/s')&&l1[3].includes((v.pm/1e6).toFixed(2)+' MPa'),
+   f1=fits();
+  tapAt(7000,29.9);
+  const f2=fits();
+  tapAt(1500,48);
+  const l2=L(),outR=l2[1].includes('範囲外')&&l2[2].startsWith('★')&&l0[2].startsWith('★')&&l0[1].includes('タップ');
+  M.sg='x';
+  mpText();
+  const stale=L()[0].includes('設定が変わりました'),f3=fits();
+  M.sg=mpSig();
+  mpText();
+  const fresh=!L()[0].includes('設定が変わりました');
+  chkB(37,'表示：量を切り替えると計算し直さずにマップが替わる，タップで N，T_b と 5 つの量の値が出る，領域の外は「範囲外」，設定が変わると「設定が変わりました」，4 行が切れない',q.every(x=>x)&&sel&&outR&&stale&&fresh&&f0&&f1&&f2&&f3,`切替 ${q.map(x=>x?1:0).join('')}，選択 ${sel}（${MP.sel&&MP.sel.N} rpm），範囲外 ${outR}，古さ ${stale}／${fresh}，行 ${[f0,f1,f2,f3].map(x=>x?1:0).join('')}`);
+  tapEl($('mpq').children[0]);
+  drawMp();
+  const g=prep(c),
+   W=c.clientWidth,
+   H=c.clientHeight,
+   D2=drawOp(g.g,g.W,g.H,{M,C:MP.c,sel:{N:5000,T:10},cur:{N:3000,T:20},best:M.best(),msg:''},COL),
+   pl=D2.pl,
+   inB=o=>o.x>=0&&o.y>=0&&o.x+(o.w||0)<=W&&o.y+(o.h||0)<=H,
+   ins=D2.mk.length===3&&D2.mk.every(inB)&&D2.lab.length>=1&&D2.lab.every(o=>o.x>=pl.x&&o.y>=pl.y&&o.x+o.w<=pl.x+pl.w&&o.y+o.h<=pl.y+pl.h)&&!!D2.lg&&inB(D2.lg)&&pl.x>=40&&pl.y+pl.h+34<=H&&pl.x+pl.w+16<=W;
+  const t2=performance.now();
+  for(let k=0;k<30;k++)drawMp();
+  const dm=(performance.now()-t2)/30;
+  chkB(37,'描画：★ ○ ＋，等高線の値，凡例，軸の目盛と軸名が Canvas の中',ins,`印 ${D2.mk.length} 個，値 ${D2.lab.length} 個，${ins}`);
+  chkP(37,'運転点のマップの描画（色の画像を作った後の 30 回の平均）',dm,6,'ms',2)
+ }
+ Object.assign(MP,keep);
+ swSub(sub0);
+ uiDefault();
+ show(0)
 };

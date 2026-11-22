@@ -1310,11 +1310,11 @@ function vmGrid(M){
 /* マップの領域：正方形で，横に余れば中央に寄せる */
 const vmLayout=(W,H)=>{const s=Math.max(40,Math.min(W-92,H-40));return{x:40+Math.max(0,(W-92-s)/2),y:6,w:s,h:s}};
 /* 等高線の値：刻み {1, 2, 2.5, 5} × 10^k のうち (lo, hi) の中の本数が 8 以下になる最小の刻みの倍数（SPEC-34 A の 4） */
-const vmNice=(lo,hi)=>{
+const vmNice=(lo,hi,nm=8)=>{
  if(!(hi>lo))return[];
  const r=hi-lo;
  let s=Infinity;
- for(let k=Math.floor(Math.log10(r/8))-1;k<=Math.floor(Math.log10(r))+1&&s===Infinity;k++)for(const m of[1,2,2.5,5]){const q=m*10**k;if(Math.floor(hi/q)-Math.ceil(lo/q)+1<=8){s=q;break}}
+ for(let k=Math.floor(Math.log10(r/nm))-1;k<=Math.floor(Math.log10(r))+1&&s===Infinity;k++)for(const m of[1,2,2.5,5]){const q=m*10**k;if(Math.floor(hi/q)-Math.ceil(lo/q)+1<=nm){s=q;break}}
  const l=[];
  for(let n=Math.ceil(lo/s);n*s<hi;n++){const v=+(n*s).toPrecision(12);if(v>lo&&v<hi)l.push(v)}
  return l
@@ -1355,6 +1355,193 @@ function vmBuild(Gd,W,H,d,cv){
  /* T_b = 0 の線（場が 0 をまたぐとき） */
  const z=lo<0&&hi>0?contourSeg((a,b)=>bil2(Gd.T,xs,xs,a,b),a0,a1,a0,a1,64,0):[];
  return{img:cv,lo,hi,seg,z,blo,bhi}
+}
+/* ===== 運転点のマップ（SPEC-37 A） ===== */
+/* 場の格子の数（横，縦），等高線の本数の上限，色の画像の大きさの上限 */
+const OPD={nx:120,ny:80,nl:10,iw:240,ih:200};
+/* マップの領域：左に縦軸の目盛と軸名，下に横軸の目盛と軸名，右に横軸の端の目盛の文字の半分 */
+const opLayout=(W,H)=>({x:42,y:8,w:Math.max(40,W-60),h:Math.max(40,H-44)});
+/* 縦軸：0 から，全開の軸トルクの最大の 1.05 倍を含む目盛まで．目盛の刻みは {1, 2, 5} × 10^k のうち目盛が 6 本以下になる最小のもの */
+function opAxis(tm){
+ const t=Math.max(1e-9,1.05*tm);
+ let s=1;
+ for(let k=Math.floor(Math.log10(t))-1;;k++){const q=[1,2,5].map(m=>m*10**k).find(q=>t/q<=6);if(q){s=q;break}}
+ const mx=Math.ceil(t/s-1e-9)*s,tv=[];
+ for(let v=0;v<=mx+1e-9;v+=s)tv.push(+v.toPrecision(12));
+ return{mx,s,tv}
+}
+/* 等高線（marching squares）：格子の節点の値 v（(nx+1)×(ny+1)．v[j(nx+1)+i] は (x0+i·sx, y0+j·sy) の値）から，値 L の線分を返す．4 隅のどれかが未定義（NaN）の小区画には引かない */
+function contourV(v,nx,ny,x0,x1,y0,y1,L){
+ const sx=(x1-x0)/nx,sy=(y1-y0)/ny,out=[],w=nx+1;
+ for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+  const c=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]],f=c.map(([a,b])=>v[b*w+a]),pts=[];
+  if(f.some(q=>q!==q))continue;
+  for(let e=0;e<4;e++){
+   const f1=f[e],f2=f[(e+1)%4];
+   if((f1-L)*(f2-L)<0){
+    const t=(L-f1)/(f2-f1),[pi,pj]=c[e],[qi,qj]=c[(e+1)%4];
+    pts.push([x0+(pi+t*(qi-pi))*sx,y0+(pj+t*(qj-pj))*sy])
+   }
+  }
+  if(pts.length===2)out.push(pts);else if(pts.length===4)out.push([pts[0],pts[1]],[pts[2],pts[3]])
+ }
+ return out
+}
+/* 色の画像と等高線を作る（値が変わったときだけ）．M は at(N, T) と tmax() を持つもの（OpMap），qi は量の番号（OPQ） */
+function opBuild(M,qi,W,H,d,cv){
+ const Q=OPQ[qi],
+  pl=opLayout(W,H),
+  ya=opAxis(M.tmax()),
+  nx=OPD.nx,
+  ny=OPD.ny,
+  w=nx+1,
+  x1=SWC.N1,
+  y1=ya.mx,
+  v=new Float64Array(w*(ny+1));
+ let lo=Infinity,hi=-Infinity;
+ for(let j=0;j<=ny;j++)for(let i=0;i<=nx;i++){
+  const r=M.at(x1*i/nx,y1*j/ny),f=r?r[Q.k]*Q.sc:NaN;
+  v[j*w+i]=f;
+  if(f===f){if(f<lo)lo=f;if(f>hi)hi=f}
+ }
+ const ok=hi>=lo,lev=ok?vmNice(Math.max(lo,Q.fr*hi),hi,OPD.nl):[];
+ cv.width=Math.max(1,Math.min(OPD.iw,Math.round(pl.w*d)));
+ cv.height=Math.max(1,Math.min(OPD.ih,Math.round(pl.h*d)));
+ const g=cv.getContext('2d'),im=g.createImageData(cv.width,cv.height),nb=lev.length,pal=[];
+ for(let b=0;b<=nb;b++)pal.push(vir(nb?b/nb:.5));
+ /* 画素の値は場の格子の双一次補間．4 隅のどれかが領域の外にある小区画（領域の縁）の画素は，点の値を直接求める */
+ for(let px=0;px<cv.width;px++){
+  const N=(px+.5)/cv.width*x1,L=M.loc?M.loc(N):null,fx=(px+.5)/cv.width*nx,i=Math.min(nx-1,Math.floor(fx)),a=fx-i;
+  for(let py=0;py<cv.height;py++){
+   const fy=(1-(py+.5)/cv.height)*ny,j=Math.min(ny-1,Math.floor(fy)),b=fy-j,q=j*w+i,k=4*(py*cv.width+px);
+   let f=(v[q]*(1-a)+v[q+1]*a)*(1-b)+(v[q+w]*(1-a)+v[q+w+1]*a)*b;
+   if(f!==f){const r=M.at(N,fy/ny*y1,L||undefined);f=r?r[Q.k]*Q.sc:NaN}
+   if(f!==f)continue;
+   let n=0;
+   while(n<nb&&lev[n]<=f)n++;
+   const c=pal[n];
+   im.data[k]=c[0];
+   im.data[k+1]=c[1];
+   im.data[k+2]=c[2];
+   im.data[k+3]=255
+  }
+ }
+ g.putImageData(im,0,0);
+ return{img:cv,qi,lo,hi,ok,lev,ya,seg:lev.map(L=>({L,s:contourV(v,nx,ny,0,x1,0,y1,L)})).filter(q=>q.s.length)}
+}
+/* マップを描く．S：{M（OpMap），C（opBuild の結果），sel（選んだ点 {N, T}），cur（運転中の機関の点 {N, T}），best（熱効率最大の点），msg}．領域，印，等高線の値の枠，凡例の枠を返す */
+function drawOp(g,W,H,S,col){
+ const pl=opLayout(W,H),
+  C=S.C,
+  x1=SWC.N1,
+  ya=C?C.ya:opAxis(S.M?S.M.tmax():50),
+  X=n=>pl.x+pl.w*n/x1,
+  Y=t=>pl.y+pl.h*(1-t/ya.mx),
+  mk=[],
+  lab=[];
+ let lg=null;
+ g.font='11px system-ui,sans-serif';
+ g.textBaseline='middle';
+ g.lineWidth=1;
+ if(C&&C.ok){
+  g.drawImage(C.img,pl.x,pl.y,pl.w,pl.h);
+  g.save();
+  g.beginPath();
+  g.rect(pl.x,pl.y,pl.w,pl.h);
+  g.clip();
+  g.strokeStyle='rgba(20,24,31,.7)';
+  for(const q of C.seg){
+   g.beginPath();
+   for(const [p1,p2] of q.s){g.moveTo(X(p1[0]),Y(p1[1]));g.lineTo(X(p2[0]),Y(p2[1]))}
+   g.stroke()
+  }
+  /* 全開の軸トルクの曲線（領域の上の縁）と下の縁 */
+  const cs=S.M.cols();
+  for(const k of['hi','lo']){
+   g.strokeStyle=col.fg;
+   g.lineWidth=k==='hi'?1.5:1;
+   g.beginPath();
+   let pen=false;
+   cs.forEach(c=>{if(!c){pen=false;return}if(pen)g.lineTo(X(c.N),Y(c[k]));else g.moveTo(X(c.N),Y(c[k]));pen=true});
+   g.stroke()
+  }
+  g.lineWidth=1;
+  /* 等高線の値：各線の線分の中点を，領域の縁から遠い順に候補とし，印とほかの文字に重ならない最初の位置に書く（置けなければ書かない） */
+  const occ=[S.best,S.cur,S.sel].filter(Boolean).map(p=>({x:X(p.N)-9,y:Y(p.T)-9,w:18,h:18})),
+   hit=r=>occ.some(o=>r.x<o.x+o.w&&o.x<r.x+r.w&&r.y<o.y+o.h&&o.y<r.y+r.h),
+   Q=OPQ[C.qi];
+  g.font='10px system-ui,sans-serif';
+  g.textAlign='left';
+  const tl=`${Q.n} ${Q.l} [${Q.u}]`,tw=g.measureText(tl).width;
+  lg={x:pl.x+4,y:pl.y+2,w:tw+6,h:16};
+  occ.push(lg);
+  g.textAlign='center';
+  for(const q of C.seg){
+   const t=String(q.L),
+    w=g.measureText(t).width+4,
+    cand=q.s.filter((_,k)=>k%3===0).map(sg=>{
+     const m=[(sg[0][0]+sg[1][0])/2,(sg[0][1]+sg[1][1])/2];
+     return[m,Math.min(X(m[0])-pl.x,pl.x+pl.w-X(m[0]),Y(m[1])-pl.y,pl.y+pl.h-Y(m[1]))]
+    }).sort((a,b)=>b[1]-a[1]);
+   for(const [m] of cand){
+    const r={x:X(m[0])-w/2,y:Y(m[1])-7,w,h:14};
+    if(r.x<pl.x||r.x+r.w>pl.x+pl.w||r.y<pl.y||r.y+r.h>pl.y+pl.h||hit(r))continue;
+    occ.push(r);
+    lab.push(r);
+    g.lineWidth=3;
+    g.strokeStyle='rgba(20,24,31,.8)';
+    g.strokeText(t,X(m[0]),Y(m[1]));
+    g.fillStyle='#ffffff';
+    g.fillText(t,X(m[0]),Y(m[1]));
+    g.lineWidth=1;
+    break
+   }
+  }
+  g.restore();
+  g.font='10px system-ui,sans-serif';
+  g.textAlign='left';
+  g.fillStyle=col.fg;
+  g.fillText(tl,lg.x+3,lg.y+8)
+ }else{
+  g.fillStyle=col.mu;
+  g.textAlign='center';
+  g.fillText(S.msg||'',pl.x+pl.w/2,pl.y+pl.h/2)
+ }
+ g.strokeStyle=col.ln;
+ g.lineWidth=1;
+ g.strokeRect(pl.x,pl.y,pl.w,pl.h);
+ g.fillStyle=col.mu;
+ g.font='11px system-ui,sans-serif';
+ g.textAlign='center';
+ for(let n=0;n<=x1;n+=1000)g.fillText(n,X(n),pl.y+pl.h+11);
+ g.fillText('回転数 N [rpm]',pl.x+pl.w/2,pl.y+pl.h+27);
+ g.textAlign='right';
+ for(const t of ya.tv)g.fillText(t,pl.x-4,Y(t));
+ g.save();
+ g.translate(pl.x-31,pl.y+pl.h/2);
+ g.rotate(-Math.PI/2);
+ g.textAlign='center';
+ g.fillText('軸トルク T_b [N·m]',0,0);
+ g.restore();
+ const draw=(p,sh,c)=>{
+  const x=X(p.N),y=Y(p.T);
+  mk.push({sh,x,y});
+  g.fillStyle=c;
+  g.strokeStyle='#14181f';
+  g.lineWidth=1.5;
+  g.beginPath();
+  if(sh==='o')g.arc(x,y,5,0,7);else if(sh==='s'){
+   for(let k=0;k<10;k++){const r=k%2?3:7,t=-PI/2+k*PI/5;g.lineTo(x+r*Math.cos(t),y+r*Math.sin(t))}
+   g.closePath()
+  }else{g.rect(x-1.5,y-7,3,14);g.rect(x-7,y-1.5,14,3)}
+  g.fill();
+  if(sh!=='+')g.stroke()
+ };
+ const inR=p=>p&&p.N>=0&&p.N<=x1&&p.T>=0&&p.T<=ya.mx;
+ if(C&&C.ok&&inR(S.best))draw(S.best,'s','#ff8a4c');
+ if(inR(S.cur))draw(S.cur,'o','#ffffff');
+ if(C&&C.ok&&inR(S.sel))draw(S.sel,'+','#ffffff');
+ return{pl,mk,lab,lg,X,Y,ya}
 }
 const vir=t=>{
  t=Math.max(0,Math.min(1,t));

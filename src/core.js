@@ -2127,6 +2127,10 @@ class Sweep{
     dpex:M.dpex,
     ppeR:M.ppeR,
     mt:M.mtl,
+    mfd:M.mfd,
+    mth:M.mth,
+    pm:M.pm,
+    Tx:M.Tx,
     ok,
     cyc:h.length,
     r
@@ -2189,6 +2193,193 @@ class SweepSet{
    }
   }
   return this.done
+ }
+}
+/* ===== 運転点のマップ（回転数 × 軸トルク．SPEC-37） ===== */
+/* als：はじめに計測する開度 [°]（大きい順）．dT：隣り合う点の軸トルクの差の上限（全開の軸トルクの最大に対する比）．down，amin：最小の開度でも T_b > 0 のときに開度を下げる倍率と下限．dal：これより狭い開度の間は細かくしない．lv：細かくする回数の上限．eps：同じ回転数で軸トルクが下がったとみなす差（同じ比）．f：補間する量 */
+const OPM={als:[90,45,28,18,12,8,5.5,3.8,2.6,1.8],dT:.1,down:.7,amin:.3,dal:.05,lv:8,eps:2e-3,f:['mfd','Tx','mth','pm','spa']};
+/* 表示する量（SPEC-37 の 7）．k：値の名前，sc：表示の単位への倍率，d：小数の桁，fr：等高線を引く範囲の下端（最大に対する比．0 は範囲の全部） */
+const OPQ=[
+ {k:'eb',n:'燃費',l:'η_b',u:'%',sc:100,d:1,fr:.75},
+ {k:'Tx',n:'排気温',l:'T_X',u:'K',sc:1,d:0,fr:0},
+ {k:'mth',n:'空気量',l:'ṁ_th',u:'g/s',sc:1e3,d:2,fr:0},
+ {k:'pm',n:'最大圧',l:'p_max',u:'MPa',sc:1e-6,d:2,fr:0},
+ {k:'spa',n:'点火',l:'θ_ig',u:'°BTDC',sc:1,d:1,fr:0}
+];
+/* 正味熱効率と正味の燃料消費率 [g/(kW·h)]：軸トルク T [N·m]，回転数 N [rpm]，燃料の質量流量 mf [kg/s] から */
+const opEb=(N,T,mf)=>T>0&&mf>0?T*N*PI/30/(mf*K.Hu):0,opBe=e=>e>0?3.6e9/(e*K.Hu):NaN;
+class OpMap{
+ constructor(P0,Ns,opt){
+  this.P0=P0;
+  this.Ns=Ns||SWN;
+  this.o=swOpt(opt);
+  this.pt=this.Ns.map(()=>[]);
+  this.np=0;
+  this.ver=0;
+  this.cv=-1;
+  this.cc=null;
+  this.t=0;
+  this.ms=10;
+  this.done=false;
+  this.stop=false;
+  this.stage='';
+  this.g=this.gen()
+ }
+ /* 1 つの開度 al [°] で，回転数の添字 idx（昇順）の点を続けて計測する（Sweep．前の点の状態を引き継ぐ） */
+ *row(al,idx){
+  if(!idx.length)return;
+  const S=new Sweep(this.P0,idx.map(i=>this.Ns[i]),al,this.o);
+  let k=0;
+  for(;;){
+   const d=S.run(this.ms);
+   for(;k<S.pts.length;k++){
+    const q=S.pts[k];
+    this.pt[idx[k]].push({al,st:!!q.st,ok:!!q.ok,cyc:q.cyc,tb:q.tb,eb:q.eb,mfd:q.mfd,Tx:q.Tx,mth:q.mth,pm:q.pm,spa:q.spa});
+    this.np++;
+    this.ver++
+   }
+   if(d||this.stop)return;
+   yield
+  }
+ }
+ /* 回転数の添字 i の，開度 al の点が T_b > 0 か */
+ pos(i,al){const q=this.pt[i].find(p=>p.al===al);return!!q&&!q.st&&q.tb>0}
+ /* 全開の軸トルクの最大 */
+ tmax(){
+  let m=0;
+  for(const c of this.pt)for(const q of c)if(q.al===OPM.als[0]&&!q.st&&q.tb>m)m=q.tb;
+  return m
+ }
+ /* 回転数の添字 i の列：c は開度の大きい順の点（エンストを除く），n は全開から軸トルクが下がっていく点（T_b > 0），z は T_b ≤ 0 になった最初の点．全開の点が無いか T_b ≤ 0 なら null */
+ chain(i,tm){
+  const c=this.pt[i].filter(q=>!q.st).sort((a,b)=>b.al-a.al);
+  if(!c.length||c[0].al!==OPM.als[0]||!(c[0].tb>0))return null;
+  const n=[c[0]];
+  let z=null;
+  for(let j=1;j<c.length;j++){
+   const q=c[j];
+   if(!(q.tb<n[n.length-1].tb-OPM.eps*tm))continue;
+   if(q.tb>0)n.push(q);else{z=q;break}
+  }
+  return{c,n,z}
+ }
+ /* 細かくする点：[開度, 回転数の添字] の一覧．列の隣り合う点の軸トルクの差が lim を超える間（T_b = 0 までの残りも同じ）の，開度の相乗平均 */
+ need(){
+  const tm=this.tmax(),
+   lim=OPM.dT*tm,
+   o=new Map,
+   add=(h,b,i)=>{
+    const a=h.c[h.c.indexOf(b)-1];
+    if(a.al-b.al<=OPM.dal)return;
+    const m=+Math.sqrt(a.al*b.al).toPrecision(6);
+    if(!o.has(m))o.set(m,[]);
+    o.get(m).push(i)
+   };
+  this.Ns.forEach((_,i)=>{
+   const h=tm>0?this.chain(i,tm):null;
+   if(!h)return;
+   for(let j=0;j+1<h.n.length;j++)if(h.n[j].tb-h.n[j+1].tb>lim)add(h,h.n[j+1],i);
+   const l=h.n[h.n.length-1];
+   if(h.z&&(l.tb>lim||l.tb-h.z.tb>2*lim))add(h,h.z,i)
+  });
+  return[...o.entries()].sort((a,b)=>b[0]-a[0])
+ }
+ *gen(){
+  const A=OPM.als;
+  let act=this.Ns.map((_,i)=>i),al=A[0];
+  /* 1：はじめの開度（大きい順）．前の開度で T_b > 0 だった回転数だけを続ける */
+  for(let k=0;k<A.length&&act.length;k++){
+   al=A[k];
+   this.stage=`開度 ${k+1}/${A.length}`;
+   yield*this.row(al,act);
+   if(this.stop)return;
+   act=act.filter(i=>this.pos(i,al))
+  }
+  /* 2：最小の開度でも T_b > 0 の回転数は，開度を下げる */
+  while(act.length&&al*OPM.down>=OPM.amin){
+   al=+(al*OPM.down).toPrecision(6);
+   this.stage='開度を下げる';
+   yield*this.row(al,act);
+   if(this.stop)return;
+   act=act.filter(i=>this.pos(i,al))
+  }
+  /* 3：軸トルクの間隔が広いところを細かくする */
+  for(let lv=1;lv<=OPM.lv;lv++){
+   const nd=this.need();
+   if(!nd.length)break;
+   this.stage=`細分 ${lv}`;
+   for(const [m,idx] of nd){yield*this.row(m,idx);if(this.stop)return}
+  }
+  this.stage='終了'
+ }
+ run(ms){
+  if(this.done)return true;
+  const t0=performance.now();
+  for(;;){
+   const left=ms-(performance.now()-t0);
+   if(left<=0)break;
+   this.ms=Math.max(1,left);
+   if(this.g.next().done){this.done=true;break}
+  }
+  this.t+=performance.now()-t0;
+  return this.done
+ }
+ /* 補間に使う列（回転数ごと．値が変わったときだけ作り直す）：{N, lo, hi, nd}．nd は軸トルクの小さい順の節点 {T, mfd, Tx, mth, pm, spa}．T_b ≤ 0 の点があれば，その手前の点との 1 次の補間で T = 0 の節点を置く */
+ cols(){
+  if(this.cv===this.ver)return this.cc;
+  const tm=this.tmax(),
+   F=OPM.f,
+   C=this.Ns.map((N,i)=>{
+    const h=tm>0?this.chain(i,tm):null;
+    if(!h)return null;
+    const nd=h.n.map(q=>{const o={T:q.tb};for(const k of F)o[k]=q[k];return o}).reverse();
+    if(h.z){
+     const a=h.n[h.n.length-1],u=a.tb/(a.tb-h.z.tb),o={T:0};
+     for(const k of F)o[k]=a[k]+(h.z[k]-a[k])*u;
+     nd.unshift(o)
+    }
+    return nd.length<2?null:{N,lo:nd[0].T,hi:nd[nd.length-1].T,nd}
+   });
+  this.cv=this.ver;
+  return this.cc=C
+ }
+ /* 回転数 N [rpm] での補間の組：両側の列 a，b，重み u，描く領域の下端 lo と上端 hi．列が無ければ null */
+ loc(N){
+  const C=this.cols(),Ns=this.Ns,n=Ns.length;
+  if(!(N>=Ns[0]&&N<=Ns[n-1]))return null;
+  let i=0,j=n-1;
+  while(j-i>1){const m=(i+j)>>1;if(Ns[m]<=N)i=m;else j=m}
+  let a=C[i],b=C[j];
+  const u=j>i?(N-Ns[i])/(Ns[j]-Ns[i]):0;
+  if(u===0)b=a;else if(u===1)a=b;
+  return a&&b?{a,b,u,lo:a.lo+(b.lo-a.lo)*u,hi:a.hi+(b.hi-a.hi)*u}:null
+ }
+ /* 点 (N [rpm], T [N·m]) の値（SPEC-37 の 5）．描く領域の外は null．L は loc(N) の結果（省けば求める） */
+ at(N,T,L){
+  L=L||this.loc(N);
+  if(!L)return null;
+  const{a,b,u,lo,hi}=L,e=1e-9*hi;
+  if(!(T>=lo-e&&T<=hi+e))return null;
+  const s=Math.max(0,Math.min(1,(T-lo)/(hi-lo))),
+   cu=(c,t)=>{
+    const d=c.nd;
+    let k=0;
+    while(k<d.length-2&&d[k+1].T<t)k++;
+    return[d[k],d[k+1],Math.max(0,Math.min(1,(t-d[k].T)/(d[k+1].T-d[k].T)))]
+   },
+   [a0,a1,wa]=cu(a,a.lo+s*(a.hi-a.lo)),
+   [b0,b1,wb]=a===b?[a0,a1,wa]:cu(b,b.lo+s*(b.hi-b.lo)),
+   r={N,T};
+  for(const k of OPM.f){const va=a0[k]+(a1[k]-a0[k])*wa,vb=b0[k]+(b1[k]-b0[k])*wb;r[k]=va+(vb-va)*u}
+  r.eb=opEb(N,T,r.mfd);
+  r.be=opBe(r.eb);
+  return r
+ }
+ /* 正味熱効率が最大の節点 {N, T, eb} */
+ best(){
+  let b=null;
+  for(const c of this.cols())if(c)for(const d of c.nd){const e=opEb(c.N,d.T,d.mfd);if(!b||e>b.eb)b={N:c.N,T:d.T,eb:e}}
+  return b
  }
 }
 const avgM=s=>{

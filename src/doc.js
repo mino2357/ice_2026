@@ -707,7 +707,7 @@ function xrRows(root){
 }
 /* 式の解説の本文中の表記をリンクにする（4 文書はビルド時に同じ規則でリンクにしてある） */
 function xrText(root){
- const re=/(?<![A-Za-z0-9])((?:REQ|SPEC|TEST)-(?:0[1-9]|[12][0-9]|3[0-5]))(?![0-9])/g,
+ const re=/(?<![A-Za-z0-9])((?:REQ|SPEC|TEST)-(?:0[1-9]|[12][0-9]|3[0-7]))(?![0-9])/g,
   w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('h1,h2,h3,h4,code,pre,.tx,.im,.dx,a')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT}),
   ns=[];
  while(w.nextNode())ns.push(w.currentNode);

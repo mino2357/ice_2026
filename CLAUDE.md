@@ -55,7 +55,7 @@
 | `src/audio.js` | エンジン音の合成器 `Synth`，振動 `Hap` |
 | `src/plot.js` | グラフの軸とレイアウト，機関断面図，全体図 |
 | `src/doc.js` | 解説タブ（式の解説，記号表 `SYM`），埋め込んだ 4 文書の表示，MathJax |
-| `src/tests.js` | アプリ内テスト `TST[1]`〜`TST[36]` とシナリオ |
+| `src/tests.js` | アプリ内テスト `TST[1]`〜`TST[37]` とシナリオ |
 | `src/ui.js`，`src/style.css`，`src/index.tpl.html` | 画面・入力・ループ，見た目，ひな形 |
 | `src/build.py` | 結合と文書の変換（pandoc が必要）→ `dist/engine.html` |
 | `tests/headless.js` | 段階 2 の検証（Playwright，7 通り） |

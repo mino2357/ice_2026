@@ -251,7 +251,7 @@ const SW={
 const swO=()=>({crit:SW.crit,flow:SW.flow,proc:SW.proc,nmin:SW.nmin,nmax:SW.nmax}),
  swSig=()=>JSON.stringify(LP)+'|'+JSON.stringify([SW.step,SW.als.slice().sort((a,b)=>b-a),SW.crit,SW.flow,SW.proc,SW.nmin,SW.nmax]);
 function swStart(){
- if((U.busy&&!U.swTest)||SW.run)return;
+ if((U.busy&&!U.swTest)||SW.run||MP.run)return;
  SW.run=new SweepSet({...LP},swN(SW.step),SW.als,swO());
  SW.run.sig=swSig();
  SW.run.P={...LP};
@@ -277,13 +277,21 @@ function swTick(ms){
 function swSub(n){
  SW.sub=n;
  [...$('sws').children].forEach((b,j)=>b.className=j===n?'on':'');
- const g=n<4;
+ const g=n<4,mp=n===6;
  $('tc').style.display=g?'':'none';
  $('swo').style.display=n===4?'':'none';
  $('swa').style.display=n===5?'':'none';
  $('swt').style.display=g?'':'none';
+ for(const k of['mpq','mpt','mpc'])$(k).style.display=mp?'':'none';
  if(n===4)swOpts();
- if(n===5)swCond()
+ if(n===5)swCond();
+ if(mp)mpText();else swBtn()
+}
+/* [計測開始]／[中止]：マップの表示ではマップの計算，それ以外では性能曲線の計測を始める・止める．もう一方の実行中は始められない（SPEC-37 A の 2） */
+function swBtn(){
+ const mp=SW.sub===6,on=mp?!!MP.run:!!SW.run,b=$('swg');
+ b.textContent=on?'中止':'計測開始';
+ b.disabled=!on&&((!!U.busy&&!U.swTest)||(mp?!!SW.run:!!MP.run))
 }
 function swOpts(){
  const B=(k,v,lab,on)=>`<button data-o="${k}" data-v="${v}" class="${on?'on':''}">${lab}</button>`,
@@ -339,7 +347,94 @@ function swText(){
  r[0].textContent=a;
  r[1].textContent=c;
  r[2].textContent=b;
- $('swg').disabled=!!U.busy&&!R&&!U.swTest
+ swBtn()
+}
+/* ===== 運転点のマップ（SPEC-37 A） ===== */
+const MP={run:null,cur:null,q:0,sel:null,maxMs:0,key:'',kz:'',c:null,cM:null,cv:null,tb:0};
+const mpSig=()=>JSON.stringify(LP)+'|'+JSON.stringify([SW.crit,SW.flow,SW.nmin,SW.nmax]),
+ mpM=()=>MP.run||MP.cur,
+ mpCur=()=>{const s=live.s,m=avgM(s);return s.fuel&&s.fired&&m.tb===m.tb?{N:m.N,T:m.tb}:null};
+function mpStart(){
+ if((U.busy&&!U.swTest)||MP.run||SW.run)return;
+ MP.run=new OpMap({...LP},SWN,swO());
+ MP.run.sg=mpSig();
+ MP.sel=null;
+ mpText()
+}
+/* 中止：それまでに計算した範囲のマップを残す */
+function mpStop(){
+ const m=MP.run;
+ if(!m)return;
+ m.stop=true;
+ MP.cur=m;
+ MP.run=null;
+ mpText()
+}
+function mpTick(ms){
+ const m=MP.run;
+ if(!m)return false;
+ const t=performance.now(),d=m.run(ms);
+ MP.maxMs=Math.max(MP.maxMs,performance.now()-t);
+ if(d){MP.cur=m;MP.run=null;mpText()}
+ return d
+}
+function mpQ(n){
+ MP.q=n;
+ [...$('mpq').children].forEach((b,j)=>b.className=j===n?'on':'');
+ mpText()
+}
+function mpText(){
+ const r=$('mpt').children,m=mpM(),f=(v,d)=>v.toFixed(d);
+ let a='計測開始で運転点のマップを求めます',b=`回転数 ${SWC.step} rpm ごと × 負荷（全開から軸トルク 0 まで）`,c='',e='';
+ if(m){
+  a=MP.run?`計算中 ${m.stage}（${m.np} 点，${f(m.t/1e3,1)} s）`:`${m.stop?'中止':'完了'} ${f(m.t/1e3,1)} s（${m.np} 点）`+(m.sg!==mpSig()?'　設定が変わりました（再計測で更新）':'');
+  const v=MP.sel?m.at(MP.sel.N,MP.sel.T):null,bs=m.best();
+  b=MP.sel?`＋ 選んだ点 ${f(MP.sel.N,0)} rpm，${f(MP.sel.T,1)} N·m${v?'（補間）':'：範囲外'}`:'マップをタップすると，その点の値が出ます';
+  if(v){
+   c=`η_b ${f(v.eb*100,1)} %，${v.be===v.be?f(v.be,0)+' g/kWh':'出力なし'}，点火 ${f(v.spa,1)}°BTDC`;
+   e=`T_X ${f(v.Tx,0)} K，ṁ_th ${f(v.mth*1e3,2)} g/s，p_max ${f(v.pm/1e6,2)} MPa`
+  }else c=bs?`★ η_b 最大 ${f(bs.eb*100,1)} %：${bs.N} rpm，${f(bs.T,1)} N·m`:''
+ }
+ r[0].textContent=a;
+ r[1].textContent=b;
+ r[2].textContent=c;
+ r[3].textContent=e;
+ swBtn()
+}
+/* 色の画像と等高線は，値か大きさか量が変わったときだけ作り直す．計算の途中は 300 ms に 1 回まで */
+function drawMp(){
+ const q=prep($('mpc'));
+ if(!q)return null;
+ const m=mpM(),d=$('mpc').width/q.W,now=performance.now();
+ let C=null;
+ if(m&&m.cols().some(Boolean)){
+  const kz=`${q.W}|${q.H}|${d}|${MP.q}`,key=kz+'|'+m.ver,same=MP.cM===m&&MP.kz===kz;
+  if(!same||(key!==MP.key&&(!MP.run||now-MP.tb>=300))){
+   MP.cM=m;
+   MP.kz=kz;
+   MP.key=key;
+   MP.tb=now;
+   MP.cv=MP.cv||document.createElement('canvas');
+   MP.c=opBuild(m,MP.q,q.W,q.H,d,MP.cv)
+  }
+  C=MP.c
+ }
+ return drawOp(q.g,q.W,q.H,{M:m,C,sel:MP.sel,cur:mpCur(),best:C&&MP.q===0?m.best():null,msg:m?`計算中（${m.stage}）`:'[計測開始] でマップを作ります'},COL)
+}
+/* タップ：★ から 12 px 以内ならその点，それ以外は回転数を 10 rpm，軸トルクを 0.1 N·m に丸めた点（軸の外は端に寄せる） */
+function mpTap(x,y){
+ const m=mpM();
+ if(!m||!m.cols().some(Boolean))return;
+ const c=$('mpc'),
+  r=c.getBoundingClientRect(),
+  pl=opLayout(c.clientWidth,c.clientHeight),
+  ya=opAxis(m.tmax()),
+  px=x-r.left,
+  py=y-r.top,
+  b=MP.q===0?m.best():null,
+  N1=SWC.N1;
+ if(b&&Math.hypot(pl.x+pl.w*b.N/N1-px,pl.y+pl.h*(1-b.T/ya.mx)-py)<=12)MP.sel={N:b.N,T:b.T};else MP.sel={N:Math.max(0,Math.min(N1,Math.round((px-pl.x)/pl.w*N1/10)*10)),T:Math.max(0,Math.min(ya.mx,Math.round((1-(py-pl.y)/pl.h)*ya.mx*10)/10))};
+ mpText()
 }
 let SLAY=[];
 function drawSw(){
@@ -884,7 +979,9 @@ function initUI(){
  tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
  tap($('bsys'),()=>show(6));
  tap($('bback'),()=>show(0));
- tap($('swg'),()=>{if(SW.run)swStop();else swStart()});
+ tap($('swg'),()=>{if(SW.sub===6){if(MP.run)mpStop();else mpStart()}else if(SW.run)swStop();else swStart()});
+ tap($('mpq'),e=>{const b=e.target.closest('button');if(b)mpQ([...$('mpq').children].indexOf(b))});
+ tap($('mpc'),e=>mpTap(e.clientX,e.clientY));
  tap($('opb'),e=>{const b=e.target.closest('button[data-m]');if(b)optSub(+b.dataset.m)});
  tap($('oob'),e=>{const b=e.target.closest('button[data-o]');if(b)optObj(+b.dataset.o)});
  tap($('orn'),optStart);
@@ -979,6 +1076,7 @@ function initUI(){
    advance(Sim,live,el,Sim.spd===Infinity?FB.mx:FB.n);
    spdTick(now);
    swTick(8);
+   mpTick(12);
    optTick(12);
    vmTick(12);
    lossTick(6);
@@ -990,7 +1088,7 @@ function initUI(){
   if(now-lastDraw<15)return;
   lastDraw=now;
   if(U.busy&&!U.uiDraw)return;
-  if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){drawSw();swText()}else if(U.tab===6)drawSysT();else if(U.tab===8)drawLossT();else if(U.tab===7){
+  if(U.tab===0){drawEng();met();ctlRender();drawPv0()}else if(U.tab===1)drawCh();else if(U.tab===5){if(SW.sub===6){drawMp();mpText()}else{drawSw();swText()}}else if(U.tab===6)drawSysT();else if(U.tab===8)drawLossT();else if(U.tab===7){
    drawOpt();
    if(++slow%6===0||OP.run)optText();
    if(OP.m===2&&(slow%6===0||(OP.vm&&!OP.vm.done)))vmText()

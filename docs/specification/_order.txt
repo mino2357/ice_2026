@@ -31,6 +31,7 @@ SPEC-32.md
 SPEC-33.md
 SPEC-34.md
 SPEC-35.md
+SPEC-37.md
 s6.md
 SPEC-21.md
 SPEC-36.md
@@ -67,4 +68,5 @@ TEST-33.md
 TEST-34.md
 TEST-35.md
 TEST-36.md
+TEST-37.md
 s9.md
