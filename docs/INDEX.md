@@ -34,7 +34,7 @@
 | 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3700–3834 | 11 | – |
 | 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 3836–3941 | – | `ui.js`:483,485,488,557,567 |
 | 24 | 内部 EGR と点火時期の妥当性 | `requirements/REQ-24.md`（659） | `specification/SPEC-24.md`（967） | `specification/TEST-24.md`（1433） | 4007–4046 | 05 | – |
-| 25 [U] | 吸気ランナの慣性（慣性過給） | `requirements/REQ-25.md`（1122） | `specification/SPEC-25.md`（3857） | `specification/TEST-25.md`（2253） | 4056–4146 | 02 04 05 29 | `core.js`:1561,1574 |
+| 25 [U] | 吸気ランナの慣性（慣性過給） | `requirements/REQ-25.md`（1137） | `specification/SPEC-25.md`（3857） | `specification/TEST-25.md`（2253） | 4056–4146 | 02 04 05 29 | `core.js`:1561,1574 |
 | 26 [U] | 性能曲線タブ（回転数に対する特性の計測） | `requirements/REQ-26.md`（1429） | `specification/SPEC-26.md`（3254） `gui/SPEC-26B.md`（1876） | `specification/TEST-26.md`（3906） | 4193–4338 | 10 14 29 31 37 | `core.js`:469,2109,2129,2130,2158,2166… `plot.js`:238 `ui.js`:260,336 |
 | 27 [U] | 排気系（排気管の脈動と背圧） | `requirements/REQ-27.md`（1475） | `specification/SPEC-27.md`（7785） | `specification/TEST-27.md`（2486） | 4579–4641 | 04 08 14 21 25 29 | `core.js`:997,1097,1222,1301,1312,1317… |
 | 28 | アイドルの妥当性 | `requirements/REQ-28.md`（413） | `specification/SPEC-28.md`（1010） | `specification/TEST-28.md`（462） | 5350–5372 | – | – |
@@ -152,7 +152,7 @@
 | `docs/changes/2026-11-23-event-theta-exact.md` | 1648 |
 | `docs/changes/2026-11-23-exhaust-sound-speed.md` | 1074 |
 | `docs/changes/2026-11-23-plot-fixes.md` | 1826 |
-| `docs/changes/2026-11-23-port-air-mass.md` | 1425 |
+| `docs/changes/2026-11-23-port-air-mass.md` | 1565 |
 | `docs/changes/2026-11-23-review-followup.md` | 2038 |
 | `docs/changes/2026-11-23-review-gemini-2.md` | 2485 |
 | `docs/changes/2026-11-23-review-gemini-3.md` | 2693 |
