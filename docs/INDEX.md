@@ -160,4 +160,4 @@
 | `docs/changes/2026-11-23-review-gemini-4.md` | 4343 |
 | `docs/changes/2026-11-23-review-gemini-5.md` | 7273 |
 | `docs/changes/2026-11-23-run-state-copy.md` | 2494 |
-| `docs/changes/2026-11-24-review-gemini-6.md` | 6507 |
+| `docs/changes/2026-11-24-review-gemini-6.md` | 9920 |
