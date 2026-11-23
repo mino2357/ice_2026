@@ -1660,7 +1660,160 @@ TST[15]=function*(){
   show(2);
   const p2=$('Pg').firstChild!==p0&&!!$('Pg').firstChild;
   show(0);
-  chkB(15,'表示の書き換え：制御の表示は文字が同じなら要素を作り直さない．設定のページは，設定タブを表示していない間は作り直さず，設定タブを表示したときに作り直す',c1&&p1&&p2,`${[c1,p1,p2].map(q=>q?1:0).join('')}`)
+  /* 画面の状態 U を前の値に戻しても（全テストの実行の終わりに戻す），制御の表示が今の状態と一致する */
+  const u0={...U},
+   sv=live,
+   ok0=$('ctl').textContent;
+  live=new Core(mkPT());
+  live.start();
+  live.s.fired=1;
+  live.s.fuel=1;
+  live.s.Nb=1234;
+  ctlRender();
+  const busy=$('ctl').textContent!==ok0;
+  Object.assign(U,u0);
+  live=sv;
+  ctlRender();
+  const c2=busy&&$('ctl').textContent===ctlText(live).map(x=>x.replace(/<[^>]*>/g,'')||'\u00a0').join('');
+  chkB(15,'表示の書き換え：制御の表示は文字が同じなら要素を作り直さない．設定のページは，設定タブを表示していない間は作り直さず，設定タブを表示したときに作り直す．画面の状態を前の値に戻した後も，制御の表示が今の状態と一致する',c1&&p1&&p2&&c2,`${[c1,p1,p2,c2].map(q=>q?1:0).join('')}`)
+ }
+/* 20：運転の状態のテキスト（REQ-15 の 15，SPEC-15 K）．クリップボードを検査用に置き換える */
+ {
+  const sv=live,
+   cl=Object.getOwnPropertyDescriptor(navigator,'clipboard'),
+   ex=document.execCommand,
+   has=typeof copyRun==='function',
+   rst=()=>{
+    if(cl)Object.defineProperty(navigator,'clipboard',cl);else delete navigator.clipboard;
+    document.execCommand=ex
+   };
+  let got=null;
+  onEnd(()=>{
+   rst();
+   live=sv;
+   if(typeof runBox==='function')runBox(0)
+  });
+  const wr=()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async x=>{got=x}},configurable:true});
+  wr();
+  uiDefault();
+  show(0);
+  const b=$('bcp'),
+   H=['【運転】','【制御】','【指標】','【状態】','【設定】','【適用待ち】','【基準サイクル】'],
+   bad=t=>/NaN|Infinity|undefined/.test(t),
+   hd=t=>{
+    let i=-1;
+    return H.every(h=>{
+     const j=t.indexOf('\n'+h+'\n'),ok=j>i;
+     i=j;
+     return ok
+    })
+   },
+   sec=(t,h)=>{
+    const L=t.split('\n'),i=L.indexOf(h),o=[];
+    if(i<0)return o;
+    for(let j=i+1;j<L.length&&!L[j].startsWith('【');j++)if(L[j]!=='')o.push(L[j]);
+    return o
+   },
+   cp=function*(){
+    got=null;
+    const m=has&&b?yield copyRun():null;
+    return{m,t:got||'',l:b?b.textContent:''}
+   };
+  /* (a) ボタンの寸法と位置．断面図の文字（最も長い場合）と重ならない */
+  let a1=false,aw='ボタンが無い';
+  if(b){
+   const q=b.getBoundingClientRect(),
+    r=$('bsys').getBoundingClientRect(),
+    e=$('eng').getBoundingClientRect(),
+    g=$('eng').getContext('2d');
+   g.save();
+   const mx=Math.max(...[
+    ['bold 13px system-ui,sans-serif','MOTOR  N̄ 12000 rpm'],
+    ['12px system-ui,sans-serif','スロットル制御'],
+    ['12px system-ui,sans-serif','動力計制御'],
+    ['12px system-ui,sans-serif','最速 999×'],
+    ['bold 12px system-ui,sans-serif','OVERLOAD UNDERPOWER'],
+    ['bold 12px system-ui,sans-serif','VALVE HIT']
+   ].map(([f,t])=>{
+    g.font=f;
+    return 8+g.measureText(t).width
+   }));
+   g.restore();
+   const sl=[$('ntb'),$('thb')].filter(x=>x&&x.offsetParent!==null).map(x=>x.getBoundingClientRect().top);
+   a1=q.width>=44&&q.height>=44&&(q.right<=r.left||q.left>=r.right||q.bottom<=r.top||q.top>=r.bottom)&&e.left+mx<q.left&&q.right<=e.right+.5&&q.top>=e.top-.5&&sl.every(t=>q.bottom<=t+.5);
+   aw=`${q.width.toFixed(0)}×${q.height.toFixed(0)} px，文字の右端 ${mx.toFixed(0)} px，ボタンの左端 ${(q.left-e.left).toFixed(0)} px`
+  }
+  chkB(15,'運転の状態のテキスト：運転タブの [コピー] が 44 px 以上で，機関断面図の中にあり，[全体図] ともスライダの帯とも重ならず，機関断面図の文字（最も長い場合）より右にある',a1,aw);
+  /* (b) 停止したコールドリセットの状態 */
+  const c1=yield*cp(),
+   s1=sec(c1.t,'【設定】'),
+   b1=c1.m==='ok'&&hd(c1.t)&&c1.t.includes('\nビルド：'+BUILD+'\n')&&!bad(c1.t)&&c1.l==='完了'&&!s1.some(l=>l.startsWith('*'))&&s1.includes('既定値と違う項目：0 件');
+  chkB(15,'運転の状態のテキスト（停止）：7 つの見出しがこの順にあり，ビルドの ID の行がある．NaN・Infinity を含まない．既定値と違う項目が 0 件．ボタンが「完了」になる',b1,`${c1.m}，${c1.t.split('\n').length} 行，「${c1.l}」`);
+  /* (c) 動力計制御の定常（S4） */
+  live=(yield*scen('S4')).c.clone();
+  show(0);
+  met();
+  ctlRender();
+  const y0=EIX.map(i=>live.s.y[i]),
+   mv=[...$('M').children].map(d=>`（${d.dataset.k}）：${d.lastChild.textContent}`),
+   cv=[...$('ctl').children].map(d=>d.textContent.replace(/ /g,'').trim()||'–'),
+   c2=yield*cp(),
+   st=sec(c2.t,'【状態】'),
+   okY=y0.length===22&&y0.every((v,i)=>{
+    const m=/^(\d+) .*：(\S+)/.exec(st[i]||'');
+    return!!m&&+m[1]===i+1&&Number(m[2])===v
+   }),
+   mt=sec(c2.t,'【指標】'),
+   okM=mt.length===24&&mv.every(x=>mt.some(l=>l.endsWith(x))),
+   okC=JSON.stringify(sec(c2.t,'【制御】'))===JSON.stringify(cv),
+   si=sec(c2.t,'【設定】').filter(l=>!l.startsWith('〔')&&!l.startsWith('既定値と違う')),
+   okS=si.length===ITEMS.length&&ITEMS.every(it=>si.some(l=>l.replace(/^\* /,'').startsWith(`${it.n}：${disp(it,LP[it.k])}`)));
+  chkB(15,'運転の状態のテキスト（動力計制御の定常）：状態の 22 成分が読み戻すと押した瞬間の値と完全に一致し，指標 24 項目が運転タブの表示と，制御の 4 行が制御状態カードと，設定の行が全項目の設定の値と一致する．NaN・Infinity を含まない',okY&&okM&&okC&&okS&&!bad(c2.t),`状態 ${okY?1:0}，指標 ${okM?1:0}（${mt.length}），制御 ${okC?1:0}，設定 ${okS?1:0}（${si.length}/${ITEMS.length}），NaN 等 ${bad(c2.t)?1:0}`);
+  /* (d) 既定値との違い，変更の記録，適用待ち */
+  const it=IT.nt,n0=LP.nt,dv=gi(it,n0)>=gmax(it)?-1:1,v1=gv(it,gi(it,n0)+dv),v2=gv(it,gi(it,n0)+2*dv);
+  Base.clear();
+  setParam('nt',v1);
+  const c3=yield*cp(),
+   s3=sec(c3.t,'【設定】'),
+   r3=sec(c3.t,'【基準サイクル】'),
+   ln=v=>`：${it.n}：${disp(it,n0)} → ${disp(it,v)}`,
+   d1=s3.filter(l=>l.startsWith('* ')).length===1&&s3.some(l=>l.startsWith(`* ${it.n}：`)&&l.includes(`（既定 ${disp(it,defv(it))}）`))&&s3.includes('既定値と違う項目：1 件')&&(r3[0]||'').startsWith('あり')&&r3.filter(l=>l.includes(ln(v1))).length===1;
+  setParam('nt',v2);
+  const c4=yield*cp(),
+   r4=sec(c4.t,'【基準サイクル】'),
+   d2=r4.filter(l=>l.includes(`：${it.n}：`)).length===1&&r4.some(l=>l.includes(ln(v2)));
+  setParam('nt',n0);
+  const c5=yield*cp(),
+   r5=sec(c5.t,'【基準サイクル】'),
+   d3=!r5.some(l=>l.includes(`：${it.n}：`))&&r5.includes('設定の変更：なし');
+  const rk=ITEMS.find(i=>i.c==='r'&&!i.ch),
+   rv=gv(rk,gi(rk,LP[rk.k])+(gi(rk,LP[rk.k])>=gmax(rk)?-1:1));
+  setParam(rk.k,rv);
+  const c6=yield*cp(),
+   d4=sec(c6.t,'【適用待ち】').some(l=>l.startsWith(`${rk.n}：${disp(rk,LP[rk.k])} → ${disp(rk,rv)}`));
+  U.pend={};
+  chkB(15,'運転の状態のテキスト（設定の変更）：変えた項目だけに * と既定値が付き，基準サイクルと変更の行がある．同じ項目を続けて変えても 1 件で新値が変わり，元に戻すと消える．要リセット項目の保留値が適用待ちにある',d1&&d2&&d3&&d4,`${[d1,d2,d3,d4].map(q=>q?1:0).join('')}`);
+  /* (e) クリップボードに書けないとき */
+  Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('x')}},configurable:true});
+  document.execCommand=()=>false;
+  const c7=yield*cp(),
+   bx=()=>{
+    const a=document.querySelector('.ew textarea');
+    return a&&a.offsetParent!==null?a:null
+   },
+   ta=bx(),
+   e1=c7.m==='show'&&!!ta&&ta.readOnly&&hd(ta.value)&&!bad(ta.value)&&c7.l==='閉じる';
+  if(b)tapEl(b);
+  const e2=!bx()&&b&&b.textContent==='コピー';
+  yield*cp();
+  show(1);
+  const e3=!bx();
+  show(0);
+  rst();
+  live=sv;
+  if(typeof runBox==='function')runBox(0);
+  uiDefault();
+  chkB(15,'運転の状態のテキスト（書けないとき）：機関断面図の領域に読み取り専用の枠が出て，ボタンが「閉じる」になる．[閉じる] とタブの切り替えで枠が消える',e1&&e2&&e3,`${c7.m}，枠 ${e1?1:0}，閉じる ${e2?1:0}，タブ ${e3?1:0}`)
  }
  {
   const nb3=!$('b3')&&![...document.querySelectorAll('button')].some(q=>/RESET/.test(q.textContent));

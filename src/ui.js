@@ -3,7 +3,7 @@ const $=i=>document.getElementById(i);
 let NOW=()=>performance.now();
 const LP=mkP();
 let live=new Core(LP),AX=mkAX();
-const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0,ctlH:''};
+const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 /* spd：再生速度（Infinity = 最速）．rs：速さの倍率（最速のときに表示．SPEC-15 F の 4），w0，t0：その計測の区間の始まり */
 const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24,el:.05};
 const Base={
@@ -16,19 +16,34 @@ const Base={
  vtc:()=>({ivo:LP.ivo,ivc:LP.ivc,evo:LP.evo,evc:LP.evc}),
  change(c,now){
   if(now-this.tl>=3000){
-   if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}
+   if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc();chgRef(c)}
    this.cam=valves({...LP},geo(LP));
    this.camC=LP.cam
   }
   this.tl=now
  },
  set(c){
-  if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}
+  if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc();chgRef(c)}
   this.cam=valves({...LP},geo(LP));
   this.camC=LP.cam
  },
- clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9}
+ clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9;CHG.rt=null}
 };
+/* 設定の変更の記録（SPEC-15 K の 3）：基準サイクルを取るたびに空にする．同じ項目を続けて変えたら 1 件にまとめ，元の値に戻ったら消す．rt：基準サイクルを取ったときの時刻とサイクル数 */
+const CHG={l:[],drop:0,rt:null,N:50};
+function chgRef(c){CHG.l=[];CHG.drop=0;CHG.rt={t:c.s.t,cyc:c.s.cyc}}
+function chgLog(k,o,v){
+ if(o===v)return;
+ const L=CHG.l,e=L[L.length-1];
+ if(e&&e.k===k){
+  e.v=v;
+  e.t=live.s.t;
+  if(e.o===v)L.pop();
+  return
+ }
+ L.push({k,o,v,t:live.s.t});
+ if(L.length>CHG.N){L.shift();CHG.drop++}
+}
 let COL={};
 const readCol=()=>{
  const cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();
@@ -77,6 +92,8 @@ function setParam(k,v,noUndo){
   const sv=LP.spb;
   LP.spb=gv(IT.spb,gi(IT.spb,live.s.spa));
   live.s.spa=LP.spb;
+  chgLog('spb',sv,LP.spb);
+  chgLog(k,old,v);
   if(!noUndo)U.undo=null;
   note(`点火の自動最適化：ON → OFF（自動値 ${LP.spb}° を手動値へ引継ぎ，前の手動値 ${sv}°）`);
   LP[k]=v;
@@ -84,6 +101,7 @@ function setParam(k,v,noUndo){
   return
  }
  LP[k]=v;
+ chgLog(k,old,v);
  if(!noUndo)U.undo={k,old};
  note(`${it.n}：${disp(it,old)} → ${disp(it,v)}${it.u?' '+it.u:''}`);
  rs()
@@ -105,7 +123,7 @@ const lamOK=()=>pval('S')/2/pval('lr')<=.5+1e-12;
 function applyPend(){
  if(!Object.keys(U.pend).length||!lamOK())return;
  const ks=Object.keys(U.pend);
- ks.forEach(k=>LP[k]=U.pend[k]);
+ ks.forEach(k=>{chgLog(k,LP[k],U.pend[k]);LP[k]=U.pend[k]});
  U.pend={};
  U.undo=null;
  live.reset();
@@ -121,7 +139,7 @@ function undo(){
  U.undo=null;
  if(u.ks){
   Base.change(live,NOW());
-  u.ks.forEach((k,i)=>LP[k]=u.olds[i]);
+  u.ks.forEach((k,i)=>{chgLog(k,LP[k],u.olds[i]);LP[k]=u.olds[i]});
   note(`元に戻しました：${u.ks.map((k,i)=>IT[k].n+' '+disp(IT[k],u.olds[i])).join('，')}`);
   rs();
   optText();
@@ -136,7 +154,7 @@ function setParams(o){
  if(!ks.length)return;
  Base.change(live,NOW());
  U.undo={ks,olds:ks.map(k=>LP[k])};
- ks.forEach(k=>LP[k]=o[k]);
+ ks.forEach(k=>{chgLog(k,LP[k],o[k]);LP[k]=o[k]});
  note(`${ks.map(k=>IT[k].n+' '+disp(IT[k],o[k])).join('，')}`);
  rs()
 }
@@ -688,9 +706,9 @@ function ctlRender(){
   const lb=dynOn(LP)&&live.s.fired&&!live.s.fuel?'STOP':'FUEL CUT',b=$('b2');
   if(b.textContent!==lb)b.textContent=lb
  }
- /* 文字が変わったときだけ書き換える（毎フレーム要素を作り直さない．SPEC-15 の J） */
- const h=ctlText(live).map(x=>`<div>${x||'&nbsp;'}</div>`).join('');
- if(h!==U.ctlH||!$('ctl').firstChild){U.ctlH=h;$('ctl').innerHTML=h}
+ /* 文字が変わったときだけ書き換える（毎フレーム要素を作り直さない．SPEC-15 の J）．前に書いた HTML は要素そのものに持たせる（U に持たせると，全テストの実行の後で U を戻したときに表示と食い違う） */
+ const h=ctlText(live).map(x=>`<div>${x||'&nbsp;'}</div>`).join(''),e=$('ctl');
+ if(h!==e._h||!e.firstChild){e._h=h;e.innerHTML=h}
 }
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){
@@ -711,6 +729,7 @@ function met(){
 }
 /* ===== tabs ===== */
 function show(i){
+ if(i!==U.tab&&document.querySelector('.ew .rbx'))runBox(0); /* タブを切り替えたら運転の状態の枠を消す（SPEC-15 K の 4） */
  if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;
  U.tab=i;
  [...$('N').children].forEach(b=>b.className=+b.dataset.t===(i===6?0:i)?'on':'');
@@ -998,6 +1017,144 @@ async function copyRes(){
  copyRes.tm=setTimeout(copyRes.done,4000);
  return'show'
 }
+/* 運転の状態のテキスト（REQ-15 の 15，SPEC-15 K の 2）：押した瞬間の運転の条件と計算の結果．e は envInfo() の値 */
+/* STN：状態ベクトルの 22 成分（仕様書 2.2 節の表の並び）．配列 y の中の位置は EIX */
+const STN=[
+ ['θ','クランク角','rad'],
+ ['ω','クランク軸の角速度','rad/s'],
+ ['p','筒内圧','Pa'],
+ ['m','筒内ガスの全質量','kg'],
+ ['m_u','筒内の未燃ガスの質量','kg'],
+ ['T_w','シリンダ壁の平均温度','K'],
+ ['p_in','吸気マニホールド圧','Pa'],
+ ['m_b,in','吸気マニホールド内の既燃ガスの質量','kg'],
+ ['ṁ_r','吸気ランナの質量流量','kg/s'],
+ ['p_p','吸気ポート圧','Pa'],
+ ['m_b,p','吸気ポート内の既燃ガスの質量','kg'],
+ ['ṁ_e','排気管の質量流量','kg/s'],
+ ['p_pe','排気ポート圧','Pa'],
+ ['p_te','排気管の出口側の圧力','Pa'],
+ ['E_in','吸気マニホールドの余剰エンタルピー','J'],
+ ['E_p','吸気ポートの余剰エンタルピー','J'],
+ ['m_f','筒内の未燃の燃料蒸気の質量','kg'],
+ ['m_bf','筒内の既燃ガスのうち燃料に由来する質量','kg'],
+ ['m_l','筒内の液体の燃料の質量','kg'],
+ ['m_f,in','吸気マニホールド内の燃料蒸気の質量','kg'],
+ ['m_f,p','吸気ポート内の燃料蒸気の質量','kg'],
+ ['T_X','排気ポートのガスの温度','K']
+];
+function runText(e){
+ const c=live,
+  s=c.s,
+  y=s.y,
+  f=v=>Number.isFinite(v)?String(v):'–',
+  u=it=>it.u?' '+it.u:'',
+  dv=it=>disp(it,defv(it)),
+  tab=U.tab===6?'全体図':([...$('N').children].find(b=>+b.dataset.t===U.tab)||{}).textContent||'',
+  sub=U.tab===1?`（画面 ${U.sub+1}）`:U.tab===2?`（${PAGES[U.pg]}）`:'',
+  rs=rsShow(),
+  wn=[...(s.ov>=2?['OVERLOAD']:[]),...(s.up>=2?['UNDERPOWER']:[]),...(c.vhit?['VALVE HIT']:[])],
+  T=c.X?c.X.T:NaN,
+  L=[
+   'SI機関シミュレータ 運転の状態',
+   'ビルド：'+BUILD,
+   '日時：'+new Date().toISOString(),
+   '環境：'+e.ua,
+   `画面：${e.scr}，表示領域 ${innerWidth}×${innerHeight}，画素の比 ${devicePixelRatio}，表示中 ${tab}${sub}`,
+   '',
+   '【運転】',
+   '状態：'+(s.fired?s.fuel?'RUN（燃焼して運転中）':'MOTOR（燃料を止めて回されている）':s.starter?'CRANK（始動中）':'STOP（停止）'),
+   '試験：'+(LP.bench===1?'シャシーダイナモメーター':'エンジンダイナモメーター'),
+   '回転数の制御：'+(LP.bench===1?'シャシー（車両）':s.mode?'動力計制御':'スロットル制御'),
+   '燃料カット：'+(s.fuel?'OFF':'ON'),
+   '再生速度：'+(Sim.spd===Infinity?'最速'+(rs>0?`（${rs.toFixed(1)}×）`:''):Sim.spd+'×'),
+   `時刻：${s.t.toFixed(4)} s，サイクル ${s.cyc}`,
+   '警告：'+(wn.length?wn.join('，'):'なし'),
+   '',
+   '【制御】',
+   ...ctlText(c).map(x=>x.replace(/<[^>]*>/g,'').trim()||'–'),
+   '',
+   '【指標】',
+   ...metricList(c,0).concat(metricList(c,1)).map(q=>`${q[2]}（${q[0]}）：${q[1]}`),
+   '',
+   '【状態】',
+   `回転数 N：${Number.isFinite(y[1])?(y[1]*30/PI).toFixed(1):'–'} rpm`,
+   `クランク角 θ mod 720°：${Number.isFinite(y[0])?(md4(y[0])/D).toFixed(2):'–'}°`,
+   `筒内ガスの平均温度 T：${Number.isFinite(T)?T.toFixed(1):'–'} K`,
+   '',
+   '【設定】'
+  ];
+ const i0=L.indexOf('【状態】')+1;
+ STN.forEach((q,i)=>L.splice(i0+i,0,`${i+1} ${q[0]} ${q[1]}：${f(y[EIX[i]])} ${q[2]}`));
+ let nd=0;
+ PAGES.forEach((pg,j)=>{
+  const its=ITEMS.filter(it=>it.pg===j);
+  if(!its.length)return;
+  L.push(`〔${pg}〕`);
+  its.forEach(it=>{
+   const v=disp(it,LP[it.k]),d=v!==dv(it);
+   if(d)nd++;
+   L.push(`${d?'* ':''}${it.n}：${v}${u(it)}${d?`（既定 ${dv(it)}）`:''}`)
+  })
+ });
+ ITEMS.filter(it=>!(it.pg>=0&&it.pg<PAGES.length)).forEach(it=>{
+  const v=disp(it,LP[it.k]),d=v!==dv(it);
+  if(d)nd++;
+  L.push(`${d?'* ':''}${it.n}：${v}${u(it)}${d?`（既定 ${dv(it)}）`:''}`)
+ });
+ L.push(`既定値と違う項目：${nd} 件`,'','【適用待ち】');
+ const pk=Object.keys(U.pend);
+ L.push(...(pk.length?pk.map(k=>`${IT[k].n}：${disp(IT[k],LP[k])} → ${disp(IT[k],U.pend[k])}${u(IT[k])}`):['なし']));
+ L.push('','【基準サイクル】',Base.ref&&CHG.rt?`あり（時刻 ${CHG.rt.t.toFixed(4)} s，サイクル ${CHG.rt.cyc} で取得）`:'なし');
+ if(CHG.drop)L.push(`（古い ${CHG.drop} 件を省略）`);
+ L.push(...(CHG.l.length?CHG.l.map(q=>`${q.t.toFixed(4)} s：${IT[q.k].n}：${disp(IT[q.k],q.o)} → ${disp(IT[q.k],q.v)}${u(IT[q.k])}`):['設定の変更：なし']));
+ return L.join('\n').replace(/-?Infinity|NaN/g,'–')
+}
+/* 運転の状態をコピーする（SPEC-15 K の 4）．書けたら 'ok'，書けなければ断面図の領域に選択できる枠を出して 'show' */
+function runBox(on,t){
+ let a=document.querySelector('.ew .rbx');
+ if(!on){
+  if(a)a.remove();
+  $('bcp').textContent='コピー';
+  return
+ }
+ if(!a){
+  a=document.createElement('textarea');
+  a.className='rbx';
+  a.readOnly=true;
+  $('ew').appendChild(a)
+ }
+ a.value=t;
+ a.focus();
+ a.select();
+ a.scrollTop=0;
+ $('bcp').textContent='閉じる'
+}
+async function copyRun(){
+ const b=$('bcp');
+ if(document.querySelector('.ew .rbx')){runBox(0);return'close'}
+ const t=runText(envInfo());
+ let ok=false;
+ try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+ if(!ok)try{
+  const a=document.createElement('textarea');
+  a.value=t;
+  a.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(a);
+  a.select();
+  ok=!!document.execCommand('copy');
+  a.remove()
+ }catch(e){}
+ clearTimeout(copyRun.tm);
+ if(ok){
+  b.textContent='完了';
+  copyRun.tm=setTimeout(()=>{if(b.textContent==='完了')b.textContent='コピー'},1500);
+  return'ok'
+ }
+ runBox(1,t);
+ return'show'
+}
+copyRun.tm=0;
 copyRes.tm=0;
 copyRes.done=()=>{clearTimeout(copyRes.tm);$('rcp').textContent='結果をコピー'};
 if(navigator.userAgentData&&navigator.userAgentData.getHighEntropyValues)navigator.userAgentData.getHighEntropyValues(['model','platformVersion','architecture']).then(v=>{ENV.hi=v},()=>{});
@@ -1028,6 +1185,7 @@ function initUI(){
  });
  tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
  tap($('bsys'),()=>show(6));
+ tap($('bcp'),()=>{copyRun()});
  tap($('bback'),()=>show(0));
  tap($('swg'),()=>{if(SW.sub===6){if(MP.run)mpStop();else mpStart()}else if(SW.run)swStop();else swStart()});
  tap($('mpq'),e=>{const b=e.target.closest('button');if(b)mpQ([...$('mpq').children].indexOf(b))});
