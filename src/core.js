@@ -160,7 +160,7 @@ const cvMix=(T,Y,cst)=>Y*R/(gmU(T,cst)-1)+(1-Y)*R/(gmB(T,cst)-1),
 const cpMix=(T,Y,cst)=>cvMix(T,Y,cst)+R;
 /* 状態 16（0〜10，13〜17）と補助積分 22（11，12，18〜37）．NS より前だけが右辺に現れる */
 /* 第26版：化学平衡のモデル（SPEC-29，30）の状態を 38〜42（m_f，m_bf，m_l，m_f,in，m_f,p），補助積分を 43〜45（H_e，∫ṁ_inj，∫ṁ_ev）に置く */
-const NY=59,NS=18,MIX=[7,10,38,39,40,41,42],MEPS=1e-12;
+const NY=59,NS=18,MIX=[7,10,38,39,40,41,42,50],MEPS=1e-12;
 const thConst=cst=>({
  cst,
  cpu:R/(gmU(TI,cst)-1)+R,
@@ -690,7 +690,7 @@ const DPa=[
  DPb4=[5179/57600,0,7571/16695,393/640,-92097/339200,187/2100,1/40];
 /* Core 専用の DOPRI5(4)．dp45 と同じ演算順序で，作業配列を使い回す．結果は o.r5（新しい配列）と o.r4（作業配列）に置く． */
 /* 段の計算に要るのは右辺に効く成分（添字 0〜17 と 38〜42）だけ．補助積分は最後の 5 次の和だけ求める */
-const SIX=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,38,39,40,41,42,49],NSX=SIX.length,NFP=22;
+const SIX=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,38,39,40,41,42,49,50],NSX=SIX.length,NFP=22;
 function dp45c(o,y,h,k0){
  const N=y.length,
   n=NSX,
@@ -780,8 +780,8 @@ const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6
 for(let i=18;i<38;i++)ATOL[i]=1;
 ATOL.push(1e-10,1e-10,1e-10,1e-9,1e-9);
 for(let i=43;i<49;i++)ATOL[i]=1;
-ATOL.push(1e-3);
-const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49];
+ATOL.push(1e-3,1e-9);/* 49：T_X，50：吸気ポートの空気の質量 m_a,p（化学平衡．SPEC-29 C の 4．許容は m_b,p と同じ） */
+const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49,50];
 /* ===== EngineCore ===== */
 const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m','mu','dq','vp'];
 /* 既燃ガスの物性の書き込み先（GAS.burned と xgas が書く順に，はじめから全部のプロパティを持たせる） */
@@ -825,6 +825,7 @@ class Core{
   const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
   const y0=[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0));
   y0[49]=TA;
+  if(SPC)y0[50]=P.pa*(.5*PI/4*P.dr*P.dr*P.Lr)/(TI*GAS.Ra); /* 吸気ポートの空気の質量（はじめは大気圧の空気．SPEC-29 C の 4） */
   if(SPC)y0[5]=P.Tw??K.Twc; /* 排気ポートのガスの温度（2.2 の 22）．化学平衡のモデルの壁温は設定の一定値（SPEC-08 の B） */
   this.s={
    y:y0,
@@ -1233,7 +1234,7 @@ class Core{
 /* 吸気側の組成（成分ごとの気体定数．SPEC-29 C）と余剰エンタルピー */
   const mai=Math.max(0,(pin*P.Vin/TI-mbi*Z.RbI-mfi*A.Rf)/A.Ra),min_=mai+mbi+mfi,Ybi=mbi/min_,Yfi=mfi/min_;
   let mp_=min_,Ybp=Ybi,Yfp=Yfi;
-  if(RO){const map=Math.max(0,(pp*Vp/TI-mbp*Z.RbI-mfp*A.Rf)/A.Ra);mp_=map+mbp+mfp;Ybp=mbp/mp_;Yfp=mfp/mp_}
+  if(RO){const map=Math.max(0,y[50]);mp_=map+mbp+mfp;Ybp=mbp/mp_;Yfp=mfp/mp_} /* ポートの空気の質量は状態（SPEC-29 C の 4．圧力から逆算しない） */
   const epi=Ein/min_,
    epp=RO?Ep/mp_:epi,
    Yap=1-Ybp-Yfp,
@@ -1383,9 +1384,12 @@ class Core{
   };
 /* 吸気側：スロットルと弁（ランナ）の流れを成分ごとに数える．スロットルの順流は，ポート噴射では当量比 φ の予混合気 */
   const ta=mt>=0?mt*(1-fph):mt*Yai,tf=mt>=0?mt*fph:mt*Yfi,tb=mt>=0?0:mt*Ybi;
-  let d6,d7,d8,d9,d10,d16,d17,d41,d42;
+  let d6,d7,d8,d9,d10,d16,d17,d41,d42,ra=ia,rf=if_,rb=ib;
   if(RO){
-   const fw=mr>=0,ra=mr*(fw?Yai:Yap),rf=mr*(fw?Yfi:Yfp),rb=mr*(fw?Ybi:Ybp),er=fw?epi:epp;
+   const fw=mr>=0,er=fw?epi:epp;
+   ra=mr*(fw?Yai:Yap);
+   rf=mr*(fw?Yfi:Yfp);
+   rb=mr*(fw?Ybi:Ybp);
    d6=TI/P.Vin*(A.Ra*(ta-ra)+A.Rf*(tf-rf)+Z.RbI*(tb-rb));
    d7=tb-rb;
    d41=tf-rf;
@@ -1407,6 +1411,8 @@ else{
    d16=-xi+xo-xt;
    d17=0
   }
+/* 成分ごとの流量（スロットル，ランナ，吸気弁．空気，燃料蒸気，既燃ガスの順．診断と検査に使う．TEST-25 項目 9） */
+  if(this.wx!==0)this.X.cf=[ta,tf,tb,ra,rf,rb,ia,if_,ib];
 /* 壁温は設定の一定値（SPEC-08 の B） */
   const d5=0,His=(mi>0?mi*hji:0)+(me<0?-me*hbX:0),Hos=(mi<0?-mi*hc0:0)+(me>0?me*hc0:0);
   if(!out)out=new Array(NY);
@@ -1460,7 +1466,7 @@ else{
   out[47]=xf;
   out[48]=r*psi;
   out[49]=d49;
-  out[50]=0;
+  out[50]=RO?ra-ia:0;
   out[51]=Qpw;
   out[52]=0;
   out[53]=0;
@@ -1590,6 +1596,7 @@ else{
       mp=pin*Vp/(TI*((1-Yb-Yf)*A.Ra+Yf*A.Rf+Yb*Z.RbI));
      y[10]=Yb*mp;
      y[42]=Yf*mp;
+     y[50]=(1-Yb-Yf)*mp;
      y[17]=y[16]/mi*mp
     }else{
      const mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI); /* γ のモデルは第25版と同じ式（演算の順も） */
@@ -1624,10 +1631,10 @@ else{
    y[49]=TX;
    const cv=(pk,Vk,mb)=>{
     const m0=pk*Vk/(R*TI),Yb=Math.min(1,Math.max(0,mb)/m0),Ru=(1-fph)*A.Ra+fph*A.Rf,mn=pk*Vk/(TI*(Yb*Z.RbI+(1-Yb)*Ru));
-    return[Yb*mn,fph*(1-Yb)*mn]
+    return[Yb*mn,fph*(1-Yb)*mn,(1-Yb)*(1-fph)*mn]
    };
    {const q=cv(y[6],P.Vin,y[7]);y[7]=q[0];y[41]=q[1]}
-   {const q=cv(y[9],Vp,y[10]);y[10]=q[0];y[42]=q[1]}
+   {const q=cv(y[9],Vp,y[10]);y[10]=q[0];y[42]=q[1];y[50]=q[2]}
    s.mah=NaN;
    s.inj.on=0
   }
@@ -1642,7 +1649,7 @@ else{
     };
    y[7]=bk(y[6],P.Vin,Math.max(0,y[7]),Math.max(0,y[41]));
    y[10]=bk(y[9],Vp,Math.max(0,y[10]),Math.max(0,y[42]));
-   y[38]=y[39]=y[40]=y[41]=y[42]=0
+   y[38]=y[39]=y[40]=y[41]=y[42]=y[50]=0
   }
   s.spc=P.gam===2;
   s.a0=y.slice();
@@ -1826,7 +1833,7 @@ else{
 /* 射影（REQ-13 7）．通常の運転では働かない */
 /* 成分の質量（m_b,in，m_b,p，m_f，m_bf，m_l，m_f,in，m_f,p）は 0 で切る．−MEPS より下へ出たときだけ回数に数える（流れの向きが変わるステップでは，誤差の許容内で 0 をわずかに下回ることがある） */
   let dty=0;
-  for(let q=0;q<7;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-ATOL[i])s.clp++;y1[i]=0;dty=1}} /* 数えるのはその成分の絶対許容誤差より下へ出たときだけ（SPEC-13 の 7） */
+  for(let q=0;q<MIX.length;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-ATOL[i])s.clp++;y1[i]=0;dty=1}} /* 数えるのはその成分の絶対許容誤差より下へ出たときだけ（SPEC-13 の 7） */
   if(y1[38]>y1[4]&&y1[4]>=0){if(y1[38]-y1[4]>MEPS)s.clp++;y1[38]=y1[4];dty=1}
 /* 余剰エンタルピーの下限 0 は γ のモデルだけ（化学平衡のモデルでは，直噴の気化で T_in より冷えた筒内ガスの逆流が負の余剰を運ぶ） */
   const SPC=P.gam===2;

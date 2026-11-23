@@ -841,8 +841,14 @@ TST[11]=function*(){
  chkB(11,'既定：設定「回転数の制御」の既定値が動力計（1），既定の設定でも動力計制御',IT.mode.d===1&&mkP().mode===1,`項目 ${IT.mode.d}，mkP ${mkP().mode}`,'1，1')
 };
 TST[12]=function*(){
- const s2=yield*scen('S2'),N2=lastT(s2.rec,3).map(q=>q.N);
- chkB(12,'S2：アイドル 800 ±25 rpm（最後の 3 s）',mdev(N2,800)<=25,'最大偏差 '+mdev(N2,800).toFixed(1)+' rpm','≤ 25');
+ const s2=yield*scen('S2');
+ let N2;
+ {/* 始動の後の揺れが収まってから判定する：S2 からさらに 10 s 運転した後の 3 s（S2 の最後の 3 s は始動から 17〜20 s で，揺れが残る．TEST-12 項目 1） */
+  const q=s2.c.clone(),r=mkRec();
+  yield*runC(q,10,r);
+  N2=lastT(r,3).map(x=>x.N)
+ }
+ chkB(12,'S2 から 10 s：アイドル 800 ±25 rpm（最後の 3 s）',mdev(N2,800)<=25,'最大偏差 '+mdev(N2,800).toFixed(1)+' rpm','≤ 25');
  const a2=mean(lastT(s2.rec,3).map(q=>q.al));
  {
   const am=almin(s2.c.P);
@@ -1098,7 +1104,7 @@ TST[13]=function*(){
   while(a.s.cyc<c0+3){hm=Math.max(hm,a.step());if(RUN.over())yield}
   yield*runCyc(b,3);
   const di=Math.abs(a.lastM.imep/b.lastM.imep-1);
-  chkB(13,'RK4 の刻みの範囲：設定は 0.01〜5°（刻み 0.01°，既定 0.25°），既定の解法は BS3(2)．Δθ = 0.01°（S2，200 ステップ）で 1 ステップの角度が 0.01°（相対 1e-3．イベントで切るステップを除く），Δθ = 5°（全開 3000 rpm，3 サイクル）で状態が有限，射影 0 回，刻み ≤ Δt_max，IMEP が既定の解法と 1% 以内',q0&&nk>=190&&dmx<=1+1e-3&&fin(a)&&a.s.clp===cl0&&hm<=K.dtR4*(1+1e-9)&&di<=.01,`範囲 ${it.lo}〜${it.hi}°，0.01° のステップ ${nk}/200（最大 ${dmx.toFixed(5)} 倍），5°：${fin(a)?'有限':'非有限'}，射影 ${a.s.clp-cl0}，最大の刻み ${(hm*1e6).toFixed(1)} μs，IMEP の差 ${(di*100).toFixed(3)} %`)
+  chkB(13,'RK4 の刻みの範囲：設定は 0.01〜5°（刻み 0.01°，既定 0.25°），既定の解法は BS3(2)．Δθ = 0.01°（S2，200 ステップ）で 1 ステップの角度が 0.01°（相対 1e-3．イベントで切るステップを除く），Δθ = 5°（全開 3000 rpm，3 サイクル）で状態が有限，射影 0 回，刻み ≤ 1.02 Δt_max（イベントの直前は 2% まで延ばす），IMEP が既定の解法と 1% 以内',q0&&nk>=190&&dmx<=1+1e-3&&fin(a)&&a.s.clp===cl0&&hm<=1.02*K.dtR4*(1+1e-6)&&di<=.01,`範囲 ${it.lo}〜${it.hi}°，0.01° のステップ ${nk}/200（最大 ${dmx.toFixed(5)} 倍），5°：${fin(a)?'有限':'非有限'}，射影 ${a.s.clp-cl0}，最大の刻み ${(hm*1e6).toFixed(1)} μs，IMEP の差 ${(di*100).toFixed(3)} %`)
  }
 /* 13：既定の解法 BS3(2)（REQ-13 の 11〜15．SPEC-13 の 8） */
  {
@@ -1194,7 +1200,7 @@ TST[13]=function*(){
   }
   chkB(13,'イベントの取りこぼしが無い：始動（BS3，DOPRI5），動力計制御の全開 0 → 7000 rpm，IVC が点火の 0.001° 手前，IVC = 点火 のそれぞれで，どのサイクルでも，サイクルの終端・IVO・IVC・EVO・EVC・点火がちょうど 1 回ずつ処理される（20 サイクル以上）',ok,out.join('；'))
  }
-/* 13：硬さ（化学平衡のモデルの全状態．項目 10 は γ のモデルと共通の 16 状態だけ）：燃料の質量，液体の燃料，吸気側の燃料蒸気，排気ポートの温度を含む 22 状態のヤコビアン */
+/* 13：硬さ（化学平衡のモデルの全状態．項目 10 は γ のモデルと共通の 16 状態だけ）：燃料の質量，液体の燃料，吸気側の燃料蒸気，排気ポートの温度，ポートの空気の質量を含む 23 状態のヤコビアン */
  {
   const IX=SIX.filter(i=>i!==11&&i!==12),
    n=IX.length,
@@ -1238,7 +1244,7 @@ TST[13]=function*(){
    worst=Math.max(worst,lm);
    out.push(`${nm}：max|λ| ${lm.toExponential(2)} 1/s（${la.toFixed(0)}°），|λ|Δt_max = ${(lm*K.dtR4).toFixed(2)}`)
   }
-  chkB(13,'硬さ（化学平衡のモデルの 22 状態，10° ごと）：アイドルと，全開 3000 rpm・直噴・気化の時定数 0.1 ms で，max|λ| × Δt_max（RK4）≤ 2.79',worst>0&&worst*K.dtR4<=2.79,out.join('；'),'≤ 2.79')
+  chkB(13,'硬さ（化学平衡のモデルの 23 状態，10° ごと）：アイドルと，全開 3000 rpm・直噴・気化の時定数 0.1 ms で，max|λ| × Δt_max（RK4）≤ 2.79',worst>0&&worst*K.dtR4<=2.79,out.join('；'),'≤ 2.79')
  }
 /* 13：不連続な変更の直後は最後の段を使い回さない（REQ-13 の 17．SPEC-13 の 8） */
  {
@@ -1769,7 +1775,7 @@ TST[15]=function*(){
    cv=[...$('ctl').children].map(d=>d.textContent.replace(/ /g,'').trim()||'–'),
    c2=yield*cp(),
    st=sec(c2.t,'【状態】'),
-   okY=y0.length===22&&y0.every((v,i)=>{
+   okY=y0.length===STN.length&&y0.length===23&&y0.every((v,i)=>{
     const m=/^(\d+) .*：(\S+)/.exec(st[i]||'');
     return!!m&&+m[1]===i+1&&Number(m[2])===v
    }),
@@ -1778,7 +1784,7 @@ TST[15]=function*(){
    okC=JSON.stringify(sec(c2.t,'【制御】'))===JSON.stringify(cv),
    si=sec(c2.t,'【設定】').filter(l=>!l.startsWith('〔')&&!l.startsWith('既定値と違う')),
    okS=si.length===ITEMS.length&&ITEMS.every(it=>si.some(l=>l.replace(/^\* /,'').startsWith(`${it.n}：${disp(it,LP[it.k])}`)));
-  chkB(15,'運転の状態のテキスト（動力計制御の定常）：状態の 22 成分が読み戻すと押した瞬間の値と完全に一致し，指標 24 項目が運転タブの表示と，制御の 4 行が制御状態カードと，設定の行が全項目の設定の値と一致する．NaN・Infinity を含まない',okY&&okM&&okC&&okS&&!bad(c2.t),`状態 ${okY?1:0}，指標 ${okM?1:0}（${mt.length}），制御 ${okC?1:0}，設定 ${okS?1:0}（${si.length}/${ITEMS.length}），NaN 等 ${bad(c2.t)?1:0}`);
+  chkB(15,'運転の状態のテキスト（動力計制御の定常）：状態の 23 成分が読み戻すと押した瞬間の値と完全に一致し，指標 24 項目が運転タブの表示と，制御の 4 行が制御状態カードと，設定の行が全項目の設定の値と一致する．NaN・Infinity を含まない',okY&&okM&&okC&&okS&&!bad(c2.t),`状態 ${okY?1:0}，指標 ${okM?1:0}（${mt.length}），制御 ${okC?1:0}，設定 ${okS?1:0}（${si.length}/${ITEMS.length}），NaN 等 ${bad(c2.t)?1:0}`);
   /* (d) 既定値との違い，変更の記録，適用待ち */
   const it=IT.nt,n0=LP.nt,dv=gi(it,n0)>=gmax(it)?-1:1,v1=gv(it,gi(it,n0)+dv),v2=gv(it,gi(it,n0)+2*dv);
   Base.clear();
@@ -2169,9 +2175,9 @@ TST[16]=function*(){
  }
  {
   const st=[...E.querySelectorAll('h3[data-sec="1"] ~ .eqs[data-st]')].map(e=>e.dataset.st),
-   want=['θ','ω','p','m','m_u','T_w','p_in','m_bi','ṁ_r','p_p','m_bp','ṁ_e','p_pe','p_te','E_in','E_p','m_f','m_bf','m_l','m_fi','m_fp','T_X'],
+   want=['θ','ω','p','m','m_u','T_w','p_in','m_bi','ṁ_r','p_p','m_bp','ṁ_e','p_pe','p_te','E_in','E_p','m_f','m_bf','m_l','m_fi','m_fp','T_X','m_ap'],
    lhs=[...E.querySelectorAll('h3[data-sec="1"] ~ .eqs[data-st]')].every(e=>{const q=e.querySelector('.tx');return q&&tid(q)[0]===e.dataset.st.normalize('NFC')});
-  chkB(16,'§1 に状態 22 成分の時間微分の式が一対一でそろい，左辺が各成分である',st.length===22&&new Set(st).size===22&&want.every(k=>st.includes(k))&&lhs,st.join(' '))
+  chkB(16,'§1 に状態 23 成分の時間微分の式が一対一でそろい，左辺が各成分である',st.length===23&&new Set(st).size===23&&want.every(k=>st.includes(k))&&lhs,st.join(' '))
  }
  {
   const secM=n=>{
@@ -4290,6 +4296,53 @@ TST[25]=function*(){
   tapEl($('Pg').querySelector('button[data-k="run"][data-c="0"]'));
   chkB(25,'設定ページ「吸気ランナ」：3 項目，操作で値が変わる，スクロール無し',U.pg>=0&&ks.join()==='run,Lr,dr'&&ch&&LP.run===0&&sec.scrollHeight<=sec.clientHeight+1,ks.join()+`，L_r ${Math.round(l0*1e3)}→${Math.round(LP.Lr*1e3)} mm`);
   show(3)
+ }
+/* 9・10：吸気側の原子の保存（REQ-25 の 6．化学平衡）．空気，燃料蒸気，既燃ガスの質量の出入りが合えば，C，H，O，N の原子の数が保存する */
+ if(!RUN.ui){
+  const sc=(yield*scen('S4')).c,
+   A=GAS,
+   VP=q=>.5*PI/4*q.P.dr*q.P.dr*q.P.Lr,
+   ST=EIX.includes(50)/* ポートの空気の質量が状態か */,
+   mI=(q,y)=>{const Rb=q.zc().RbI;return(y[6]*q.P.Vin/TI-y[7]*Rb-y[41]*A.Rf)/A.Ra+y[7]+y[41]},
+   mP=(q,y)=>{const Rb=q.zc().RbI;return(ST?y[50]:(y[9]*VP(q)/TI-y[10]*Rb-y[42]*A.Rf)/A.Ra)+y[10]+y[42]};
+  let w9=0,n9=0,e9='',r10=[];
+  let rs=20261123;
+  const rnd=()=>{rs=(Math.imul(rs,1664525)+1013904223)>>>0;return rs/4294967296};
+  for(const inj of[1,0]){
+   const q=sc.clone();
+   q.P.inj=inj;
+   yield*runCyc(q,inj?1:10);
+   const ys=[];
+   yield*runCyc(q,1,cc=>ys.push(cc.s.y.slice()));
+   const out=new Array(NY).fill(0),N0=ys.length;
+   for(let k=0;k<N0;k++){
+    const y=ys[k].slice();
+    for(const i of[7,41,10,42])y[i]*=1+.2*(rnd()-.5);
+    if(ST)y[50]*=1+.2*(rnd()-.5);
+    ys.push(y)
+   }
+   for(const y of ys){
+    q.wx=1;
+    q.fS(y,out);
+    const X=q.X,f=X.cf;
+    if(!f){e9='成分ごとの流量が無い';w9=Infinity;break}
+    const[ta,tf,tb,ra,rf,rb,ia,if_,ib]=f,
+     Rb=q.zc().RbI,
+     sc_=Math.abs(X.mt)+Math.abs(X.mr)+Math.abs(X.mi)||1,
+     dai=(q.P.Vin/TI*out[6]-out[7]*Rb-out[41]*A.Rf)/A.Ra,
+     dap=ST?out[50]:(VP(q)/TI*out[9]-out[10]*Rb-out[42]*A.Rf)/A.Ra,
+     E=[['マニホールドの空気',dai,ta-ra],['マニホールドの既燃ガス',out[7],tb-rb],['マニホールドの燃料蒸気',out[41],tf-rf],['ポートの空気',dap,ra-ia],['ポートの既燃ガス',out[10],rb-ib],['ポートの燃料蒸気',out[42],rf-if_]];
+    for(const[nm,a,b]of E){const e=Math.abs(a-b)/sc_;if(e>w9){w9=e;e9=`${inj?'直噴':'ポート噴射'}，${nm}`}}
+    n9++
+   }
+   yield;
+   const r=yield*runCyc(q,1),
+    eT=Math.abs(mI(q,r.y1)+mP(q,r.y1)-mI(q,r.y0)-mP(q,r.y0)-(r.d(23)-r.d(25)))/Math.abs(r.d(25)),
+    eP=Math.abs(mP(q,r.y1)-mP(q,r.y0)-(r.d(24)-r.d(25)))/Math.abs(r.d(25));
+   r10.push([inj,eT,eP])
+  }
+  chkB(25,'原子の保存（右辺）：化学平衡・ランナ ON（直噴，ポート噴射）の 1 サイクルの全ステップの状態と，成分を ±10% 変えた状態で，マニホールドとポートの空気，既燃ガス，燃料蒸気の質量の時間微分が，スロットル，ランナ，吸気弁の成分ごとの流量の出入りと相対 1e-12 で同じ',w9<=1e-12&&n9>0,`${n9} 状態，最大の差 ${w9.toExponential(1)}${w9>1e-12?'（'+e9+'）':''}`);
+  chkB(25,'原子の保存（1 サイクル）：吸気側の全質量の変化が ΔM_th − ΔM_in と，ポートの全質量の変化が ΔM_r − ΔM_in と，ΔM_in の相対 1e-6 以内で合う（直噴，ポート噴射）',r10.every(([,a,b])=>a<=1e-6&&b<=1e-6),r10.map(([i,a,b])=>`${i?'直噴':'ポート噴射'}：全体 ${a.toExponential(1)}，ポート ${b.toExponential(1)}`).join('，'))
  }
 };
 /* ---- TEST-26 WOT sweep tab ---- */
