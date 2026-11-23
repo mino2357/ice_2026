@@ -153,7 +153,7 @@
 | `docs/changes/2026-11-23-exhaust-sound-speed.md` | 3044 |
 | `docs/changes/2026-11-23-loss-axis-negative.md` | 858 |
 | `docs/changes/2026-11-23-plot-fixes.md` | 1826 |
-| `docs/changes/2026-11-23-port-air-mass.md` | 4385 |
+| `docs/changes/2026-11-23-port-air-mass.md` | 4473 |
 | `docs/changes/2026-11-23-review-followup.md` | 2038 |
 | `docs/changes/2026-11-23-review-gemini-2.md` | 2485 |
 | `docs/changes/2026-11-23-review-gemini-3.md` | 2693 |

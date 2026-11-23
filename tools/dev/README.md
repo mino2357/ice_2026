@@ -46,7 +46,8 @@ npm install && npx playwright install chromium
 2. pandoc：`https://github.com/jgm/pandoc/releases/download/3.1.3/pandoc-3.1.3-linux-amd64.tar.gz` を同じように展開してリンクする．
 3. `npm install`，`npx playwright install chromium`（Chromium は `~/.cache/ms-playwright` に入る）．
 4. Chromium が要るシステムのライブラリ（`libnspr4`，`libnss3`，`libasound2t64`）が無いと，起動に失敗する（`ldd` で `not found` と出る）．`apt` の deb を取って（署名のある `InRelease` → `Packages.xz` のハッシュ → deb のハッシュの順に確かめる），`dpkg-deb -x` で `~/.local/opt/chromium-libs` に展開し，実行のときに `LD_LIBRARY_PATH=$HOME/.local/opt/chromium-libs/usr/lib/x86_64-linux-gnu` を付ける．
-5. 新しく開いた端末では `~/.profile` が `~/.local/bin` を `PATH` に入れる．入っていない殻では `export PATH=$HOME/.local/bin:$PATH` を付ける．
+5. GitHub CLI（`gh`．プルリクエストと CI の結果を見るのに使う．道具の実行には要らない）：`https://github.com/cli/cli/releases` の最新版の `gh_*_linux_amd64.tar.gz` と `gh_*_checksums.txt` を取り，`sha256sum -c` で確かめてから，`bin/gh` を `~/.local/bin` に置く（2026-11-23 に 2.105.0 で行った）．ログインは端末で `gh auth login`（利用者が行う）．
+6. 新しく開いた端末では `~/.profile` が `~/.local/bin` を `PATH` に入れる．入っていない殻では `export PATH=$HOME/.local/bin:$PATH` を付ける．
 
 `git fetch`／`git push` が `Permission denied (publickey)` になるとき：鍵にパスフレーズがあり，エージェントに鍵が載っていない．端末で `ssh-add` する（`~/.ssh/config` の `IdentityAgent` の場所のエージェントに載せる）．
 
