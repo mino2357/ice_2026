@@ -951,10 +951,19 @@ TST[13]=function*(){
   yield*runCyc(q,1);
   q.s.eve=0;
   q.s.evn=[0,0,0,0,0,0];
-  let lo=Infinity,hi=-Infinity;
+  let lo=Infinity,hi=-Infinity,nE=0,bE=0,wE='';
+  const dE=q.doEv;
+  q.doEv=function(y1,th1){/* イベントを処理した後の θ が，イベントの角度と同じ（サイクルの終端では 0）か（REQ-13 の 3） */
+   dE.call(this,y1,th1);
+   const w=Math.abs(th1-P4)<=1e-7?0:th1;
+   nE++;
+   if(y1[0]!==w){bE++;wE=wE||`${th1.toFixed(6)} → ${y1[0]}`}
+  };
   yield*runCyc(q,3,cc=>{lo=Math.min(lo,cc.s.y[0]);hi=Math.max(hi,cc.s.y[0])});
+  delete q.doEv;
   chkB(13,'イベント（S4，3 サイクル）：終端・IVO・IVC・EVO・EVC・点火の角度の誤差 ≤ 10⁻⁸ rad，各 3 回',q.s.eve<=1e-8&&q.s.evn.every(v=>v===3),`最大の誤差 ${q.s.eve.toExponential(1)} rad，回数 ${q.s.evn.join(' ')}`);
-  chkB(13,'クランク角が [0, 4π] にある（サイクルの終端で 4π を引く）',lo>=-1e-8&&hi<=P4+1e-8,`${lo.toExponential(1)}〜${hi.toFixed(6)} rad`)
+  chkB(13,'イベントを処理した後の θ がイベントの角度と同じ（サイクルの終端では 0）',nE>=18&&bE===0,`処理 ${nE} 回，合わない ${bE} 回${wE?'（'+wE+'）':''}`);
+  chkB(13,'クランク角が [0, 4π] にある（厳密）',lo>=0&&hi<=P4,`${lo.toExponential(1)}〜${hi.toFixed(6)} rad`)
  }
  const f3=yield*scen('F3000');
  {
@@ -1331,20 +1340,21 @@ TST[13]=function*(){
    b=e(.05);
   chkB(13,'BS3 の次数：刻みを半分にすると 1 ステップの誤差が 1/16，誤差の見積もり（3 次と 2 次の差）が 1/8（±10%）',Math.abs(a[0]/b[0]/16-1)<=.1&&Math.abs(a[1]/b[1]/8-1)<=.1,`${(a[0]/b[0]).toFixed(2)}，${(a[1]/b[1]).toFixed(2)}`,'16，8')
  }
-/* 13：互換（REQ-13 の 15）：DOPRI5 を選ぶと第26版と同じ値 */
+/* 13：互換（REQ-13 の 15）：DOPRI5 と熱物性 γ(T) を選ぶと第26版と同じ値（第26版の値は commit 93f480b を Node.js で実行して求めた．化学平衡の値は REQ-25 の 6 で変わるので比べない） */
  {
-  const a=new Core({...mkP(),cvar:0,mode:1,alm:90*D,nt:3000,sol:1}),b=new Core({...mkP(),cvar:0,mode:0,sol:1});
+  const a=new Core({...mkP(),cvar:0,mode:1,alm:90*D,nt:3000,sol:1,gam:0}),
+   b=new Core({...mkP(),cvar:0,mode:0,sol:1,gam:0});
   a.start();
   yield*runC(a,2);
   b.start();
   yield*runC(b,3);
   const va=[a.s.t,a.s.y[1],a.s.y[2],a.lastM.imep,a.s.cyc],
    vb=[b.s.t,b.s.y[1],b.s.y[2],b.lastM.imep,b.s.cyc],
-   ra=[2.000015887898891,313.2795687532501,974098.8214152278,1257308.143025189,46],
-   rb=[3.00007790555914,98.36649849843752,27888.22045771213,-29490.707054431434,29];
+   ra=[2.0000159014308676,306.42449191785664,464804.11500222684,1103436.186909774,47],
+   rb=[3.000037960377129,89.42289317922796,92922.10082133336,-35582.19687220702,28];
   {
    const rv=[...ra,...rb],vv=[...va,...vb],e=Math.max(...vv.map((v,i)=>Math.abs(v/rv[i]-1)));
-   chkB(13,'互換：設定で DOPRI5 を選ぶと，第26版と同じ値（動力計制御・全開・目標 3000 rpm の始動から 2 s と，スロットル制御の始動から 3 s の，時刻，ω，p，IMEP，サイクル数．相対 1e-4．処理系が同じならビット単位で同じことは開発時に tools/dev/bitcheck.js で確かめる）',e<=1e-4,'相対差の最大 '+e.toExponential(1),'≤ 1e-4')
+   chkB(13,'互換：設定で DOPRI5 と熱物性 γ(T) を選ぶと，第26版と同じ値（動力計制御・全開・目標 3000 rpm の始動から 2 s と，スロットル制御の始動から 3 s の，時刻，ω，p，IMEP，サイクル数．相対 1e-4．処理系が同じなら，第26版に θ を揃える変更だけを当てたものとビット単位で同じことを tools/dev/bitcheck.js で確かめる）',e<=1e-4,'相対差の最大 '+e.toExponential(1),'≤ 1e-4')
   }
  }
 /* 13：回転数が自由な運転（アイドル S2，動力計制御 S4）で，BS3 と DOPRI5 の平均回転数と IMEP が合う */

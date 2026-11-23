@@ -1556,7 +1556,7 @@ else{
   }
   if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3];s.TE=T;if(SPC&&cy.mb>1e-9)s.zs=cy.z}
   if(near(md4(2*PI-s.spa*D))&&!s.ig){n[5]++;this.ign(T,Yu,y1[2],cy)}
-  if(near(P4)){n[0]++;this.cycleEnd();y1[0]-=P4}
+  if(near(P4)){n[0]++;this.cycleEnd();y1[0]=0}
  }
 /* 運転中にランナ・排気系を ON にしたときの初期化（REQ-25 6，REQ-27 7） */
  syncSw(){
@@ -1886,7 +1886,12 @@ else{
   this.pv=vals;
   s.li=i;
   s.t+=dt;
-  if(hit||(ed<Infinity&&y1[0]>=ea-1e-9)){s.eve=Math.max(s.eve,Math.abs(ea-y1[0]));this.doEv(y1,ea);dty=1}
+  if(hit||(ed<Infinity&&y1[0]>=ea-1e-9)){
+   s.eve=Math.max(s.eve,Math.abs(ea-y1[0]));
+   y1[0]=ea;/* 角度を揃える（SPEC-13 の 4．REQ-13 の 3） */
+   this.doEv(y1,ea);
+   dty=1
+  }
   if(P.sol===2){if(dty)this.kFy=null;else{const kc=this.kFc;for(let q=0;q<NSX;q++)kc[q]=y1[SIX[q]]}}
   this.ecu(dt,y1[1]);
   if(s.t>=s.hn*.05){
