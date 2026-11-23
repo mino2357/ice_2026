@@ -1,6 +1,6 @@
 {
  "tier1": {
-  "at": "2026-11-23T10:42:54.525Z",
+  "at": "2026-11-23T10:50:14.358Z",
   "plan": "TEST-16（360×640）",
   "files": {
    "src/audio.js": "93f84b5e1572bccd",
@@ -66,7 +66,7 @@
    "docs/requirements/REQ-20.md": "0d081967895beadb",
    "docs/requirements/REQ-21.md": "995ce6edcc94b268",
    "docs/requirements/REQ-24.md": "082ffb9a6052e6e0",
-   "docs/requirements/REQ-25.md": "f582a4c9a93af598",
+   "docs/requirements/REQ-25.md": "1e01f1c62df1ac75",
    "docs/requirements/REQ-26.md": "58819c49e5bea5c9",
    "docs/requirements/REQ-27.md": "1335ba9596c1a09d",
    "docs/requirements/REQ-28.md": "72b4feddae82d5dd",
