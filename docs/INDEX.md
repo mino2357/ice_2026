@@ -121,7 +121,7 @@
 
 | ファイル | 字数 |
 | :--- | ---: |
-| `CLAUDE.md` | 5911 |
+| `CLAUDE.md` | 5999 |
 | `docs/dev-notes.md` | 4228 |
 | `docs/verification.md` | 41822 |
 | `docs/review_v26.md` | 34714 |
