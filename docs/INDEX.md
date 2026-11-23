@@ -24,12 +24,12 @@
 | 12 | ECU（スロットル開度の PI 制御と点火時期の自動最適化） | `requirements/REQ-12.md`（1055） | `specification/SPEC-12.md`（2696） | `specification/TEST-12.md`（1936） | 843–905 | 07 13 | `core.js`:264 |
 | 13 | 数値積分 | `requirements/REQ-13.md`（2416） | `specification/SPEC-13.md`（9672） | `specification/TEST-13.md`（6082） | 906–1052 | 03 04 07 08 10 12 14 29 | `core.js`:745,1120,1499,1656,1734,1797… |
 | 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（823） | `specification/SPEC-14.md`（3035） | `specification/TEST-14.md`（1481） | 1378–1442 | 11 12 13 15 18 29 | `core.js`:1032,1909 |
-| 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（1835） | `gui/SPEC-15.md`（7433） | `gui/TEST-15.md`（4712） | 1495–1591 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,40,58,150,174,483… |
+| 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（2373） | `gui/SPEC-15.md`（9368） | `gui/TEST-15.md`（5663） | 1495–1591 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,40,58,150,174,483… |
 | 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5683） | `gui/TEST-16.md`（3776） | 1907–2096 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
 | 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4577） | `gui/TEST-17.md`（3478） | 2334–2468 | 11 18 26 30 | `plot.js`:18,89,164,294,334 |
 | 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2576–2836 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:92,153,539 |
 | 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1205） | `gui/TEST-19.md`（873） | 2901–2948 | 12 15 23 31 | `plot.js`:787,800 |
-| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1214） | `specification/SPEC-20.md`（6738） | `specification/TEST-20.md`（2158） | 2971–2971 | 01 10 13 15 16 17 24 25 26 31 32 33 34 35 36 37 | `ui.js`:975 |
+| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1214） | `specification/SPEC-20.md`（6746） | `specification/TEST-20.md`（2158） | 2971–2971 | 01 10 13 15 16 17 24 25 26 31 32 33 34 35 36 37 | `ui.js`:975 |
 | 21 [U] | エンジン音 | `requirements/REQ-21.md`（1247） | `specification/SPEC-21.md`（8842） | `specification/TEST-21.md`（4555） | 3047–3092 | 02 18 22 23 27 36 | `core.js`:2557 `audio.js`:15,21,32,44,109,123… `ui.js`:971 |
 | 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3529–3663 | 11 | – |
 | 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 3665–3770 | – | `ui.js`:465,467,470,539,549 |
@@ -66,7 +66,7 @@
 | 要件定義書 | 5. 受入 | `requirements/s5.md` | 10 |
 | 要件定義書 | 5.1 納品条件 | `requirements/s5.1.md` | 608 |
 | 要件定義書 | 5.2 実機目視チェックリスト [M]（Galaxy S26+／Chrome） | `requirements/s5.2.md` | 1532 |
-| 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 3958 |
+| 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 3982 |
 | 要件定義書 | 7. 改訂の記録 | `requirements/s7.md` | 13 |
 | 要件定義書 | 7.1 版の一覧 | `requirements/s7.1.md` | 917 |
 | 要件定義書 | 7.2 未決事項と既知の限界 | `requirements/s7.2.md` | 5317 |
@@ -114,7 +114,7 @@
 | 用語の定義集 | 3.2 モデルと数値計算 | `glossary/s3.2.md` | 1353 |
 | 用語の定義集 | 3.3 制御と動力計 | `glossary/s3.3.md` | 1095 |
 | 用語の定義集 | 3.3a 最適化と熱効率の内訳（SPEC-32〜34） | `glossary/s3.3a.md` | 2642 |
-| 用語の定義集 | 3.4 画面と検証 | `glossary/s3.4.md` | 2768 |
+| 用語の定義集 | 3.4 画面と検証 | `glossary/s3.4.md` | 2888 |
 | 用語の定義集 | 4. 略語 | `glossary/s4.md` | 1052 |
 
 ## 3. そのほかの文書とコード
@@ -152,3 +152,4 @@
 | `docs/changes/2026-11-23-review-gemini-3.md` | 2693 |
 | `docs/changes/2026-11-23-review-gemini-4.md` | 4343 |
 | `docs/changes/2026-11-23-review-gemini-5.md` | 6524 |
+| `docs/changes/2026-11-23-run-state-copy.md` | 1020 |
