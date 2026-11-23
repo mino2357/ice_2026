@@ -148,6 +148,7 @@
 | `docs/changes/2026-11-22-result-copy.md` | 5486 |
 | `docs/changes/2026-11-22-review-gemini-1.md` | 11174 |
 | `docs/changes/2026-11-22-valve-timing-search.md` | 5374 |
+| `docs/changes/2026-11-23-review-followup.md` | 1810 |
 | `docs/changes/2026-11-23-review-gemini-2.md` | 2485 |
 | `docs/changes/2026-11-23-review-gemini-3.md` | 2693 |
 | `docs/changes/2026-11-23-review-gemini-4.md` | 4343 |
