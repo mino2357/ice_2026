@@ -2725,6 +2725,24 @@ TST[17]=function*(){
    chkB(17,'負の値：0 起点の軸（F = 10）に M = 6.3，m = −0.49 で範囲 [−2, 10]（目盛 −2, 0, …, 10），m = −0.01 では [0, 10]，m = 0 が 2.9 s では変わらず 3.0 s で [0, 10]．既定のアイドル（動力計制御，開度 15°，800 rpm）のスロットルの質量流量の最小が負で，軸の下限が最小以下',r1==='-2,10'&&tk==='-2,0,2,4,6,8,10'&&r2===0&&r3===-2&&r4===0&&mn<0&&q.ya.a<=mn,`[${r1}]，目盛 ${tk}，${r2}，${r3} → ${r4}，アイドル：最小 ${mn.toFixed(3)} g/s，下限 ${q.ya.a}`)
   }
  }
+/* 14：有限でない値（SPEC-17 B の評価）．±∞ で範囲を探すと終わらないので，評価で除き，軸は範囲を変えない */
+ {
+  const[lo,hi]=amm([1,Infinity,NaN,-Infinity,3],[2]),
+   a1=lo===1&&hi===3,
+   s=new AxS(10,10),
+   z=new AxS(10,10,1),
+   b=new AxB(1);
+  s.up(5,0,-1);
+  b.up(1,2,0);
+  const r0=JSON.stringify([s.a,s.b,z.a,z.b,b.a,b.b]);
+  s.up(Infinity,1,-Infinity);
+  z.up(Infinity,1);
+  b.up(0,Infinity,1);
+  b.up(-Infinity,2,2);
+  b.up(-Infinity,Infinity,3);
+  const a2=JSON.stringify([s.a,s.b,z.a,z.b,b.a,b.b])===r0;
+  chkB(17,'有限でない値：データの最小・最大の評価が ±∞ と NaN を除く．段階型と帯域型の軸に ±∞ を与えても呼び出しが戻り，範囲が変わらない',a1&&a2,`評価 [${lo}, ${hi}]，軸 ${a2?'変わらない':'変わった'}`)
+ }
 };
 TST[18]=function*(){
  uiDefault();
@@ -5314,6 +5332,17 @@ TST[31]=function*(){
   for(let i=0;i<30;i++)drawSys(q.g,live,q.W,q.H,COL);
   const t=(performance.now()-t0)/30;
   chkP(31,'全体図の描画（30 回の平均）',t,6,'ms',2)
+ }
+/* 8：見出しの色（SPEC-31 A の 5）．噴射の枠は淡い緑．描画が使う色の表の名前がすべて表にある */
+ {
+  const hc=o=>{
+    const t=sysSpec(mk(o),380,560,g).tags.find(q=>q.id==='inj');
+    return t?t.hc:''
+   },
+   h1=hc({gam:2,inj:1}),
+   h0=hc({gam:2,inj:0}),
+   miss=[...new Set((sysSpec.toString()+drawSys.toString()).match(/SYC\.\w+/g)||[])].map(x=>x.slice(4)).filter(k=>!(k in SYC));
+  chkB(31,'見出しの色：直噴とポート噴射のどちらでも，噴射の枠の見出しが淡い緑（#8ce99a）．描画が使う色の表の名前（SYC.…）がすべて表にある',h1==='#8ce99a'&&h0==='#8ce99a'&&!miss.length,`直噴 ${h1}，ポート噴射 ${h0}，表に無い名前 ${miss.join('，')||'なし'}`)
  }
  show(0);
  uiDefault()

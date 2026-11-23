@@ -52,7 +52,7 @@ class AxB{
   }
  }
  up(m,M,now){
-  if(!(M>=m))return;
+  if(!(M>=m)||m===-Infinity||M===Infinity)return; /* ±∞ で刻みを探すと終わらない（SPEC-17 B） */
   let ch=!this.init||m<this.a||M>this.b;
   if(!ch){
    if((M-m)/(this.b-this.a)<.25){if(this.tl==null)this.tl=now;if(now-this.tl>=3000){ch=1;this.tl=null}}else this.tl=null
@@ -83,7 +83,7 @@ const mkAX=()=>({
 const amax=(...A)=>{let m=0;for(const a of A)for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v}return m};
 const amm=(...A)=>{
  let lo=Infinity,hi=-Infinity;
- for(const a of A)for(let i=0;i<a.length;i++){const v=a[i];if(v===v){if(v<lo)lo=v;if(v>hi)hi=v}}
+ for(const a of A)for(let i=0;i<a.length;i++){const v=a[i];if(v>-Infinity&&v<Infinity){if(v<lo)lo=v;if(v>hi)hi=v}} /* 有限でない値（NaN，±∞）は除く（SPEC-17 B） */
  return[lo,hi]
 };
 /* 毎フレーム，描いているデータ（クランク角の軌跡は直近の 720°，トレンドは表示中の窓）で範囲を評価する（GUI SPEC-17 B） */
@@ -809,7 +809,7 @@ function engText(c,rs){
 /* ===== 全体図（SPEC-31．系統図）．設計座標 400×620 を一様な縮尺 k で置く．sysSpec が場面の記述（要素，位置，寸法，文字），drawSys が描画 ===== */
 const SYW=400,
  SYH=620,
- SYC={in:'#5b8fd8',inl:'#a9c9f5',ex:'#e0773a',exl:'#f5b48c',sig:'#c9a227',abs:'#ff8a4c',mot:'#69db7c',met:'#9aa3ad',dk:'#0b0e13'};
+ SYC={in:'#5b8fd8',inl:'#a9c9f5',ex:'#e0773a',exl:'#f5b48c',sig:'#c9a227',abs:'#ff8a4c',mot:'#69db7c',met:'#9aa3ad',fuel:'#8ce99a',dk:'#0b0e13'};
 /* 圧力の色（SPEC-31 A の 4）．kPa → [r,g,b] */
 function pcol(kPa){
  const u=Math.max(0,Math.min(1,Math.log10(Math.max(kPa,1e-9)/10)/Math.log10(500))),
