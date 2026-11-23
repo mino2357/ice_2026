@@ -475,7 +475,7 @@ const GAS=(()=>{
    this.ec=K.etac;
    this.z=phi2z((G.f0+G.df*i)/this.ec);
    this.ip=0;
-   this.t={e:new Float64Array(n),c:new Float64Array(n),R:new Float64Array(n),Q:new Float64Array(n)}
+   this.t={e:new Float64Array(n),c:new Float64Array(n),R:new Float64Array(n),Q:new Float64Array(n),cF:new Float64Array(G.np)}/* cF：T_fr の凍結の側の c_v（行ごと．T_fr の節点の c，Q は平衡の側の傾き） */
   }
   row(){
    const ip=this.ip,{e,c,R,Q}=this.t,ec=this.ec,z=this.z,p=Math.exp(G.lp0+G.dlp*ip);
@@ -491,6 +491,7 @@ const GAS=(()=>{
    /* 平衡の側の傾き c_v = ∂e/∂T と ∂R/∂T は，節点の値の差分で求める（内側は 4 次の中心差分，端は 2 次の片側差分）．凍結の側は c_v が凍結組成の値，∂R/∂T = 0 */
    for(let it=iF;it<G.nT;it++){const k=ip*G.nT+it,h=G.dT,L=G.nT-1;c[k]=df(e,k,it,L,h);Q[k]=df(R,k,it,L,h)}
    for(let it=0;it<iF;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(nf,T,z,ec);R[k]=bR(nf,z,ec);c[k]=bCv(nf,T,z,ec)}
+   this.t.cF[ip]=bCv(nf,G.T0+G.dT*iF,z,ec);
    this.ip++
   }
   /* 持ち時間 ms の中で行を作る（ms = Infinity で全行）．できたら表を返す */
@@ -557,22 +558,31 @@ const GAS=(()=>{
    C1=t1.c,
    R1=t1.R,
    Q1=t1.Q,
-   e00=a0*E0[k]+a1*C0[k]+a2*E0[k+1]+a3*C0[k+1],
-   e01=a0*E0[k2]+a1*C0[k2]+a2*E0[k2+1]+a3*C0[k2+1],
-   e10=a0*E1[k]+a1*C1[k]+a2*E1[k+1]+a3*C1[k+1],
-   e11=a0*E1[k2]+a1*C1[k2]+a2*E1[k2+1]+a3*C1[k2+1],
-   d00=b0*(E0[k]-E0[k+1])+b1*C0[k]+b3*C0[k+1],
-   d01=b0*(E0[k2]-E0[k2+1])+b1*C0[k2]+b3*C0[k2+1],
-   d10=b0*(E1[k]-E1[k+1])+b1*C1[k]+b3*C1[k+1],
-   d11=b0*(E1[k2]-E1[k2+1])+b1*C1[k2]+b3*C1[k2+1],
-   r00=a0*R0[k]+a1*Q0[k]+a2*R0[k+1]+a3*Q0[k+1],
-   r01=a0*R0[k2]+a1*Q0[k2]+a2*R0[k2+1]+a3*Q0[k2+1],
-   r10=a0*R1[k]+a1*Q1[k]+a2*R1[k+1]+a3*Q1[k+1],
-   r11=a0*R1[k2]+a1*Q1[k2]+a2*R1[k2+1]+a3*Q1[k2+1],
-   q00=b0*(R0[k]-R0[k+1])+b1*Q0[k]+b3*Q0[k+1],
-   q01=b0*(R0[k2]-R0[k2+1])+b1*Q0[k2]+b3*Q0[k2+1],
-   q10=b0*(R1[k]-R1[k+1])+b1*Q1[k]+b3*Q1[k+1],
-   q11=b0*(R1[k2]-R1[k2+1])+b1*Q1[k2]+b3*Q1[k2+1],
+   lf=jt===iF-1&&!!t0.cF/* T_fr の左の区間は凍結の側：右端の傾きに凍結の側の値（c_v は凍結組成，∂R/∂T = 0）を使う（SPEC-29 A の 6） */,
+   C0a=lf?t0.cF[jp]:C0[k+1],
+   C0b=lf?t0.cF[jp+1]:C0[k2+1],
+   C1a=lf?t1.cF[jp]:C1[k+1],
+   C1b=lf?t1.cF[jp+1]:C1[k2+1],
+   Q0a=lf?0:Q0[k+1],
+   Q0b=lf?0:Q0[k2+1],
+   Q1a=lf?0:Q1[k+1],
+   Q1b=lf?0:Q1[k2+1],
+   e00=a0*E0[k]+a1*C0[k]+a2*E0[k+1]+a3*C0a,
+   e01=a0*E0[k2]+a1*C0[k2]+a2*E0[k2+1]+a3*C0b,
+   e10=a0*E1[k]+a1*C1[k]+a2*E1[k+1]+a3*C1a,
+   e11=a0*E1[k2]+a1*C1[k2]+a2*E1[k2+1]+a3*C1b,
+   d00=b0*(E0[k]-E0[k+1])+b1*C0[k]+b3*C0a,
+   d01=b0*(E0[k2]-E0[k2+1])+b1*C0[k2]+b3*C0b,
+   d10=b0*(E1[k]-E1[k+1])+b1*C1[k]+b3*C1a,
+   d11=b0*(E1[k2]-E1[k2+1])+b1*C1[k2]+b3*C1b,
+   r00=a0*R0[k]+a1*Q0[k]+a2*R0[k+1]+a3*Q0a,
+   r01=a0*R0[k2]+a1*Q0[k2]+a2*R0[k2+1]+a3*Q0b,
+   r10=a0*R1[k]+a1*Q1[k]+a2*R1[k+1]+a3*Q1a,
+   r11=a0*R1[k2]+a1*Q1[k2]+a2*R1[k2+1]+a3*Q1b,
+   q00=b0*(R0[k]-R0[k+1])+b1*Q0[k]+b3*Q0a,
+   q01=b0*(R0[k2]-R0[k2+1])+b1*Q0[k2]+b3*Q0b,
+   q10=b0*(R1[k]-R1[k+1])+b1*Q1[k]+b3*Q1a,
+   q11=b0*(R1[k2]-R1[k2+1])+b1*Q1[k2]+b3*Q1b,
    eA=e00+(e01-e00)*wp,
    eB=e10+(e11-e10)*wp,
    rA=r00+(r01-r00)*wp,
@@ -2461,12 +2471,12 @@ class OpMap{
   if(!L)return null;
   const{a,b,u,lo,hi}=L,e=1e-9*hi;
   if(!(T>=lo-e&&T<=hi+e))return null;
-  const s=Math.max(0,Math.min(1,(T-lo)/(hi-lo))),
+  const s=hi>lo?Math.max(0,Math.min(1,(T-lo)/(hi-lo))):0/* 幅の無い列では 0（0 で割らない） */,
    cu=(c,t)=>{
     const d=c.nd;
     let k=0;
     while(k<d.length-2&&d[k+1].T<t)k++;
-    return[d[k],d[k+1],Math.max(0,Math.min(1,(t-d[k].T)/(d[k+1].T-d[k].T)))]
+    return[d[k],d[k+1],d[k+1].T>d[k].T?Math.max(0,Math.min(1,(t-d[k].T)/(d[k+1].T-d[k].T))):0]
    },
    [a0,a1,wa]=cu(a,a.lo+s*(a.hi-a.lo)),
    [b0,b1,wb]=a===b?[a0,a1,wa]:cu(b,b.lo+s*(b.hi-b.lo)),

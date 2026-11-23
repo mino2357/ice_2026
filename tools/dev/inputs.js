@@ -5,7 +5,7 @@ const fs=require('fs'),path=require('path'),crypto=require('crypto'),root=path.r
 const sha=s=>crypto.createHash('sha1').update(s).digest('hex').slice(0,16),pad=i=>String(i).padStart(2,'0');
 const ls=(d,re)=>fs.readdirSync(path.join(root,d)).filter(f=>re.test(f)).sort().map(f=>d+'/'+f);
 function hashes(){const H={};
- for(const f of[...ls('src',/\.(js|css|html|py)$/),...['requirements','specification','gui','glossary'].flatMap(k=>ls('docs/'+k,/\.(md|txt)$/)),'tests/headless.js','tools/dev/run.js']){
+ for(const f of[...ls('src',/\.(js|css|html|py)$/),...['requirements','specification','gui','glossary'].flatMap(k=>ls('docs/'+k,/\.(md|txt)$/)),'tests/headless.js','tools/dev/run.js','tools/dev/shard.js','tools/dev/times.json']){
   const t=fs.readFileSync(path.join(root,f),'utf8');
   if(f!=='src/tests.js'){H[f]=sha(t);continue}
   const L=t.split('\n'),com=[];let cur=null,buf=[];const flush=()=>{if(cur){H[f+'#TST-'+cur]=sha(buf.join('\n'));cur=null;buf=[]}};

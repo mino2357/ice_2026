@@ -9,7 +9,7 @@
    | $m_{bf}$ | 筒内の既燃ガスのうち，燃料に由来する質量 | kg |
 
    従属変数：未燃の空気 $m_a = m_u - m_f$，既燃ガス $m_b = m - m_u$，$\zeta = \frac{m_{bf}}{m_b}$（$m_b \le 10^{-12}\ \text{kg}$ では $\zeta = \zeta^*$），未燃ガスの燃料の割合 $\psi = \frac{m_f}{m_u}$．$\zeta^*$ は筒外の既燃ガスに使う値で，排気弁が開く時点（EVO）の $\zeta$ で更新する（初期値は設定の $\phi$ から $\frac{\phi}{\text{AF}_{st} + \phi}$）．
-2. **温度**：状態方程式 $pV = \mathcal{R}\,T$，$\mathcal{R} \equiv m_a R_a + m_f R_f + m_b R_b(T, p, \zeta)$ [J/K] を $T$ について解く．$R_b$ が $T$ に依存するので，$T^{(0)} = \frac{pV}{m_a R_a + m_f R_f + m_b R_b(T_{fr}, p, \zeta)}$ から $T^{(k+1)} = \frac{pV}{m_a R_a + m_f R_f + m_b R_b(T^{(k)}, p, \zeta)}$ を 6 回繰り返す（回数は固定．右辺を状態の関数にするため）．
+2. **温度**：状態方程式 $pV = \mathcal{R}\,T$，$\mathcal{R} \equiv m_a R_a + m_f R_f + m_b R_b(T, p, \zeta)$ [J/K] を $T$ について解く．$R_b$ が $T$ に依存するので，$T^{(0)} = \frac{pV}{m_a R_a + m_f R_f + m_b R_b(T_{fr}, p, \zeta)}$ から始め，$g(T) = T\,\mathcal{R}(T) - pV = 0$ を Newton 法 $T \leftarrow T - \frac{g(T)}{\mathcal{R}(T) + T\,m_b\frac{\partial R_b}{\partial T}}$ で解く（最大 8 回．修正が相対 $10^{-11}$ 未満になったら終える．凍結の温度より下では $R_b$ が一定なので 1 回で終わる．`Core.cylT`）．（以前は「不動点の反復 $T^{(k+1)} = \frac{pV}{m_a R_a + m_f R_f + m_b R_b(T^{(k)}, p, \zeta)}$ を 6 回」と書いていたが，コードは Newton 法に替わっていた．外部のレビューの指摘で直した．）
 3. **成分の質量**：流れ $j$（質量流量 $\dot m_j$，流入が正）の成分の質量分率を $Y_{a,j}$，$Y_{f,j}$，$Y_{b,j}$（和は 1），既燃分の $\zeta$ を $\zeta_j$ とする．燃焼の速さ $r$ は SPEC-06（$m_{u,\text{trapped}}$ は点火の時点の $m_u$ とする．SPEC-30 の 7），液体の燃料の気化の速さ $\dot m_{\text{ev}}$ は SPEC-30．
    $$\frac{dm}{dt} = \sum_j\dot m_j + \dot m_{\text{ev}}, \qquad \frac{dm_u}{dt} = \sum_j\dot m_j\left(Y_{a,j} + Y_{f,j}\right) + \dot m_{\text{ev}} - r$$
    $$\frac{dm_f}{dt} = \sum_j\dot m_j Y_{f,j} + \dot m_{\text{ev}} - r\,\psi, \qquad \frac{dm_{bf}}{dt} = \sum_j\dot m_j Y_{b,j}\zeta_j + r\,\psi$$

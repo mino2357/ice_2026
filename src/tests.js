@@ -5120,6 +5120,25 @@ TST[29]=function*(){
   }
   chkB(29,'熱物性を運転中に切り替えたサイクルは平均に入れない（全開 3000 rpm，サイクルの途中で化学平衡 → γ(T)，γ(T) → 化学平衡）：そのサイクルの終わりに平均が空，次のサイクルから数える',ok,out.join('；'))
  }
+/* 14：凍結の温度の下の区間（SPEC-29 A の 6）：T_fr − 50 K から T_fr までは凍結の側で，R_b は一定，∂R_b/∂T = 0，c_v は温度とともに減らない */
+ {
+  const o=mkGB(),bad=[];
+  for(const ph of[.7,1,1.3])for(const p of[2e5,5e6]){
+   const z=GAS.phi2z(ph);
+   GAS.burned(1650,p,z,o);
+   const R0=o.R;
+   let cv0=o.eT,wR=0,wQ=0,dn=0;
+   for(let T=1652;T<1700;T+=2){
+    GAS.burned(T,p,z,o);
+    wR=Math.max(wR,Math.abs(o.R/R0-1));
+    wQ=Math.max(wQ,Math.abs(o.RT));
+    if(o.eT<cv0-1e-9)dn=Math.max(dn,cv0-o.eT);
+    cv0=o.eT
+   }
+   if(!(wR<=1e-12&&wQ===0&&dn===0))bad.push(`φ ${ph}，${p/1e3} kPa：R の変化 ${wR.toExponential(1)}，最大の |∂R/∂T| ${wQ.toExponential(1)}，c_v の減り ${dn.toFixed(3)}`)
+  }
+  chkB(29,'凍結の温度の下（1650〜1700 K）：既燃ガスの R_b が一定（相対 1e-12），∂R_b/∂T = 0，c_v が温度とともに減らない（φ 0.7，1，1.3，200 kPa と 5 MPa）',bad.length===0,bad.join('；')||'6 / 6')
+ }
 };
 TST[30]=function*(){
  const A=GAS;
@@ -6796,5 +6815,14 @@ TST[37]=function*(){
  Object.assign(MP,keep);
  swSub(sub0);
  uiDefault();
- show(0)
+ show(0);
+/* 7：幅の無い列（ある回転数で軸トルクの節点の範囲が 1 点）で補間が NaN にならない（SPEC-37 の 5） */
+ {
+  const nd=T=>({T,mfd:1e-5,Tx:900,mth:2e-3,pm:5e6,spa:20}),
+   c={lo:30,hi:30,nd:[nd(30),nd(30)]},
+   L={a:c,b:c,u:0,lo:30,hi:30},
+   r=OpMap.prototype.at.call({loc:()=>L},2000,30,L),
+   ok=!!r&&OPM.f.every(k=>Number.isFinite(r[k]))&&r.mfd===1e-5;
+  chkB(37,'幅の無い列（軸トルクの節点の範囲が 30 N·m の 1 点）の点 (2000 rpm, 30 N·m) の補間の値がすべて有限で，節点の値と同じ',ok,r?OPM.f.map(k=>k+' '+r[k]).join('，'):'null')
+ }
 };
