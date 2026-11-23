@@ -153,5 +153,5 @@
 | `docs/changes/2026-11-23-review-gemini-2.md` | 2485 |
 | `docs/changes/2026-11-23-review-gemini-3.md` | 2693 |
 | `docs/changes/2026-11-23-review-gemini-4.md` | 4343 |
-| `docs/changes/2026-11-23-review-gemini-5.md` | 6524 |
+| `docs/changes/2026-11-23-review-gemini-5.md` | 7131 |
 | `docs/changes/2026-11-23-run-state-copy.md` | 2494 |
