@@ -39,7 +39,7 @@ function*runC(c,T,o){
  o=o||{};
  const t1=c.s.t+T;
  let n=0,cy=c.s.cyc,tk=Math.floor(c.s.t/.05+1e-9);
- while(c.s.t<t1){
+ while(c.s.t<t1&&!c.s.div){
   c.step();
   if(c.s.cyc!==cy){cy=c.s.cyc;o.cyc&&o.cyc(c)}
   if(o.tick){const k=Math.floor(c.s.t/.05+1e-9);if(k!==tk){tk=k;o.tick(c)}}
@@ -1424,6 +1424,40 @@ TST[13]=function*(){
   }
   chkB(13,'段の ω < 0：燃焼の最中（γ(T)，化学平衡のポート噴射と直噴）と直噴の噴射の最中の状態で ω の符号だけを反転して右辺を評価すると，熱の発生，既燃の側へ移る質量の速さ，噴射率が 0 以上（反転の前はどれも正）',ok,out.join('；'))
  }
+/* 13：有限でない結果を受け入れない（REQ-13 の 19）：右辺の圧力の成分，補助積分の成分（図示仕事．誤差の制御の外）を有限でない値にする */
+ {
+  const z=(yield*scen('S4')).c,f0=Core.prototype.f,ng=[];
+  let n=0;
+  for(const gam of[0,2])
+   for(const sol of[0,1,2])
+    for(const k of[2,18]){
+   const c=z.clone();
+   let o1=false;
+   try{
+    c.P.gam=gam;
+    for(let i=0;i<20;i++)c.step();
+    c.P.sol=sol;
+    for(let i=0;i<5;i++)c.step();
+    const y0=c.s.y.slice(),
+     t0=c.s.t,
+     d0=c.s.ndv|0,
+     same=()=>c.s.y.length===y0.length&&c.s.y.every((v,i)=>Object.is(v,y0[i]))&&c.s.t===t0;
+    c.f=function(y,o){const r=f0.call(this,y,o);r[k]=NaN;return r};
+    c.step();
+    o1=same()&&c.s.div===1&&c.s.ndv===d0+1;
+    delete c.f;
+    let r=0;
+    for(let i=0;i<3;i++)r+=c.step();
+    o1=o1&&same()&&r===0&&c.s.ndv===d0+1;
+    c.reset();
+    o1=o1&&!c.s.div
+   }catch(e){o1=false}
+   n++;
+   if(!o1)ng.push(`${gam?'化学平衡':'γ(T)'}・${['RK4','DOPRI5','BS3'][sol]}・成分 ${k}`);
+   yield
+  }
+  chkB(13,'有限でない結果を受け入れない（S4，γ(T) と化学平衡 × RK4・DOPRI5・BS3，右辺の圧力の成分または補助積分の成分を NaN）：1 回のステップで状態と時刻が前のまま，発散の印が立ち回数が 1．右辺を戻して 3 回進めても変わらず Δt = 0．コールドリセットで印が下りる',ng.length===0,ng.length?`${n} 通り中 ${ng.length} 通りで不成立：${ng.join('，')}`:`${n} 通りすべて成立`)
+ }
 };
 TST[14]=function*(){
  const s3=yield*scen('S3'),s4=yield*scen('S4'),G=geo(mkPT());
@@ -1880,6 +1914,45 @@ TST[15]=function*(){
   chkB(15,'[RESET] のボタンが無い',nb3);
   chkB(15,'有限な状態での START は状態を初期値に戻さない',r4);
   chkB(15,'状態に NaN があるときの START は，初期値に戻してから始動する（状態が有限，t = 0，始動している）',r5,`有限 ${fin(live)}，t ${live.s.t}`);
+  live.reset()
+ }
+/* 21：計算の発散（REQ-15 の 12，16）：右辺を有限でない値を返すものに置き換えて進める */
+ {
+  show(0);
+  live.reset();
+  live.start();
+  for(let i=0;i<50;i++)live.step();
+  const f0=Core.prototype.f,
+   dw=()=>{
+    const cv=document.createElement('canvas');
+    cv.width=360;
+    cv.height=400;
+    const g=cv.getContext('2d'),ft=g.fillText.bind(g),T=[];
+    g.fillText=(t,x,y)=>{T.push(t);ft(t,x,y)};
+    drawEngine(g,live,360,400,COL);
+    return T.some(t=>t.includes('DIVERGED'))
+   },
+   tx=()=>/\n警告：[^\n]*DIVERGED/.test(runText(envInfo()));
+  let a=false,b=false,c=false,d=false,w='';
+  try{
+   live.f=function(y,o){const r=f0.call(this,y,o);r[2]=NaN;return r};
+   const st={spd:1,debt:0},w0=performance.now();
+   advance(st,live,1/60,FB.n);
+   const ms=performance.now()-w0;
+   a=ms<=FB.n+100;
+   b=dw()&&tx();
+   delete live.f;
+   const y1=live.s.y.slice(),t1=live.s.t;
+   for(let i=0;i<5;i++)advance(st,live,1/60,FB.n);
+   c=dw()&&tx()&&live.s.t===t1&&live.s.y.every((v,i)=>Object.is(v,y1[i]))&&fin(live);
+   tapEl($('b1'));
+   d=fin(live)&&live.s.t===0&&!live.s.div&&(live.s.starter===1||live.s.fired===1)&&!dw();
+   w=`1 フレーム ${ms.toFixed(0)} ms，表示 ${b?1:0}，残る ${c?1:0}，START ${d?1:0}`
+  }catch(e){
+   delete live.f;
+   w='例外：'+e.message
+  }
+  chkB(15,'計算の発散：右辺が有限でない値を返すと，1 フレームが上限の時間の中で終わり，機関断面図と運転の状態のテキストに DIVERGED が出る．右辺を戻して進めても DIVERGED が残り状態と時刻が変わらない．START で初期値から始動し DIVERGED が消える',a&&b&&c&&d,w);
   live.reset()
  }
  show(3);

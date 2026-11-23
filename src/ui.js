@@ -71,6 +71,7 @@ function advance(st,c,el,budget){
  let n=0;
  while(st.debt>0){
   st.debt-=c.step();/* 上限の判定は 4 ステップごと（既燃ガスの表の節点を作るステップは 1 ステップが長い．SPEC-15 F の 2） */
+  if(c.s&&c.s.div){st.debt=0;break} /* 発散して止まった計算では回らない（SPEC-13 の 7） */
   if(budget&&(++n&3)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}
  }
  if(mx)st.debt=0
@@ -166,7 +167,7 @@ function defaults(){
 }
 function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* [START]：状態に有限でない値があるときは，初期値に戻してから始動する（SPEC-15 D の 4） */
-function startTap(){if(!live.s.y.every(Number.isFinite))coldReset();live.start();if(SND.on)sndEnsure()}
+function startTap(){if(!live.s.y.every(Number.isFinite)||live.s.div)coldReset();live.start();if(SND.on)sndEnsure()}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
 /* SPEC-30 の 9：熱物性が「化学平衡」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
@@ -1054,7 +1055,7 @@ function runText(e){
   tab=U.tab===6?'全体図':([...$('N').children].find(b=>+b.dataset.t===U.tab)||{}).textContent||'',
   sub=U.tab===1?`（画面 ${U.sub+1}）`:U.tab===2?`（${PAGES[U.pg]}）`:'',
   rs=rsShow(),
-  wn=[...(s.ov>=2?['OVERLOAD']:[]),...(s.up>=2?['UNDERPOWER']:[]),...(c.vhit?['VALVE HIT']:[])],
+  wn=[...(s.ov>=2?['OVERLOAD']:[]),...(s.up>=2?['UNDERPOWER']:[]),...(c.vhit?['VALVE HIT']:[]),...(s.div?['DIVERGED']:[])],
   T=c.X?c.X.T:NaN,
   L=[
    'SI機関シミュレータ 運転の状態',

@@ -842,6 +842,8 @@ class Core{
    exOn:P.exs,
    clp:0,
    nfa:0,
+   ndv:0,
+   div:0,
    nfe:0,
    eP:1,
    eve:0,
@@ -1732,6 +1734,7 @@ else{
  }
  step(){
   const s=this.s,P=this.P,G=this.G;
+  if(s.div)return 0; /* 発散して止まっている（REQ-13 の 19，SPEC-13 の 7）．コールドリセットまで何もしない */
   this.updV();
   this.syncSw();
   if(!P.sauto||!s.fired)s.spa=P.spb;
@@ -1842,6 +1845,15 @@ else{
     h=he*fac
    }
   }
+/* 有限でない結果は受け入れず，状態と時刻をステップの前のまま計算を止める（REQ-13 の 19，SPEC-13 の 7） */
+  for(let i=0;i<NY;i++)
+   if(!Number.isFinite(y1[i])){
+    s.div=1;
+    s.ndv++;
+    this.kFy=null;
+    this.wx=0;
+    return 0
+   }
 /* 射影（REQ-13 7）．通常の運転では働かない */
 /* 成分の質量（m_b,in，m_b,p，m_f，m_bf，m_l，m_f,in，m_f,p）は 0 で切る．−MEPS より下へ出たときだけ回数に数える（流れの向きが変わるステップでは，誤差の許容内で 0 をわずかに下回ることがある） */
   let dty=0;
@@ -2133,7 +2145,7 @@ else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd
   c.fixTw=this.fixTw;
   return c
  }
- run(T){const t1=this.s.t+T;while(this.s.t<t1)this.step()}
+ run(T){const t1=this.s.t+T;while(this.s.t<t1&&!this.s.div)this.step()}
 }
 /* ===== metrics display (validity rule) ===== */
 const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':x.toFixed(n)+u;
@@ -2198,10 +2210,10 @@ class Sweep{
   if(c.P.gam===2&&!GAS.warm(ms))return false;
   while(!this.done){
    c.step();/* エンスト（燃料 OFF）：点をエンストとして記録し，描かない（SPEC-26 の 4） */
-   if(!c.s.fuel){
-    this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length});
+   if(!c.s.fuel||c.s.div){/* 発散（SPEC-13 の 7）もエンストと同じく記録して描かない．同じ機関で続けられないので掃引を終える */
+    this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length,dv:c.s.div});
     this.i++;
-    if(this.i>=this.Ns.length)this.done=true;else this.begin();
+    if(this.i>=this.Ns.length||c.s.div)this.done=true;else this.begin();
     continue
    }
    if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}/* 経過時間は毎ステップ調べる（最初の点で表の節点を作る遅いステップが続くため．SPEC-26 B の 1） */
@@ -2907,6 +2919,7 @@ class VTEval{
   let k=0;
   for(;;){
    c.step();
+   if(c.s.div){this.nu++;this.n++;this.ok=false;this.J=-Infinity;this.M={tb:NaN,eb:NaN};return true} /* 発散した評価（SPEC-13 の 7）：周期定常に達しない評価と同じく数え，次の評価をこの状態から始めない */
    if(c.s.cyc!==this.cy){this.cy=c.s.cyc;if(c.lastM)this.h.push(c.lastM);if(this.check())return true}
    if((++k&3)===0&&performance.now()-t0>ms)return false
   }
@@ -3018,12 +3031,12 @@ class LossBk{
   let k=0;
   const st=()=>{c.step();return(++k&3)===0};
   let cy=s.cyc;
-  while(s.cyc===cy){if(st())yield}
+  while(s.cyc===cy&&!s.div){if(st())yield}
   /* 実際のサイクル */
   cy=s.cyc;
   const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31];
   let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN,vE=NaN;
-  while(s.cyc===cy){
+  while(s.cyc===cy&&!s.div){
    const n2=s.evn[2],n3=s.evn[3];
    c.step();
    if(s.cyc!==cy)break;
@@ -3031,6 +3044,7 @@ class LossBk{
    if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c);vE=kinV(c.G,s.y[0])}
    if((++k&3)===0)yield
   }
+  if(s.div)return{ok:false,why:'計算が発散した'};
   const M=c.lastM,C={...s.C},G=c.G;
   if(!rep||!M||!(M.ei>0)||!C.on)return{ok:false,why:'燃焼したサイクルが得られない'};
   const Qf=M.W/M.ei,W180=zI-z0,xi=d=>SPC?K.etac*d*K.Hu/Qf:d/Qf; /* 燃えた燃料の熱の割合 ξ（SPEC-33 A）：化学平衡では既燃の側へ移った燃料 × η_c，ほかは発熱の積分 */
@@ -3047,13 +3061,14 @@ class LossBk{
    const zs=q.s.y[19],b0=bf(q);
    let pe=NaN;
    /* 段 F の間だけ，既燃ガスの表を解離の無いものに替える（1 ステップごとに戻す．運転中の機関と交互に進むため） */
-   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){
+   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc&&!q.s.div){
     const n3=q.s.evn[3];
     if(nd)GAS.nd(1);
     try{q.step()}finally{if(nd)GAS.nd(0)}
     if(q.s.evn[3]!==n3)pe=q.s.y[2];
     if((++k&3)===0)yield
    }
+   if(q.s.div)return{ok:false,why:'計算が発散した'};
    R[nm]={W:q.s.y[19]-zs,pe,xi:xi(bf(q)-b0)}
   }
   if(!R.F)R.F=R.FA;

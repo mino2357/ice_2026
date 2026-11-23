@@ -783,7 +783,7 @@ function drawEngine(g,c,W,Hh,col,nt,rs){
  g.textAlign='left';
  const L=engText(c,rs),
   fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':''),
-  W_=[...(fl?[fl.trim()]:[]),...(c.vhit?['VALVE HIT']:[])];
+  W_=[...(fl?[fl.trim()]:[]),...(c.vhit?['VALVE HIT']:[]),...(s.div?['DIVERGED']:[])];
 /* 帯の上端（Hh）より下に文字を描かない．入り切らないときは警告を残し，状態の行を下から省く（SPEC-19 の 6） */
  const nl=Math.max(0,Math.floor((Hh-22)/15)+1),ns=Math.max(Math.min(1,L.length),Math.min(L.length,nl-W_.length));
  g.fillStyle=col.fg;
