@@ -1,11 +1,11 @@
 {
  "tier1": {
-  "at": "2026-11-23T11:29:46.677Z",
+  "at": "2026-11-23T12:36:15.469Z",
   "plan": "第25版とのビット比較 ＋ 全項目（360×640）",
   "files": {
-   "src/audio.js": "93f84b5e1572bccd",
+   "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "e9629d00136f7b24",
-   "src/core.js": "2fcb7d32383ff9a0",
+   "src/core.js": "87a1b7cd6b3d877a",
    "src/doc.js": "5cd1e65ac95ffc63",
    "src/index.tpl.html": "1508974b8d56c054",
    "src/plot.js": "c18e6f0aa8df36f9",
@@ -47,7 +47,7 @@
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "92b8f919b87a17ff",
+   "src/tests.js#common": "7d5b967475f3d54f",
    "src/ui.js": "6b1b25c621db95ef",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
@@ -143,7 +143,7 @@
    "docs/specification/TEST-13.md": "458a90f216abb581",
    "docs/specification/TEST-14.md": "ea6b996a43b633cf",
    "docs/specification/TEST-20.md": "b2939d0d37d30928",
-   "docs/specification/TEST-21.md": "ba2c20890c92e88d",
+   "docs/specification/TEST-21.md": "5fc1f7f1ab5a65b8",
    "docs/specification/TEST-24.md": "5b84bbbb0d501ffc",
    "docs/specification/TEST-25.md": "06f6d8f77ddf2718",
    "docs/specification/TEST-26.md": "519e27d7f336dedc",
@@ -236,8 +236,8 @@
    "docs/glossary/s3.4.md": "33a497055814c7d1",
    "docs/glossary/s3.md": "140a3d1fbe89fce2",
    "docs/glossary/s4.md": "5b0476929eb847cd",
-   "tests/headless.js": "51ffd4c245526d2b",
-   "tools/dev/run.js": "a1895e9038183710"
+   "tests/headless.js": "ace97cb60e98e306",
+   "tools/dev/run.js": "1cff4d6e3045b567"
   }
  },
  "approved": {

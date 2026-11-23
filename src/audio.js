@@ -30,10 +30,15 @@ function loopFit(L,d,c,fs){
  return{b,g:m2/mg(b,1000)}
 }
 /* 出口の平均流の Mach 数（SPEC-21 B の 1）：me は排気弁の質量流量の表 [g/s]，ρ_X = p_atm/(R T_X) */
-function exMach(me,pa,d,c){
+function exMach(me,pa,d,c,T=AU.Tex,Rg=R){
  let s=0,n=0;
  for(const v of me)if(v===v){s+=v;n++}
- return n?Math.min(.5,Math.abs(s/n*1e-3)/(pa/(R*AU.Tex)*PI/4*d*d*c)):0
+ return n?Math.min(.5,Math.abs(s/n*1e-3)/(pa/(Rg*T)*PI/4*d*d*c)):0
+}
+/* 音速の目標値（SPEC-21 B の 1）：化学平衡で排気系 ON のときは直前のサイクルの排気温度の平均 T̄_X での √(γ_X R_X T̄_X)，それ以外は 800 K の値．{c, T, R} */
+function sndC(e){
+ const q=e&&e.sndC?e.sndC():null;
+ return q||{c:cEx(),T:AU.Tex,R}
 }
 function onePoleB(m,w){
  if(!(m<1))return 0;
@@ -104,6 +109,9 @@ class Synth{
   this.d=.04;
   this.M=0;
   this.c=556.7;
+  this.ct=556.7;/* 音速の目標値．c はこれに時定数 τ_c で近づく（SPEC-21 B の 1） */
+  this.cF=NaN;
+  this.aC=1-Math.exp(-1/(fs*.1));
   this.cv=1;
   this.seed=12345;
 /* 遅延線の長さ：排気管の往復の遅れ 2 L / c（L は設定の上限 3 m，c は下限 330 m/s として）が収まる 2 の冪．48 kHz では 4096（REQ-21 の 3） */
@@ -144,7 +152,9 @@ class Synth{
   if(o.env)this.nxEnv=Float32Array.from(o.env);
   if(imm&&this.nx){this.tab=this.nx;this.nx=null}
   if(imm&&this.nxEnv){this.env=this.nxEnv;this.nxEnv=null}
-  for(const k of['Nt','vol','L','c','d','cv','seed','fl','fm','ld','M'])if(o[k]!=null)this[k]=o[k];
+  for(const k of['Nt','vol','L','d','cv','seed','fl','fm','ld','M'])if(o[k]!=null)this[k]=o[k];
+  if(o.c!=null){this.c=o.c;this.ct=o.c}
+  if(o.ct!=null)this.ct=o.ct;
   if(imm){this.N=this.Nt;this.amp=this.Nt>30?1:0;this.st=this.seed>>>0;this.ns=(this.seed^0x9E3779B9)>>>0}
  }
  nrnd(){
@@ -192,8 +202,8 @@ class Synth{
   if(this.cv){this.ac=1+.03*this.uz();this.sc=1/(1+.005*this.uz())}else{this.ac=1;this.sc=1}
  }
  loop(){
-  const k=this.L+'|'+this.d+'|'+this.c;
-  if(k!==this.key){this.key=k;const F=loopFit(this.L,this.d,this.c,this.fs);this.b=F.b;this.gl=F.g}
+  const k=this.L+'|'+this.d;/* 損失のフィルタは，c が前に作った値から相対 1e-3 を超えて変わったときだけ作り直す（SPEC-21 B の 1） */
+  if(k!==this.key||!(Math.abs(this.c-this.cF)<=1e-3*this.cF)){this.key=k;this.cF=this.c;const F=loopFit(this.L,this.d,this.c,this.fs);this.b=F.b;this.gl=F.g}
   return this.b
  }
  fInit(){
@@ -293,14 +303,22 @@ class Synth{
    fs=this.fs,
    bf=this.buf,
    M=bf.length,
-   b=this.loop(),
-   D=Math.max(2,2*this.L/this.c*fs-b/(1-b)),
+   b=this.loop();
+  let D=Math.max(2,2*this.L/this.c*fs-b/(1-b)),
    di=Math.min(Math.floor(D),M-2),
-   df=D-di,
+   df=D-di;
+  const
    g0=ACON.gc,
    V=this.vol*1.6,
    rl=this.gl*(1-this.M)/(1+this.M);
   for(let s=0;s<out.length;s++){
+   if(this.c!==this.ct){/* 音速を目標値へ標本ごとに近づけ，遅延の長さもなめらかに動かす（階段状に替えると読み出しの位置が跳ぶ） */
+    this.c+=(this.ct-this.c)*this.aC;
+    if(Math.abs(this.ct-this.c)<=1e-12*this.ct)this.c=this.ct;
+    D=Math.max(2,2*this.L/this.c*fs-b/(1-b));
+    di=Math.min(Math.floor(D),M-2);
+    df=D-di
+   }
    this.N+=(this.Nt-this.N)*this.aN;
    this.amp+=((this.N>30?1:0)-this.amp)*this.aA;
    const inc=n*this.N/120/fs*this.sc;
@@ -381,7 +399,9 @@ function sndTick(){
   SND.cyc=live.s.cyc;
   m.tab=mkTable(live.last.me);
   m.env=mkEnv(live.last.me);
-  m.M=exMach(live.last.me,LP.pa,LP.dex,cEx())
+  const q=sndC(live);
+  m.ct=q.c;
+  m.M=exMach(live.last.me,LP.pa,LP.dex,q.c,q.T,q.R)
  }
  SND.post(m)
 }

@@ -1124,6 +1124,13 @@ class Core{
   return T
  }
 /* 排気ポートのガスの物性（温度の 3 次 Hermite 補間．表の範囲の外は端の値と端の c_v で延ばす）．o に e，eT，R，RT を書く */
+ sndC(){/* 音速の目標値（SPEC-21 B の 1 (a)）．化学平衡・排気系 ON で，直前のサイクルの排気温度の平均が有限で 300 K 以上のときだけ．それ以外は null */
+  const P=this.P,M=this.lastM,T=M&&M.Tx;
+  if(P.gam!==2||!P.exs||!(T>=300&&T<Infinity))return null;
+  const o=this.sg||(this.sg=mkGB());
+  this.xgas(T,o);
+  return{c:Math.sqrt((1+o.R/o.eT)*o.R*T),T,R:o.R}
+ }
  xgas(T,o){
   const g=GAS.G,
    t=this.zc().xt,

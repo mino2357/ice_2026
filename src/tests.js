@@ -3282,6 +3282,99 @@ TST[21]=function*(){
    for(let i=0;i<n;i++){const v=y[i];if(!(v===v))fin=false;else if(Math.abs(v)>mx)mx=Math.abs(v)}
    chkB(21,'遅延が最も長い組合せ（L = 3 m，384 kHz）：出力が有限で |y| ≤ 1，第 1 共鳴が c/4L と 2% 以内．遅延線が往復の遅れより長い',fin&&mx<=1&&mx>0&&Math.abs(bf/f0-1)<=.02&&s.buf.length>2*L/c*FS+2,`極大 ${bf.toFixed(2)}／${f0.toFixed(2)} Hz，最大 ${mx.toExponential(2)}，遅延線 ${s.buf.length}（遅れ ${(2*L/c*FS).toFixed(0)} サンプル）`)
   }
+/* 29〜31：排気温度と音速（REQ-21 の 10．SPEC-21 B の 1） */
+  {
+   const SC=typeof sndC==='function'?sndC:null,
+    q0=new Core({...mkPT()}),
+    cT=T=>{const o=mkGB();q0.xgas(T,o);return Math.sqrt((1+o.R/o.eT)*o.R*T)},
+    TT=[700,1000,1200],
+    CC=TT.map(cT);
+   {
+    const fb=[];
+    for(const ct of CC){
+     const f0=ct/4,
+      ff=f0/Math.round(f0/5),
+      Pn=48000/ff,
+      i0=120000,
+      nw=Math.round(5*Pn),
+      n=i0+nw+10,
+      s=new Synth(48000,{vol:1e-4,L:1,d:.04,cv:0,fl:0,c,tab:imp,Nt:120*ff}),
+      y=new Float32Array(n);
+     s.set({ct});
+     for(let i=0;i<n;i+=48000){s.process(y.subarray(i,Math.min(n,i+48000)));yield}
+     let bf=0,bm=-1;
+     for(let k=Math.ceil(f0*.9/ff);k*ff<=f0*1.1;k++){const m=dftAbs(y,i0,nw,k*ff,48000);if(m>bm){bm=m;bf=k*ff}}
+     fb.push([bf,f0])
+    }
+    const ok=fb.every(([b,f])=>Math.abs(b/f-1)<=.02),
+     rt=fb.every(([b],i)=>Math.abs(b/fb[0][0]/(CC[i]/CC[0])-1)<=.02);
+    chkB(21,'排気温度と音速：音速の目標値を T̄_X = 700，1000，1200 K の √(γ_X R_X T̄_X) にすると，第 1 共鳴が c*/4L と 2% 以内で，周波数の比が音速の比と 2% 以内',ok&&rt,fb.map(([b,f],i)=>`${TT[i]} K：${b.toFixed(1)}／${f.toFixed(1)} Hz`).join('，'))
+   }
+   {
+    const r=[];
+    for(const sc of[s4,yield*scen('W3000')]){
+     const e=sc.c,v=SC&&SC(e),T=e.lastM.Tx,o=mkGB();
+     e.xgas(T,o);
+     r.push({v,T,w:Math.sqrt((1+o.R/o.eT)*o.R*T)})
+    }
+    let m=null,lv=null,me=null;
+    const p0=SND.post,y0=SND.cyc,sv=live;
+    SND.post=x=>{m=x};
+    SND.cyc=-1;
+    live=s4.c.clone();/* 運転中の機関の代わり（サイクルの完了時に送る値を見る） */
+    try{sndTick();lv=SC&&SC(live);me=live.last.me}finally{SND.post=p0;SND.cyc=y0;live=sv}
+    const wire=!!(m&&lv&&m.ct===lv.c&&m.M===exMach(me,LP.pa,LP.dex,lv.c,lv.T,lv.R)),
+     ok=r.every(o=>o.v&&Math.abs(o.v.c/o.w-1)<=1e-12)&&r[1].v&&r[0].v&&r[1].v.c>r[0].v.c;
+    chkB(21,'送る音速の目標値：化学平衡・排気系 ON の部分負荷（S4）と全開（3000 rpm）で，直前のサイクルの T_X から求めた √(γ_X R_X T_X) と相対 1e-12 で同じで，全開の方が大きい．サイクルの完了時に送る値と出口の Mach 数が同じ目標値を使う',ok&&wire,r.map(o=>`T_X ${o.T.toFixed(0)} K：${o.v?o.v.c.toFixed(2):'–'}／${o.w.toFixed(2)} m/s`).join('，')+(wire?'，送る値 一致':`，送る値 不一致（${m?m.ct:'送らない'}／${lv?lv.c:'–'}，M ${m?m.M:'–'}）`))
+   }
+   {
+    const n0=48000,
+     n1=24000,
+     mk=o=>new Synth(48000,{vol:.6,L:1,d:.04,cv:0,fl:0,c:CC[0],tab:T4,Nt:3000,...o}),
+     dmax=(y,i0,i1)=>{let d=0;for(let i=i0+1;i<i1;i++)d=Math.max(d,Math.abs(y[i]-y[i-1]));return d},
+     run=f=>{
+      const s=mk({}),y=new Float32Array(n0+n1);
+      s.process(y.subarray(0,n0));
+      f(s);
+      s.process(y.subarray(n0));
+      return{s,y}
+     };
+    const A=run(s=>s.set({ct:CC[2]})),
+     F0=run(()=>{}),
+     F1=(()=>{const s=mk({c:CC[2]}),y=new Float32Array(n0+n1);s.process(y);return{s,y}})(),
+     S=run(s=>s.set({c:CC[2]}));
+    yield;
+    const B=mk({});
+    B.process(new Float32Array(n0));
+    B.set({ct:CC[2]});
+    B.process(new Float32Array(48000));
+    const da=dmax(A.y,n0,n0+n1),
+     dr=Math.max(dmax(F0.y,n0,n0+n1),dmax(F1.y,n0,n0+n1)),
+     ds=dmax(S.y,n0,n0+n1),
+     cv=Math.abs(B.c/CC[2]-1);
+    chkB(21,'音速が変わる間の跳び：700 K の音速の定常から 1200 K の目標値に替えて 0.5 s，隣り合う標本の差の最大が，音速を固めたときの大きい方の 1.1 倍以下．替えた後 1 s で合成器の音速が目標値と相対 1e-4 以内',da<=1.1*dr&&cv<=1e-4,`${(da/dr).toFixed(3)} 倍（階段状に替えたとき ${(ds/dr).toFixed(3)} 倍），1 s 後の差 ${cv.toExponential(1)}`)
+   }
+   {
+    const c0=cEx(),g=new Core({...mkPT(),gam:0}),x=new Core({...mkPT(),exs:0});
+    const vg=SC&&SC(g),vx=SC&&SC(x),okS=!!(vg&&vx&&vg.c===c0&&vx.c===c0&&vg.T===AU.Tex&&vx.T===AU.Tex);
+    let okA=true;
+    for(const fm of[0,1]){
+     const o={tab:T4,Nt:24000,vol:.6,L:1,d:.04,cv:1,seed:3,c,fm,ld:1,fl:.2},
+      a=new Synth(48000,o),
+      b=new Synth(48000,o),
+      ya=new Float32Array(240),
+      yb=new Float32Array(240);
+     for(let k=0;k<4800;k++){
+      b.set({ct:c0});
+      a.process(ya);
+      b.process(yb);
+      for(let i=0;i<240;i++)if(ya[i]!==yb[i])okA=false;
+      if((k&511)===0)yield
+     }
+    }
+    chkB(21,'γ(T) と排気系 OFF：送る音速の目標値が 800 K の値と浮動小数点数として同じ．サイクルごとにその目標値を送っても，計算の音と演出の音の出力が 4800 サイクルの全標本で，送らないときと完全に一致',okS&&okA,`γ(T) ${vg?vg.c:'–'}，排気系 OFF ${vx?vx.c:'–'}／${c0} m/s，出力 ${okA?'一致':'不一致'}`)
+   }
+  }
 /* 28：検査のための記録は求めたときだけ（計算の音と演出の音） */
   {
    const out=[];
