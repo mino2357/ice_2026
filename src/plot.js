@@ -1192,8 +1192,10 @@ function lossSpec(r,W,H){
   lw=two?6:Math.min(Math.max(150,W*.42),260),
   pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-82},
   rh=pl.h/nr,
-  mx=Math.ceil(r.eO*10)/10,
-  X=v=>pl.x+pl.w*Math.max(0,v)/mx,
+  vs=rows.flatMap(q=>[q[1],q[2]]).filter(Number.isFinite),
+  mx=Math.max(.1,Math.ceil(Math.max(0,...vs)*10-1e-9)/10),
+  mn=Math.min(0,Math.floor(Math.min(0,...vs)*10+1e-9)/10)/* 横軸は 0 と全段の値を含む 10 % 刻みの範囲．熱効率が負なら 0 の線の左に描く（SPEC-33 C の 1） */,
+  X=v=>pl.x+pl.w*(v-mn)/(mx-mn),
   bh=Math.min(20,rh*(two?.4:.62));
  return{
   two,
@@ -1203,6 +1205,7 @@ function lossSpec(r,W,H){
   }),
   pl,
   mx,
+  mn,
   X,
   rh
  }
@@ -1223,15 +1226,16 @@ function drawLoss(g,W,H,r,col,msg){
  const S=lossSpec(r,W,H),pc=(v,d)=>(v*100).toFixed(d);
  g.strokeStyle=col.ln;
  g.lineWidth=1;
- for(let v=0;v<=S.mx+1e-9;v+=.1){
-  const x=S.X(v);
+ for(let k=Math.round(S.mn*10);k<=Math.round(S.mx*10);k++){
+  const v=k/10,x=S.X(v);
+  g.strokeStyle=k===0?col.mu:col.ln;
   g.beginPath();
   g.moveTo(x,S.pl.y);
   g.lineTo(x,S.pl.y+S.pl.h);
   g.stroke();
   g.fillStyle=col.mu;
   g.textAlign='center';
-  g.fillText(Math.round(v*100)+'',x,S.pl.y+S.pl.h+9)
+  g.fillText((k<0?'−':'')+Math.abs(k*10),x,S.pl.y+S.pl.h+9)
  }
  g.fillText('熱効率（%）',S.pl.x+S.pl.w/2,S.pl.y+S.pl.h+22);
  S.rows.forEach((q,i)=>{
@@ -1250,7 +1254,7 @@ function drawLoss(g,W,H,r,col,msg){
   g.fillStyle=col.fg;
   if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}
   g.textAlign='left';
-  g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${pc(q.hi,1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)
+  g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${q.hi<0?'−':''}${pc(Math.abs(q.hi),1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)
  });
  g.fillStyle=col.mu;
  g.textAlign='left';

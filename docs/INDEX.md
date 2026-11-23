@@ -41,12 +41,12 @@
 | 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（1845） | `specification/SPEC-29.md`（6572） `specification/SPEC-29B.md`（10648） | `specification/TEST-29.md`（5270） | 4907–4914 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,398,469,587… |
 | 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 5124–5138 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,662,1088,1262,1551 `plot.js`:480 `ui.js`:172 |
 | 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2954） | `gui/TEST-31.md`（1761） | 5347–5352 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:475 |
-| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5584–5587 | 03 21 33 34 | `core.js`:2553,2670,2685,2708,2727,2852… `plot.js`:1138,1260 `ui.js`:762,776,779 |
-| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（858） | `specification/TEST-33.md`（1551） | 5802–5830 | 01 03 10 12 14 29 30 32 | `core.js`:451,2963,3024,3050,3060 `plot.js`:1138,1189,1210 `ui.js`:762,776,872 |
-| 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 5918–5922 | 32 | `core.js`:2588,3108,3110 `plot.js`:1448,1500 `ui.js`:776,883 |
-| 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 6089–6092 | 11 18 22 23 26 | `core.js`:238,242,247,2067 `plot.js`:446 `ui.js`:669 |
-| 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1356） | `specification/SPEC-36.md`（2141） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1861） | 6437–6438 | 07 13 15 | `core.js`:1509 `audio.js`:363,408 `ui.js`:990,992,1168 |
-| 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2439） | 6600–6607 | 26 | `core.js`:2299,2302,2458 `plot.js`:1547 `ui.js`:315,377 |
+| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5584–5587 | 03 21 33 34 | `core.js`:2553,2670,2685,2708,2727,2852… `plot.js`:1138,1264 `ui.js`:762,776,779 |
+| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5802–5830 | 01 03 10 12 14 29 30 32 | `core.js`:451,2963,3024,3050,3060 `plot.js`:1138,1189,1197,1213 `ui.js`:762,776,872 |
+| 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 5931–5935 | 32 | `core.js`:2588,3108,3110 `plot.js`:1452,1504 `ui.js`:776,883 |
+| 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 6102–6105 | 11 18 22 23 26 | `core.js`:238,242,247,2067 `plot.js`:446 `ui.js`:669 |
+| 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1356） | `specification/SPEC-36.md`（2141） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1861） | 6450–6451 | 07 13 15 | `core.js`:1509 `audio.js`:363,408 `ui.js`:990,992,1168 |
+| 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2439） | 6613–6620 | 26 | `core.js`:2299,2302,2458 `plot.js`:1551 `ui.js`:315,377 |
 
 ## 2. そのほかの節
 
@@ -134,10 +134,10 @@
 | `docs/history/changes_v26.md` | 31648 |
 | `src/core.js` | 102620 |
 | `src/audio.js` | 15516 |
-| `src/plot.js` | 64744 |
+| `src/plot.js` | 65064 |
 | `src/doc.js` | 58601 |
 | `src/ui.js` | 53658 |
-| `src/tests.js` | 295635 |
+| `src/tests.js` | 296265 |
 | `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
@@ -151,8 +151,9 @@
 | `docs/changes/2026-11-23-c7-wording.md` | 470 |
 | `docs/changes/2026-11-23-event-theta-exact.md` | 2977 |
 | `docs/changes/2026-11-23-exhaust-sound-speed.md` | 3044 |
+| `docs/changes/2026-11-23-loss-axis-negative.md` | 858 |
 | `docs/changes/2026-11-23-plot-fixes.md` | 1826 |
-| `docs/changes/2026-11-23-port-air-mass.md` | 4249 |
+| `docs/changes/2026-11-23-port-air-mass.md` | 4385 |
 | `docs/changes/2026-11-23-review-followup.md` | 2038 |
 | `docs/changes/2026-11-23-review-gemini-2.md` | 2485 |
 | `docs/changes/2026-11-23-review-gemini-3.md` | 2693 |

@@ -5868,7 +5868,20 @@ TST[33]=function*(){
    });
    const t2=performance.now();
    for(let i=0;i<30;i++){const q2=prep($('olc'));drawLoss(q2.g,q2.W,q2.H,r,COL)}
-   dm=(performance.now()-t2)/30
+   dm=(performance.now()-t2)/30;
+/* 8：熱効率が負のとき（SPEC-33 C の 1）：正味熱効率を −10 % にした結果で，横軸が負の値を含み，負の棒が 0 の線の左にある */
+   {
+    const rn={...r,eb:-.1},
+     Sn=lossSpec(rn,q.W,q.H),
+     Z=Sn.X(0),
+     L=Sn.pl.x,
+     Rr=Sn.pl.x+Sn.pl.w,
+     wb=Sn.rows[11],
+     wm=Sn.rows[10],
+     inP=Sn.rows.every(w=>w.x0>=L-.5&&w.x1<=Rr+.5&&w.x0<=w.x1),
+     ok=Z>L+1&&Math.abs(wb.x0-Sn.X(-.1))<1e-9&&wb.x0<Z-1&&Math.abs(wb.x1-Z)<1e-9&&wm.x0<Z-1&&Math.abs(wm.x0-wb.x0)<1e-9&&inP;
+    chkB(33,'熱効率が負のとき：正味熱効率 −10 % の結果で，横軸の左端が負で，正味熱効率と機械損失の棒の左端が −10 % の位置（0 の線より左），全部の棒が図の中',ok,`0 の線 ${(Z-L).toFixed(1)} px（左端から），η_b の棒 ${wb.x0.toFixed(1)}〜${wb.x1.toFixed(1)} px，図の中 ${inP}`)
+   }
   }
 /* 7：燃料を噴いていない運転では内訳を計算しない（REQ-33 の 7） */
   {
