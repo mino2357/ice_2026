@@ -15,8 +15,8 @@ const out=[];const bad=(k,m)=>out.push('['+k+'] '+m);
 const N=37,pad=i=>String(i).padStart(2,'0');
 const lines=s=>s.split('\n');
 const cut=(s,re)=>{const i=s.search(re);return i<0?s:s.slice(0,i)};
-/* 見出しの間の本文を取る */
-const sect=(src,re)=>{const L=lines(src),r={};let cur=null;for(const l of L){const m=l.match(re);if(m){cur=m[1];r[cur]={title:m[2],body:[]}}else if(/^## /.test(l))cur=null;else if(/^### /.test(l)&&!re.test(l))cur=null;else if(cur)r[cur].body.push(l)}return r};
+/* 見出しの間の本文を取る（「### SPEC-nn（続き）：」は，1 ページの上限で分けた同じ番号の続きとして読む） */
+const sect=(src,re)=>{const L=lines(src),r={};let cur=null;for(const l of L){const m=l.match(re),q=/^### [A-Z]+-\d\d（続き）：/.test(l)&&l.replace('（続き）：','：').match(re);if(q&&r[q[1]]){cur=q[1]}else if(m){cur=m[1];r[cur]={title:m[2],body:[]}}else if(/^## /.test(l))cur=null;else if(/^### /.test(l)&&!re.test(l))cur=null;else if(cur)r[cur].body.push(l)}return r};
 /* 画面の文書（docs/gui.md）に置いた章も同じ番号で数える（どちらか一方にだけ見出しがあること） */
 const dupH=(srcs,re,nm)=>{const c={};for(const s of srcs)for(const l of lines(s)){const m=l.match(re);if(m)c[m[1]]=(c[m[1]]||0)+1}for(const k of Object.keys(c))if(c[k]>1)bad('番号',nm+'-'+k+' の見出しが '+c[k]+' 個')};
 const REQ=sect(req+'\n'+gui,/^### REQ-(\d\d)：(.*)$/),SPEC=sect(spec+'\n'+gui,/^### SPEC-(\d\d)：(.*)$/),TEST=sect(spec+'\n'+gui,/^### TEST-(\d\d)：(.*)$/);
