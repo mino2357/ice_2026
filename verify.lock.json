@@ -1,11 +1,11 @@
 {
  "tier1": {
-  "at": "2026-11-23T16:04:32.972Z",
-  "plan": "npm test（7 通り）",
+  "at": "2026-11-23T22:23:18.118Z",
+  "plan": "第25版とのビット比較 ＋ 全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "e9629d00136f7b24",
-   "src/core.js": "94a315fc296bfd6e",
+   "src/core.js": "1f54709d752be74b",
    "src/doc.js": "f4ed8f5903c3cc7b",
    "src/index.tpl.html": "1508974b8d56c054",
    "src/plot.js": "ccf6df39121d7862",
@@ -47,7 +47,7 @@
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "da76b850ec90b7f8",
+   "src/tests.js#common": "2bbca9e72923b880",
    "src/ui.js": "48de20e557e99ed2",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
@@ -61,7 +61,7 @@
    "docs/requirements/REQ-10.md": "86e9f8aa03803b81",
    "docs/requirements/REQ-11.md": "18093cee7db0550b",
    "docs/requirements/REQ-12.md": "a50349cf51942944",
-   "docs/requirements/REQ-13.md": "f73b359b589ebf54",
+   "docs/requirements/REQ-13.md": "a5cadb7e777e692b",
    "docs/requirements/REQ-14.md": "47c058aba9be8d42",
    "docs/requirements/REQ-20.md": "0d081967895beadb",
    "docs/requirements/REQ-21.md": "995ce6edcc94b268",
@@ -93,7 +93,7 @@
    "docs/requirements/s5.1.md": "9356551dc88cb3da",
    "docs/requirements/s5.2.md": "d83a27f4d8afe4b8",
    "docs/requirements/s5.md": "972a28b6bcd23246",
-   "docs/requirements/s6.md": "46926f57e15e6298",
+   "docs/requirements/s6.md": "de2ba03ee0308483",
    "docs/requirements/s7.1.md": "25ce936db9d985e8",
    "docs/requirements/s7.2.md": "4cd1a396b8c6f9d2",
    "docs/requirements/s7.3.md": "dec35c3218446b13",
@@ -110,7 +110,7 @@
    "docs/specification/SPEC-10.md": "e2f3508240833195",
    "docs/specification/SPEC-11.md": "012509407f25140d",
    "docs/specification/SPEC-12.md": "4abf3800d663a336",
-   "docs/specification/SPEC-13.md": "686a8ef8d5e74c76",
+   "docs/specification/SPEC-13.md": "d3ee89c3379ba359",
    "docs/specification/SPEC-14.md": "bee3efb4974b4727",
    "docs/specification/SPEC-20.md": "a5051843440ff541",
    "docs/specification/SPEC-21.md": "dfdedd75e5d6c121",
@@ -140,7 +140,7 @@
    "docs/specification/TEST-10.md": "c4ee4ad0a608ba31",
    "docs/specification/TEST-11.md": "e3aed54805c7e1af",
    "docs/specification/TEST-12.md": "491cff9bf4a9cebf",
-   "docs/specification/TEST-13.md": "df5a89085c4d540a",
+   "docs/specification/TEST-13.md": "e01e644a8082386d",
    "docs/specification/TEST-14.md": "ea6b996a43b633cf",
    "docs/specification/TEST-20.md": "b2939d0d37d30928",
    "docs/specification/TEST-21.md": "5fc1f7f1ab5a65b8",
@@ -243,7 +243,7 @@
   }
  },
  "approved": {
-  "commit": "d5bb20d18d3aa52a3a509a7332281e59f6c1be6f",
-  "at": "2026-11-23T14:37:11.523Z"
+  "commit": "fd714384549ab773c4388587d1255787acad882e",
+  "at": "2026-11-23T22:10:41.079Z"
  }
 }

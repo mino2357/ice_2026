@@ -981,9 +981,11 @@ class Core{
    mt=mdot(P.pa,pin,Tt,Ath(P,s.al),1+R/((1-Ybi)*R/(gmU(Tt,cst)-1)+Ybi*R/(gmB(Tt,cst)-1)))
   }
 /* 燃焼と壁面熱伝達（woschni と同じ式） */
+/* 段の ω < 0（REQ-13 の 18）：燃焼の速さは max(0, ω) で作る */
   const dxb=C.on?wiebe((tt-C.th0)/C.db,C.m??K.wm)/C.db:0,
-   Q=C.Q*dxb*om,
-   dmc=C.mut*dxb*om,
+   op=Math.max(0,om),
+   Q=C.Q*dxb*op,
+   dmc=C.mut*dxb*op,
    cm=G.S*om/PI,
    gx=tt>=Vv.gA&&tt<Vv.gB,
    I0=s.I0;
@@ -1272,11 +1274,11 @@ class Core{
 /* 噴射と気化（SPEC-30） */
 /* 噴射中かどうかは開始と終了のイベントで切り替える（ステップの中では一定の率．∫ṁ_inj dt = m_f,cmd が丸めの範囲で成り立つ） */
   let minj=0;
-  {const J=s.inj;if(DI&&J.on)minj=J.m/J.dth*om}
+  {const J=s.inj;if(DI&&J.on)minj=J.m/J.dth*Math.max(0,om)} /* 段の ω < 0 で負にしない（REQ-13 の 18） */
   const mev=P.tev>0?ml/P.tev:minj;
 /* 燃焼と壁面熱伝達 */
   const dxb=C.on?wiebe((tt-C.th0)/C.db,C.m??K.wm)/C.db:0,
-   r=C.mut*dxb*om,
+   r=C.mut*dxb*Math.max(0,om),
    psi=mu>1e-12?mf/mu:0,
    cm=G.S*om/PI,
    gx=tt>=Vv.gA&&tt<Vv.gB,

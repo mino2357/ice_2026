@@ -1390,6 +1390,40 @@ TST[13]=function*(){
   }
   chkB(13,'回転数が自由な運転（S2 のアイドル，S4 の動力計制御．切り替えて 2 s 後からの 2 s）：BS3 と DOPRI5 の平均回転数の差 ≤ 0.5%，IMEP の平均の差 ≤ 1%，強制受理と射影が無い',ok,out.join('；'))
  }
+/* 13：段の ω < 0（REQ-13 の 18）：燃焼の最中と噴射の最中の状態で ω の符号だけを反転して右辺を評価する */
+ {
+  const out=[];
+  let ok=true;
+  for(const cf of[{gam:0},{gam:2,inj:0},{gam:2,inj:1}]){
+   const c=new Core({...mkP(),cvar:0,mode:1,alm:90*D,nt:3000,...cf}),
+    SPC=cf.gam===2,
+    ev=(q,neg)=>{
+     const d=q.clone(),y=d.s.y.slice();
+     if(neg)y[1]=-y[1];
+     d.wx=1;
+     d.kFy=null;
+     const o=d.f(y,new Array(NY).fill(0));
+     return{Q:d.X.Q,mb:SPC?o[39]:-o[4],mj:d.X.minj}
+    };
+   c.start();
+   yield*runC(c,1);
+   let n=0;
+   while(!(c.s.C.on&&c.X.Q>0&&c.s.y[0]%P4>2*PI+5*D)&&n<1e5){c.step();n++}
+   const a=ev(c,0),b=ev(c,1);
+   let o1=a.Q>0&&a.mb>0&&b.Q>=0&&b.mb>=0,
+    s=`${SPC?(cf.inj?'直噴':'ポート噴射'):'γ(T)'}：Q̇ ${a.Q.toExponential(2)} → ${b.Q.toExponential(2)} W，質量 ${a.mb.toExponential(2)} → ${b.mb.toExponential(2)} kg/s`;
+   if(cf.inj===1){
+    n=0;
+    while(!c.s.inj.on&&n<1e5){c.step();n++}
+    const p=ev(c,0),m=ev(c,1);
+    o1=o1&&p.mj>0&&m.mj>=0;
+    s+=`，噴射率 ${p.mj.toExponential(2)} → ${m.mj.toExponential(2)} kg/s`
+   }
+   ok=ok&&o1;
+   out.push(s)
+  }
+  chkB(13,'段の ω < 0：燃焼の最中（γ(T)，化学平衡のポート噴射と直噴）と直噴の噴射の最中の状態で ω の符号だけを反転して右辺を評価すると，熱の発生，既燃の側へ移る質量の速さ，噴射率が 0 以上（反転の前はどれも正）',ok,out.join('；'))
+ }
 };
 TST[14]=function*(){
  const s3=yield*scen('S3'),s4=yield*scen('S4'),G=geo(mkPT());
