@@ -7,7 +7,7 @@ _dup=sorted(set(k for k in _k if _k.count(k)>1));assert not _dup,'SYM に重複:
 # ---- 4 文書（要件定義書・仕様書・画面の文書・用語の定義集）を HTML にして埋め込む．数式は TeX のまま（SPEC-16 の 3，9） ----
 import subprocess,json,html as _html
 def _pd(src,mode):
-    try:return subprocess.run(['pandoc','-f','gfm+tex_math_dollars','-t','html',mode,'--wrap=none',src],capture_output=True,text=True,check=True).stdout
+    try:return subprocess.run(['pandoc','-f','gfm-autolink_bare_uris+tex_math_dollars','-t','html',mode,'--wrap=none',src],capture_output=True,text=True,check=True).stdout
     except FileNotFoundError:raise SystemExit('pandoc が必要です（文書を HTML に変換するため）')
 def _tx(m):
     d=m.group(1)=='display';tex=_html.unescape(m.group(2)).strip()
@@ -25,6 +25,8 @@ def md2doc(name,key):
     assert 'class="math' not in _pd(src,'--mathml'),name+'：変換できない数式があります'
     h=_pd(src,'--mathjax')
     h=re.sub(r'<span class="math (inline|display)">(.*?)</span>',_tx,h,flags=re.S)
+    # 変換漏れの検出：数式とコードを除いた本文に $ と ` が残っていないこと（pandoc が数式・コードと認めなかった所．例：リンクの閉じ括弧の直後に文字が続くと，gfm の裸の URL の自動リンクがその先を素の文字列にする）
+    _raw=re.findall(r'[^<>]{0,30}[$`][^<>]{0,30}',re.sub(r'<(code|pre)[ >].*?</\1>|<span class="(?:im|dx)">.*?</span></span>|<[^>]+>',lambda m:'<>',h,flags=re.S));assert not _raw,name+'：数式かコードに変換されなかった $ か ` があります：'+' ｜ '.join(_raw[:5])
     h=re.sub(r'<table>(.*?)</table>',r'<div class="tw"><table>\1</table></div>',h,flags=re.S)
     h=re.sub(r' (class="(?:header|odd|even)"|style="text-align: left;")','',h)
     h=h.replace('<a href="http','<a target="_blank" rel="noopener" href="http')

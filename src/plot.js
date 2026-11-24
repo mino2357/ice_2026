@@ -52,7 +52,7 @@ class AxB{
   }
  }
  up(m,M,now){
-  if(!(M>=m))return;
+  if(!(M>=m)||m===-Infinity||M===Infinity)return; /* ±∞ で刻みを探すと終わらない（SPEC-17 B） */
   let ch=!this.init||m<this.a||M>this.b;
   if(!ch){
    if((M-m)/(this.b-this.a)<.25){if(this.tl==null)this.tl=now;if(now-this.tl>=3000){ch=1;this.tl=null}}else this.tl=null
@@ -83,7 +83,7 @@ const mkAX=()=>({
 const amax=(...A)=>{let m=0;for(const a of A)for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>m)m=v}return m};
 const amm=(...A)=>{
  let lo=Infinity,hi=-Infinity;
- for(const a of A)for(let i=0;i<a.length;i++){const v=a[i];if(v===v){if(v<lo)lo=v;if(v>hi)hi=v}}
+ for(const a of A)for(let i=0;i<a.length;i++){const v=a[i];if(v>-Infinity&&v<Infinity){if(v<lo)lo=v;if(v>hi)hi=v}} /* 有限でない値（NaN，±∞）は除く（SPEC-17 B） */
  return[lo,hi]
 };
 /* 毎フレーム，描いているデータ（クランク角の軌跡は直近の 720°，トレンドは表示中の窓）で範囲を評価する（GUI SPEC-17 B） */
@@ -783,7 +783,7 @@ function drawEngine(g,c,W,Hh,col,nt,rs){
  g.textAlign='left';
  const L=engText(c,rs),
   fl=(s.ov>=2?' OVERLOAD':'')+(s.up>=2?' UNDERPOWER':''),
-  W_=[...(fl?[fl.trim()]:[]),...(c.vhit?['VALVE HIT']:[])];
+  W_=[...(fl?[fl.trim()]:[]),...(c.vhit?['VALVE HIT']:[]),...(s.div?['DIVERGED']:[])];
 /* 帯の上端（Hh）より下に文字を描かない．入り切らないときは警告を残し，状態の行を下から省く（SPEC-19 の 6） */
  const nl=Math.max(0,Math.floor((Hh-22)/15)+1),ns=Math.max(Math.min(1,L.length),Math.min(L.length,nl-W_.length));
  g.fillStyle=col.fg;
@@ -809,7 +809,7 @@ function engText(c,rs){
 /* ===== 全体図（SPEC-31．系統図）．設計座標 400×620 を一様な縮尺 k で置く．sysSpec が場面の記述（要素，位置，寸法，文字），drawSys が描画 ===== */
 const SYW=400,
  SYH=620,
- SYC={in:'#5b8fd8',inl:'#a9c9f5',ex:'#e0773a',exl:'#f5b48c',sig:'#c9a227',abs:'#ff8a4c',mot:'#69db7c',met:'#9aa3ad',dk:'#0b0e13'};
+ SYC={in:'#5b8fd8',inl:'#a9c9f5',ex:'#e0773a',exl:'#f5b48c',sig:'#c9a227',abs:'#ff8a4c',mot:'#69db7c',met:'#9aa3ad',fuel:'#8ce99a',dk:'#0b0e13'};
 /* 圧力の色（SPEC-31 A の 4）．kPa → [r,g,b] */
 function pcol(kPa){
  const u=Math.max(0,Math.min(1,Math.log10(Math.max(kPa,1e-9)/10)/Math.log10(500))),
@@ -1192,8 +1192,10 @@ function lossSpec(r,W,H){
   lw=two?6:Math.min(Math.max(150,W*.42),260),
   pl={x:lw,y:6,w:Math.max(40,W-lw-62),h:H-82},
   rh=pl.h/nr,
-  mx=Math.ceil(r.eO*10)/10,
-  X=v=>pl.x+pl.w*Math.max(0,v)/mx,
+  vs=rows.flatMap(q=>[q[1],q[2]]).filter(Number.isFinite),
+  mx=Math.max(.1,Math.ceil(Math.max(0,...vs)*10-1e-9)/10),
+  mn=Math.min(0,Math.floor(Math.min(0,...vs)*10+1e-9)/10)/* 横軸は 0 と全段の値を含む 10 % 刻みの範囲．熱効率が負なら 0 の線の左に描く（SPEC-33 C の 1） */,
+  X=v=>pl.x+pl.w*(v-mn)/(mx-mn),
   bh=Math.min(20,rh*(two?.4:.62));
  return{
   two,
@@ -1203,6 +1205,7 @@ function lossSpec(r,W,H){
   }),
   pl,
   mx,
+  mn,
   X,
   rh
  }
@@ -1223,15 +1226,16 @@ function drawLoss(g,W,H,r,col,msg){
  const S=lossSpec(r,W,H),pc=(v,d)=>(v*100).toFixed(d);
  g.strokeStyle=col.ln;
  g.lineWidth=1;
- for(let v=0;v<=S.mx+1e-9;v+=.1){
-  const x=S.X(v);
+ for(let k=Math.round(S.mn*10);k<=Math.round(S.mx*10);k++){
+  const v=k/10,x=S.X(v);
+  g.strokeStyle=k===0?col.mu:col.ln;
   g.beginPath();
   g.moveTo(x,S.pl.y);
   g.lineTo(x,S.pl.y+S.pl.h);
   g.stroke();
   g.fillStyle=col.mu;
   g.textAlign='center';
-  g.fillText(Math.round(v*100)+'',x,S.pl.y+S.pl.h+9)
+  g.fillText((k<0?'−':'')+Math.abs(k*10),x,S.pl.y+S.pl.h+9)
  }
  g.fillText('熱効率（%）',S.pl.x+S.pl.w/2,S.pl.y+S.pl.h+22);
  S.rows.forEach((q,i)=>{
@@ -1250,7 +1254,7 @@ function drawLoss(g,W,H,r,col,msg){
   g.fillStyle=col.fg;
   if(S.two){g.textAlign='left';g.fillText(q.name,S.pl.x,q.ny)}else{g.textAlign='right';g.fillText(q.name,S.pl.x-6,q.ny)}
   g.textAlign='left';
-  g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${pc(q.hi,1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)
+  g.fillText(q.kind==='l'||q.kind==='g'?`${q.v>=0?'−':'+'}${pc(Math.abs(q.v),2)} %pt`:`${q.hi<0?'−':''}${pc(Math.abs(q.hi),1)} %`,Math.max(q.x1,S.X(q.hi))+4,q.y)
  });
  g.fillStyle=col.mu;
  g.textAlign='left';

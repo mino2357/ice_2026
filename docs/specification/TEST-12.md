@@ -1,6 +1,6 @@
 ### TEST-12：ECU（スロットル開度の PI 制御と点火時期の自動最適化）（REQ-12，SPEC-12）
 
-1. [S] S2（S1 に続けて $15\ \text{s}$）：最後の $3\ \text{s}$ で $|\bar N - 800| \le 25\ \text{rpm}$，かつ $\alpha > \alpha_{\min}$．
+1. [S] S2（S1 に続けて $15\ \text{s}$）からさらに $10\ \text{s}$ 運転した後の $3\ \text{s}$ で $|\bar N - 800| \le 25\ \text{rpm}$．S2 の最後の $3\ \text{s}$ で $\alpha > \alpha_{\min}$．（はじめは S2 の最後の $3\ \text{s}$（始動から $17$〜$20\ \text{s}$）で回転数も判定していた．そこは始動の後の揺れが残る区間で，吸気ポートの空気の質量を状態にした（REQ-25 の 6）とき，最大の偏差が $23.8 \to 30.6\ \text{rpm}$ になって FAIL した．揺れは収まっていく（始動から $47$〜$50\ \text{s}$ で前 $797$〜$803$，後 $796$〜$802\ \text{rpm}$．Node.js）ので，揺れが収まった区間で判定する形にした．基準 $\pm 25\ \text{rpm}$ は変えていない．利用者の確認による（2026-11-23）．）
 2. [S] N1200（S2 から目標 $1200\ \text{rpm}$，$8\ \text{s}$）：最後の $2\ \text{s}$ で $\pm 25\ \text{rpm}$．
 3. [S] S7（S2 から $p_{\text{atm}} = 80\ \text{kPa}$，$10\ \text{s}$）：$800 \pm 25\ \text{rpm}$ を保ち，定常の開度が S2 より大きい．
 4. [S] AMAX（S2 から目標 $2000\ \text{rpm}$，$\alpha_{\max} = 5^\circ$，$8\ \text{s}$）：$\alpha = \alpha_{\max}$ に張り付き，$4\ \text{s} \to 8\ \text{s}$ で $I_\alpha$ が増えない．

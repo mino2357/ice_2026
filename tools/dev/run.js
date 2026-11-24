@@ -23,7 +23,8 @@ await p.evaluate(([only,ui,pj])=>{window.__t={};let d=0,last=performance.now(),c
   /* テストごとの所要時間：ST[i] が 'run' になった時刻の差 */
   const tm=setInterval(()=>{for(let i=1;i<=NT;i++)if(ST[i]==='run'&&cur!==i){const now=performance.now();if(cur)window.__t[cur]=(window.__t[cur]||0)+now-last;cur=i;last=now}if(d===1){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;clearInterval(tm)}},20);
   show(3);runAll(only||null,ui,pj)},[only,!!opt('ui'),opt('noperf')?0:1]);
-await p.waitForFunction(()=>window.__done===1,null,{timeout:900000});
+/* 打ち切りは固まったときの止め．所要時間でテストを規定しない（利用者の方針．CLAUDE.md の 10）ので長めにとる */
+await p.waitForFunction(()=>window.__done===1,null,{timeout:1800000});
 const r=await p.evaluate(()=>({sum:document.getElementById('sm').textContent,maxF:RUN.maxF,maxId:RUN.maxId,total:RUN.total,t:window.__t,TR}));
 console.log(W+'x'+H,r.sum,'最長フレーム間隔',Math.round(r.maxF),'ms（TEST-'+r.maxId+'）');
 for(const k of Object.keys(r.TR).sort((a,b)=>a-b))for(const q of r.TR[k])if(opt('names')||!q.ok||q.over)console.log((q.over?(q.ok?'  性能 ':'  FAIL '):q.ok?'  ok   ':'  FAIL ')+'TEST-'+String(k).padStart(2,'0')+' | '+q.n+' | 実測 '+String(q.val).slice(0,160)+' | 基準 '+String(q.ref).slice(0,80));

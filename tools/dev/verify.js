@@ -8,7 +8,7 @@
      4 文書の断片，src/doc.js，src/build.py        → TEST-16
      src/audio.js                                   → TEST-21，36
      src/tests.js の TST[n] だけ                    → TEST-n
-     src/tests.js のそれ以外，src/core.js           → 全項目（360×640）．core.js は第25版とのビット比較も
+     src/tests.js のそれ以外，src/core.js           → 全項目（360×640．shard.js で組に分けて同時に実行）．core.js は第25版とのビット比較も
      src/ui.js，plot.js，style.css，index.tpl.html，build.py → 画面のモード（360×640 と 820×1180） */
 'use strict';
 const {spawnSync}=require('child_process'),path=require('path'),I=require('./inputs.js'),root=I.root;
@@ -26,11 +26,12 @@ for(const f of ch){
  else if(f==='src/core.js'){full=true;bit=true}
  else if(/^src\/(ui\.js|plot\.js|style\.css|index\.tpl\.html)$/.test(f))ui=true;
  else if(f==='tests/headless.js'||f==='tools/dev/run.js')only.add(16);
+ else if(f==='tools/dev/shard.js'||f==='tools/dev/times.json')full=true;
  else full=true}
 const steps=[['点検（npm run check）','npm',['run','check','--silent']],['ビルド','npm',['run','build','--silent']]];
 const run=(nm,a)=>steps.push([nm,'node',['tools/dev/run.js','--noperf',...a]]);
 if(bit)steps.push(['第25版とのビット比較','node',['tools/dev/bitcheck.js','--chromium']]);
-if(full)run('全項目（360×640）',[]);
+if(full)steps.push(['全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）','node',['tools/dev/shard.js']]);
 else{if(only.size)run('TEST-'+[...only].sort((a,b)=>a-b).join('，')+'（360×640）',['--only',[...only].sort((a,b)=>a-b).join(',')]);if(ui)run('画面のモード（360×640）',['--ui'])}
 if(ui)run('画面のモード（820×1180）',['--ui','--vp','820x1180']);
 const plan=steps.slice(2).map(s=>s[0]).join(' ＋ ');

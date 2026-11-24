@@ -160,7 +160,7 @@ const cvMix=(T,Y,cst)=>Y*R/(gmU(T,cst)-1)+(1-Y)*R/(gmB(T,cst)-1),
 const cpMix=(T,Y,cst)=>cvMix(T,Y,cst)+R;
 /* 状態 16（0〜10，13〜17）と補助積分 22（11，12，18〜37）．NS より前だけが右辺に現れる */
 /* 第26版：化学平衡のモデル（SPEC-29，30）の状態を 38〜42（m_f，m_bf，m_l，m_f,in，m_f,p），補助積分を 43〜45（H_e，∫ṁ_inj，∫ṁ_ev）に置く */
-const NY=59,NS=18,MIX=[7,10,38,39,40,41,42],MEPS=1e-12;
+const NY=59,NS=18,MIX=[7,10,38,39,40,41,42,50],MEPS=1e-12;
 const thConst=cst=>({
  cst,
  cpu:R/(gmU(TI,cst)-1)+R,
@@ -387,12 +387,16 @@ const GAS=(()=>{
   NS=10,
   A=EL.map(e=>SP.map(s=>s.c[e]||0));
  const elem=(z,ec)=>[ec*z*nC/Mf,ec*z*y*nC/Mf,2*(1-z)*xo,2*(1-z)*xn];
+ /* 表を作るときに，収束しなかった平衡の解の数 nc と，解けなかった連立方程式の数 sg（REQ-29 の 9．検証で 0 を確かめる）．
+    of：物性を求めた当量比 φ_r が表の範囲の外で，端に丸めた回数（REQ-29 の 11） */
+ const ST={nc:0,sg:0,of:0};
  function solve(M,r,n){
   for(let i=0;i<n;i++){
    let p=i;
    for(let k=i+1;k<n;k++)if(Math.abs(M[k][i])>Math.abs(M[p][i]))p=k;
    if(p!==i){const t=M[i];M[i]=M[p];M[p]=t;const q=r[i];r[i]=r[p];r[p]=q}
    const d=M[i][i];
+   if(!(Math.abs(d)>0)){ST.sg++;return null} /* ピボットが 0（か非有限）：解けない（REQ-29 の 9） */
    for(let k=i+1;k<n;k++){const f=M[k][i]/d;if(f){for(let j=i;j<n;j++)M[k][j]-=f*M[i][j];r[k]-=f*r[i]}}
   }
   for(let i=n-1;i>=0;i--){let s=r[i];for(let j=i+1;j<n;j++)s-=M[i][j]*r[j];r[i]=s/M[i][i]}
@@ -419,7 +423,7 @@ const GAS=(()=>{
    }
    Mx.push([Mx[0][4],Mx[1][4],Mx[2][4],Mx[3][4],sn-N]);
    r.push(N-sn+smu);
-   solve(Mx,r,5);
+   if(!solve(Mx,r,5))break;
    const dN=r[4];
    let mx=5*Math.abs(dN);
    for(let j=0;j<NS;j++){
@@ -441,8 +445,8 @@ const GAS=(()=>{
   bR=(n,z,ec)=>{let N=0;for(let j=0;j<NS;j++)N+=n[j];return RU*N+(1-ec)*z*Rf},
   bCv=(n,T,z,ec)=>{let c=0;for(let j=0;j<NS;j++)c+=n[j]*(cp(SP[j],T)-RU);return c+(1-ec)*z*cvf(T)};
  const z2phi=z=>AF*z/(1-z),phi2z=ph=>ph/(AF+ph);
- /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0.50〜1.50（0.0125 刻み．量論の折れ目 φ_r = 1 を節点に置く），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
- const G={f0:.5,df:.0125,nf:81,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},
+ /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0〜1.50（0.0125 刻み，121 点．量論の折れ目 φ_r = 1 を節点に置く．下端 0 は始動の直後のポート噴射の薄い混合気を含めるため．REQ-29 の 11），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
+ const G={f0:0,df:.0125,nf:121,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},
   tab=new Array(G.nf).fill(null),
   iF=Math.round((Tfr-G.T0)/G.dT);
  /* 解離の無い既燃ガス（SPEC-33 A の段 F）：組成を T_nd = 1000 K の平衡（完全燃焼の生成物）に固定し，比熱だけ温度で変える．ND が真の間，burned はこの表を使う */
@@ -457,7 +461,8 @@ const GAS=(()=>{
    R=new Float64Array(G.np*G.nT),
    Q=new Float64Array(G.np*G.nT);
   for(let ip=0;ip<G.np;ip++){
-   const n0=eq(TND,Math.exp(G.lp0+G.dlp*ip),z,ec).n,r0=bR(n0,z,ec);
+   const q0=eq(TND,Math.exp(G.lp0+G.dlp*ip),z,ec),n0=q0.n,r0=bR(n0,z,ec);
+   if(!q0.ok)ST.nc++;
    for(let it=0;it<G.nT;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(n0,T,z,ec);R[k]=r0;c[k]=bCv(n0,T,z,ec)}
   }
   return tabN[i]={e,c,R,Q}
@@ -471,13 +476,14 @@ const GAS=(()=>{
    this.ec=K.etac;
    this.z=phi2z((G.f0+G.df*i)/this.ec);
    this.ip=0;
-   this.t={e:new Float64Array(n),c:new Float64Array(n),R:new Float64Array(n),Q:new Float64Array(n)}
+   this.t={e:new Float64Array(n),c:new Float64Array(n),R:new Float64Array(n),Q:new Float64Array(n),cF:new Float64Array(G.np)}/* cF：T_fr の凍結の側の c_v（行ごと．T_fr の節点の c，Q は平衡の側の傾き） */
   }
   row(){
    const ip=this.ip,{e,c,R,Q}=this.t,ec=this.ec,z=this.z,p=Math.exp(G.lp0+G.dlp*ip);
    let w=null,nf=null;
    for(let it=iF;it<G.nT;it++){
     const T=G.T0+G.dT*it,q=eq(T,p,z,ec,w),k=ip*G.nT+it;
+    if(!q.ok)ST.nc++;
     w=q.n;
     if(it===iF)nf=q.n.slice();
     e[k]=bE(q.n,T,z,ec);
@@ -486,6 +492,7 @@ const GAS=(()=>{
    /* 平衡の側の傾き c_v = ∂e/∂T と ∂R/∂T は，節点の値の差分で求める（内側は 4 次の中心差分，端は 2 次の片側差分）．凍結の側は c_v が凍結組成の値，∂R/∂T = 0 */
    for(let it=iF;it<G.nT;it++){const k=ip*G.nT+it,h=G.dT,L=G.nT-1;c[k]=df(e,k,it,L,h);Q[k]=df(R,k,it,L,h)}
    for(let it=0;it<iF;it++){const T=G.T0+G.dT*it,k=ip*G.nT+it;e[k]=bE(nf,T,z,ec);R[k]=bR(nf,z,ec);c[k]=bCv(nf,T,z,ec)}
+   this.t.cF[ip]=bCv(nf,G.T0+G.dT*iF,z,ec);
    this.ip++
   }
   /* 持ち時間 ms の中で行を作る（ms = Infinity で全行）．できたら表を返す */
@@ -519,7 +526,8 @@ const GAS=(()=>{
  const cl=(x,a,b)=>x<a?a:x>b?b:x,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
  /* ホットパス：オブジェクトと配列を作らない．o に e, R と偏微分 eT, ep, ez, RT, Rp, Rz を書く */
  function burned(T,p,z,o){
-  const ph=cl(K.etac*AF*z/(1-z),G.f0,FMX),
+  const pr=K.etac*AF*z/(1-z),
+   ph=cl(pr,G.f0,FMX),
    xf=(ph-G.f0)/G.df,
    jf=Math.min(G.nf-2,Math.floor(xf)),
    wf=xf-jf,
@@ -552,31 +560,41 @@ const GAS=(()=>{
    C1=t1.c,
    R1=t1.R,
    Q1=t1.Q,
-   e00=a0*E0[k]+a1*C0[k]+a2*E0[k+1]+a3*C0[k+1],
-   e01=a0*E0[k2]+a1*C0[k2]+a2*E0[k2+1]+a3*C0[k2+1],
-   e10=a0*E1[k]+a1*C1[k]+a2*E1[k+1]+a3*C1[k+1],
-   e11=a0*E1[k2]+a1*C1[k2]+a2*E1[k2+1]+a3*C1[k2+1],
-   d00=b0*(E0[k]-E0[k+1])+b1*C0[k]+b3*C0[k+1],
-   d01=b0*(E0[k2]-E0[k2+1])+b1*C0[k2]+b3*C0[k2+1],
-   d10=b0*(E1[k]-E1[k+1])+b1*C1[k]+b3*C1[k+1],
-   d11=b0*(E1[k2]-E1[k2+1])+b1*C1[k2]+b3*C1[k2+1],
-   r00=a0*R0[k]+a1*Q0[k]+a2*R0[k+1]+a3*Q0[k+1],
-   r01=a0*R0[k2]+a1*Q0[k2]+a2*R0[k2+1]+a3*Q0[k2+1],
-   r10=a0*R1[k]+a1*Q1[k]+a2*R1[k+1]+a3*Q1[k+1],
-   r11=a0*R1[k2]+a1*Q1[k2]+a2*R1[k2+1]+a3*Q1[k2+1],
-   q00=b0*(R0[k]-R0[k+1])+b1*Q0[k]+b3*Q0[k+1],
-   q01=b0*(R0[k2]-R0[k2+1])+b1*Q0[k2]+b3*Q0[k2+1],
-   q10=b0*(R1[k]-R1[k+1])+b1*Q1[k]+b3*Q1[k+1],
-   q11=b0*(R1[k2]-R1[k2+1])+b1*Q1[k2]+b3*Q1[k2+1],
+   lf=jt===iF-1&&!!t0.cF/* T_fr の左の区間は凍結の側：右端の傾きに凍結の側の値（c_v は凍結組成，∂R/∂T = 0）を使う（SPEC-29 A の 6） */,
+   C0a=lf?t0.cF[jp]:C0[k+1],
+   C0b=lf?t0.cF[jp+1]:C0[k2+1],
+   C1a=lf?t1.cF[jp]:C1[k+1],
+   C1b=lf?t1.cF[jp+1]:C1[k2+1],
+   Q0a=lf?0:Q0[k+1],
+   Q0b=lf?0:Q0[k2+1],
+   Q1a=lf?0:Q1[k+1],
+   Q1b=lf?0:Q1[k2+1],
+   e00=a0*E0[k]+a1*C0[k]+a2*E0[k+1]+a3*C0a,
+   e01=a0*E0[k2]+a1*C0[k2]+a2*E0[k2+1]+a3*C0b,
+   e10=a0*E1[k]+a1*C1[k]+a2*E1[k+1]+a3*C1a,
+   e11=a0*E1[k2]+a1*C1[k2]+a2*E1[k2+1]+a3*C1b,
+   d00=b0*(E0[k]-E0[k+1])+b1*C0[k]+b3*C0a,
+   d01=b0*(E0[k2]-E0[k2+1])+b1*C0[k2]+b3*C0b,
+   d10=b0*(E1[k]-E1[k+1])+b1*C1[k]+b3*C1a,
+   d11=b0*(E1[k2]-E1[k2+1])+b1*C1[k2]+b3*C1b,
+   r00=a0*R0[k]+a1*Q0[k]+a2*R0[k+1]+a3*Q0a,
+   r01=a0*R0[k2]+a1*Q0[k2]+a2*R0[k2+1]+a3*Q0b,
+   r10=a0*R1[k]+a1*Q1[k]+a2*R1[k+1]+a3*Q1a,
+   r11=a0*R1[k2]+a1*Q1[k2]+a2*R1[k2+1]+a3*Q1b,
+   q00=b0*(R0[k]-R0[k+1])+b1*Q0[k]+b3*Q0a,
+   q01=b0*(R0[k2]-R0[k2+1])+b1*Q0[k2]+b3*Q0b,
+   q10=b0*(R1[k]-R1[k+1])+b1*Q1[k]+b3*Q1a,
+   q11=b0*(R1[k2]-R1[k2+1])+b1*Q1[k2]+b3*Q1b,
    eA=e00+(e01-e00)*wp,
    eB=e10+(e11-e10)*wp,
    rA=r00+(r01-r00)*wp,
    rB=r10+(r11-r10)*wp,
    inT=T===Tc,
    inP=xp>0&&xp<G.np-1,
-   inF=ph>G.f0&&ph<FMX,
+   inF=ph===pr/* 範囲の端（φ_r = 0 など）では片側の傾き．範囲の外は 0 */,
    dzf=K.etac*AF/((1-z)*(1-z))/G.df,
    ip=1/(G.dlp*p);
+  if(ph!==pr)ST.of++;
   o.eT=(d00+(d01-d00)*wp)*(1-wf)+(d10+(d11-d10)*wp)*wf;
   o.e=eA+(eB-eA)*wf+(inT?0:o.eT*(T-Tc));
   o.R=rA+(rB-rA)*wf; /* 表の温度の範囲の外は，端の c_v で e を直線に延ばす（R は端の値．SPEC-29 A） */
@@ -619,6 +637,8 @@ const GAS=(()=>{
   cvf,
   hf,
   eq,
+  solve,
+  stat:ST,
   elem,
   A,
   bE,
@@ -683,7 +703,7 @@ const DPa=[
  DPb4=[5179/57600,0,7571/16695,393/640,-92097/339200,187/2100,1/40];
 /* Core 専用の DOPRI5(4)．dp45 と同じ演算順序で，作業配列を使い回す．結果は o.r5（新しい配列）と o.r4（作業配列）に置く． */
 /* 段の計算に要るのは右辺に効く成分（添字 0〜17 と 38〜42）だけ．補助積分は最後の 5 次の和だけ求める */
-const SIX=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,38,39,40,41,42,49],NSX=SIX.length;
+const SIX=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,38,39,40,41,42,49,50],NSX=SIX.length,NFP=22;
 function dp45c(o,y,h,k0){
  const N=y.length,
   n=NSX,
@@ -773,8 +793,8 @@ const ATOL=[1e-6,1e-3,1,1e-9,1e-9,1e-4,1,1e-9,1e-6,1,1e-9,1,1,1e-6,1,1,1e-6,1e-6
 for(let i=18;i<38;i++)ATOL[i]=1;
 ATOL.push(1e-10,1e-10,1e-10,1e-9,1e-9);
 for(let i=43;i<49;i++)ATOL[i]=1;
-ATOL.push(1e-3);
-const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49];
+ATOL.push(1e-3,1e-9);/* 49：T_X，50：吸気ポートの空気の質量 m_a,p（化学平衡．SPEC-29 C の 4．許容は m_b,p と同じ） */
+const EIX=[0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,38,39,40,41,42,49,50];
 /* ===== EngineCore ===== */
 const TRK=['p','V','T','mi','me','Li','Le','Ti','Ts','Td','Tf','N','pin','mt','m','mu','dq','vp'];
 /* 既燃ガスの物性の書き込み先（GAS.burned と xgas が書く順に，はじめから全部のプロパティを持たせる） */
@@ -802,7 +822,8 @@ class Core{
   this.kF=null;
   this.kG=null;
   this.kFy=null;
-  this.kFs=0;
+  this.kFc=new Float64Array(NSX);
+  this.kFp=new Float64Array(NFP).fill(NaN);
   this.kFX=null;
   this.pv=null;
   this.trO=null;
@@ -817,16 +838,19 @@ class Core{
   const P=this.P,G=this.G=geo(P),k=kin(G,PI),SPC=P.gam===2,m=P.pa*k.V/((SPC?GAS.Ra:R)*K.Ti0);
   const y0=[PI,0,P.pa,m,m,298.15,P.pa,0,0,P.pa,0,0,0,0,P.pa,P.pa].concat(new Array(NY-16).fill(0));
   y0[49]=TA;
+  if(SPC)y0[50]=P.pa*(.5*PI/4*P.dr*P.dr*P.Lr)/(TI*GAS.Ra); /* 吸気ポートの空気の質量（はじめは大気圧の空気．SPEC-29 C の 4） */
   if(SPC)y0[5]=P.Tw??K.Twc; /* 排気ポートのガスの温度（2.2 の 22）．化学平衡のモデルの壁温は設定の一定値（SPEC-08 の B） */
   this.s={
    y:y0,
    exOn:P.exs,
    clp:0,
    nfa:0,
+   ndv:0,
+   div:0,
    nfe:0,
    eP:1,
    eve:0,
-   evn:[0,0,0,0,0,0],
+   evn:[0,0,0,0,0,0,0,0],
    ig:0,
    tc0:0,
    pq:[0,0,0,0],
@@ -962,9 +986,11 @@ class Core{
    mt=mdot(P.pa,pin,Tt,Ath(P,s.al),1+R/((1-Ybi)*R/(gmU(Tt,cst)-1)+Ybi*R/(gmB(Tt,cst)-1)))
   }
 /* 燃焼と壁面熱伝達（woschni と同じ式） */
+/* 段の ω < 0（REQ-13 の 18）：燃焼の速さは max(0, ω) で作る */
   const dxb=C.on?wiebe((tt-C.th0)/C.db,C.m??K.wm)/C.db:0,
-   Q=C.Q*dxb*om,
-   dmc=C.mut*dxb*om,
+   op=Math.max(0,om),
+   Q=C.Q*dxb*op,
+   dmc=C.mut*dxb*op,
    cm=G.S*om/PI,
    gx=tt>=Vv.gA&&tt<Vv.gB,
    I0=s.I0;
@@ -1109,12 +1135,20 @@ class Core{
    A.burned(T,p,z,o);
    const Rt=r0+mb*o.R,dT=(T*Rt-pV)/(Rt+T*mb*o.RT);
    if(Math.abs(dT)<1e-11*T)return T;
+   if(!(T>0))return NaN; /* 段の状態が非物理的（p ≤ 0 など）：反復を続けない．ステップは棄却される（SPEC-13 の 4） */
    T-=dT
   }
   A.burned(T,p,z,o);
   return T
  }
 /* 排気ポートのガスの物性（温度の 3 次 Hermite 補間．表の範囲の外は端の値と端の c_v で延ばす）．o に e，eT，R，RT を書く */
+ sndC(){/* 音速の目標値（SPEC-21 B の 1 (a)）．化学平衡・排気系 ON で，直前のサイクルの排気温度の平均が有限で 300 K 以上のときだけ．それ以外は null */
+  const P=this.P,M=this.lastM,T=M&&M.Tx;
+  if(P.gam!==2||!P.exs||!(T>=300&&T<Infinity))return null;
+  const o=this.sg||(this.sg=mkGB());
+  this.xgas(T,o);
+  return{c:Math.sqrt((1+o.R/o.eT)*o.R*T),T,R:o.R}
+ }
  xgas(T,o){
   const g=GAS.G,
    t=this.zc().xt,
@@ -1217,7 +1251,7 @@ class Core{
 /* 吸気側の組成（成分ごとの気体定数．SPEC-29 C）と余剰エンタルピー */
   const mai=Math.max(0,(pin*P.Vin/TI-mbi*Z.RbI-mfi*A.Rf)/A.Ra),min_=mai+mbi+mfi,Ybi=mbi/min_,Yfi=mfi/min_;
   let mp_=min_,Ybp=Ybi,Yfp=Yfi;
-  if(RO){const map=Math.max(0,(pp*Vp/TI-mbp*Z.RbI-mfp*A.Rf)/A.Ra);mp_=map+mbp+mfp;Ybp=mbp/mp_;Yfp=mfp/mp_}
+  if(RO){const map=Math.max(0,y[50]);mp_=map+mbp+mfp;Ybp=mbp/mp_;Yfp=mfp/mp_} /* ポートの空気の質量は状態（SPEC-29 C の 4．圧力から逆算しない） */
   const epi=Ein/min_,
    epp=RO?Ep/mp_:epi,
    Yap=1-Ybp-Yfp,
@@ -1245,11 +1279,11 @@ class Core{
 /* 噴射と気化（SPEC-30） */
 /* 噴射中かどうかは開始と終了のイベントで切り替える（ステップの中では一定の率．∫ṁ_inj dt = m_f,cmd が丸めの範囲で成り立つ） */
   let minj=0;
-  {const J=s.inj;if(DI&&J.on)minj=J.m/J.dth*om}
+  {const J=s.inj;if(DI&&J.on)minj=J.m/J.dth*Math.max(0,om)} /* 段の ω < 0 で負にしない（REQ-13 の 18） */
   const mev=P.tev>0?ml/P.tev:minj;
 /* 燃焼と壁面熱伝達 */
   const dxb=C.on?wiebe((tt-C.th0)/C.db,C.m??K.wm)/C.db:0,
-   r=C.mut*dxb*om,
+   r=C.mut*dxb*Math.max(0,om),
    psi=mu>1e-12?mf/mu:0,
    cm=G.S*om/PI,
    gx=tt>=Vv.gA&&tt<Vv.gB,
@@ -1367,9 +1401,12 @@ class Core{
   };
 /* 吸気側：スロットルと弁（ランナ）の流れを成分ごとに数える．スロットルの順流は，ポート噴射では当量比 φ の予混合気 */
   const ta=mt>=0?mt*(1-fph):mt*Yai,tf=mt>=0?mt*fph:mt*Yfi,tb=mt>=0?0:mt*Ybi;
-  let d6,d7,d8,d9,d10,d16,d17,d41,d42;
+  let d6,d7,d8,d9,d10,d16,d17,d41,d42,ra=ia,rf=if_,rb=ib;
   if(RO){
-   const fw=mr>=0,ra=mr*(fw?Yai:Yap),rf=mr*(fw?Yfi:Yfp),rb=mr*(fw?Ybi:Ybp),er=fw?epi:epp;
+   const fw=mr>=0,er=fw?epi:epp;
+   ra=mr*(fw?Yai:Yap);
+   rf=mr*(fw?Yfi:Yfp);
+   rb=mr*(fw?Ybi:Ybp);
    d6=TI/P.Vin*(A.Ra*(ta-ra)+A.Rf*(tf-rf)+Z.RbI*(tb-rb));
    d7=tb-rb;
    d41=tf-rf;
@@ -1391,6 +1428,8 @@ else{
    d16=-xi+xo-xt;
    d17=0
   }
+/* 成分ごとの流量（スロットル，ランナ，吸気弁．空気，燃料蒸気，既燃ガスの順．診断と検査に使う．TEST-25 項目 9） */
+  if(this.wx!==0)this.X.cf=[ta,tf,tb,ra,rf,rb,ia,if_,ib];
 /* 壁温は設定の一定値（SPEC-08 の B） */
   const d5=0,His=(mi>0?mi*hji:0)+(me<0?-me*hbX:0),Hos=(mi<0?-mi*hc0:0)+(me>0?me*hc0:0);
   if(!out)out=new Array(NY);
@@ -1444,7 +1483,7 @@ else{
   out[47]=xf;
   out[48]=r*psi;
   out[49]=d49;
-  out[50]=0;
+  out[50]=RO?ra-ia:0;
   out[51]=Qpw;
   out[52]=0;
   out[53]=0;
@@ -1487,7 +1526,7 @@ else{
   s.ig=1;/* 燃焼の時刻（振動．SPEC-36 A の 3）．状態ではない */
   if(C.on&&C.Q>0){const g=this.igT;g.push(s.t);if(g.length>256)g.shift()}
  }
-/* 次のイベント（REQ-13 4）：サイクルの終端，IVO，IVC，EVO，EVC，点火．th より先で最も近い角度を this.ea に置く */
+/* 次のイベント（REQ-13 4）：サイクルの終端，IVO，IVC，EVO，EVC，点火，下死点（π，3π．W_g の被積分関数が切り替わる）．th より先で最も近い角度を this.ea に置く */
  nextEv(th){
   const V=this.V,lo=th+1e-7;
   let a=P4;
@@ -1500,6 +1539,9 @@ else{
   x=V.gC;
   if(x>lo&&x<a)a=x;
   x=md4(2*PI-this.s.spa*D);
+  if(x>lo&&x<a)a=x;
+  if(PI>lo&&PI<a)a=PI;
+  x=3*PI;
   if(x>lo&&x<a)a=x;
   if(this.P.gam===2&&this.P.inj===1){
    x=md4(this.P.soi);
@@ -1547,7 +1589,9 @@ else{
   }
   if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3];s.TE=T;if(SPC&&cy.mb>1e-9)s.zs=cy.z}
   if(near(md4(2*PI-s.spa*D))&&!s.ig){n[5]++;this.ign(T,Yu,y1[2],cy)}
-  if(near(P4)){n[0]++;this.cycleEnd();y1[0]-=P4}
+  if(near(PI))n[6]++;
+  if(near(3*PI))n[7]++;
+  if(near(P4)){n[0]++;this.cycleEnd();y1[0]=0}
  }
 /* 運転中にランナ・排気系を ON にしたときの初期化（REQ-25 6，REQ-27 7） */
  syncSw(){
@@ -1558,11 +1602,29 @@ else{
   if(!!P.run!==!!s.runOn){
    s.runOn=P.run;
    if(P.run){
-    const y=s.y,pin=y[6],mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI);
+    const y=s.y,pin=y[6],Vp=.5*PI/4*P.dr*P.dr*P.Lr;
     y[8]=0;
     y[9]=pin;
-    y[10]=Math.min(1,Math.max(0,y[7])/mi)*mp;
-    y[17]=Math.max(0,y[16])/mi*mp
+    if(P.gam===2){
+/* 化学平衡のモデル（REQ-25 の 5）：マニホールドと同じ組成（既燃ガス，燃料蒸気）と単位質量あたりの余剰（符号を保つ）．質量は成分ごとの気体定数で求める（右辺 fS の吸気側の式と同じ） */
+     const A=GAS,
+      Z=this.zc(),
+      mbi=Math.max(0,y[7]),
+      mfi=Math.max(0,y[41]),
+      mai=Math.max(0,(pin*P.Vin/TI-mbi*Z.RbI-mfi*A.Rf)/A.Ra),
+      mi=mai+mbi+mfi,
+      Yb=mbi/mi,
+      Yf=mfi/mi,
+      mp=pin*Vp/(TI*((1-Yb-Yf)*A.Ra+Yf*A.Rf+Yb*Z.RbI));
+     y[10]=Yb*mp;
+     y[42]=Yf*mp;
+     y[50]=(1-Yb-Yf)*mp;
+     y[17]=y[16]/mi*mp
+    }else{
+     const mp=pin*.5*PI/4*P.dr*P.dr*P.Lr/(R*TI),mi=pin*P.Vin/(R*TI); /* γ のモデルは第25版と同じ式（演算の順も） */
+     y[10]=Math.min(1,Math.max(0,y[7])/mi)*mp;
+     y[17]=Math.max(0,y[16])/mi*mp
+    }
    }
   }
  }
@@ -1591,10 +1653,10 @@ else{
    y[49]=TX;
    const cv=(pk,Vk,mb)=>{
     const m0=pk*Vk/(R*TI),Yb=Math.min(1,Math.max(0,mb)/m0),Ru=(1-fph)*A.Ra+fph*A.Rf,mn=pk*Vk/(TI*(Yb*Z.RbI+(1-Yb)*Ru));
-    return[Yb*mn,fph*(1-Yb)*mn]
+    return[Yb*mn,fph*(1-Yb)*mn,(1-Yb)*(1-fph)*mn]
    };
    {const q=cv(y[6],P.Vin,y[7]);y[7]=q[0];y[41]=q[1]}
-   {const q=cv(y[9],Vp,y[10]);y[10]=q[0];y[42]=q[1]}
+   {const q=cv(y[9],Vp,y[10]);y[10]=q[0];y[42]=q[1];y[50]=q[2]}
    s.mah=NaN;
    s.inj.on=0
   }
@@ -1609,10 +1671,11 @@ else{
     };
    y[7]=bk(y[6],P.Vin,Math.max(0,y[7]),Math.max(0,y[41]));
    y[10]=bk(y[9],Vp,Math.max(0,y[10]),Math.max(0,y[42]));
-   y[38]=y[39]=y[40]=y[41]=y[42]=0
+   y[38]=y[39]=y[40]=y[41]=y[42]=y[50]=0
   }
   s.spc=P.gam===2;
   s.a0=y.slice();
+  s.cf=0; /* 補助積分を取り直したので，このサイクルの集計は途中から：平均に入れない（REQ-29 の 10） */
   this.TC=null
  }
  cylOld(y,V){
@@ -1626,8 +1689,60 @@ else{
    m=y[2]*V/(R*T);
   return{m,mu:mu/m0*m}
  }
+/* 右辺が直接使う設定（SPEC-13 の 8）が，前に調べたときと同じか．違えば覚え直して false（最後の段を使い回さない）．
+   弁の設定は updV の署名 sig，壁温は syncSw が書く y[5]，始動と停止は start／stop が kFy を消すことで扱う */
+ fsalP(){
+  const P=this.P,a=this.kFp;
+  let same=true,v;
+  v=P.Id;
+  if(a[0]!==v){a[0]=v;same=false}
+  v=P.Lex;
+  if(a[1]!==v){a[1]=v;same=false}
+  v=P.Lr;
+  if(a[2]!==v){a[2]=v;same=false}
+  v=P.Ta;
+  if(a[3]!==v){a[3]=v;same=false}
+  v=P.Vin;
+  if(a[4]!==v){a[4]=v;same=false}
+  v=P.cw;
+  if(a[5]!==v){a[5]=v;same=false}
+  v=P.dex;
+  if(a[6]!==v){a[6]=v;same=false}
+  v=P.dpx;
+  if(a[7]!==v){a[7]=v;same=false}
+  v=P.dr;
+  if(a[8]!==v){a[8]=v;same=false}
+  v=P.exs?1:0;
+  if(a[9]!==v){a[9]=v;same=false}
+  v=P.gam;
+  if(a[10]!==v){a[10]=v;same=false}
+  v=P.inj;
+  if(a[11]!==v){a[11]=v;same=false}
+  v=P.pa;
+  if(a[12]!==v){a[12]=v;same=false}
+  v=P.phi;
+  if(a[13]!==v){a[13]=v;same=false}
+  v=P.run?1:0;
+  if(a[14]!==v){a[14]=v;same=false}
+  v=P.tev;
+  if(a[15]!==v){a[15]=v;same=false}
+  v=this.sig;
+  if(a[16]!==v){a[16]=v;same=false}
+  v=this.fixw?1:0;
+  if(a[17]!==v){a[17]=v;same=false}
+  v=P.At||0;
+  if(a[18]!==v){a[18]=v;same=false}
+  v=P.Vm||0;
+  if(a[19]!==v){a[19]=v;same=false}
+  v=P.Dt;
+  if(a[20]!==v){a[20]=v;same=false}
+  v=P.cam;
+  if(a[21]!==v){a[21]=v;same=false}
+  return same
+ }
  step(){
   const s=this.s,P=this.P,G=this.G;
+  if(s.div)return 0; /* 発散して止まっている（REQ-13 の 19，SPEC-13 の 7）．コールドリセットまで何もしない */
   this.updV();
   this.syncSw();
   if(!P.sauto||!s.fired)s.spa=P.spb;
@@ -1653,10 +1768,10 @@ else{
    dt=h
   }
 else if(P.sol===2){
-/* BS3(2)，最後の段の使い回し（FSAL），刻みの PI 制御（SPEC-13 の 8）．使い回せるのは，前のステップの後で状態が書き換えられていないときだけ（配列が同じで，成分の和が同じ） */
-   let h=Math.min(s.h,BS3.cap*D/om,BS3.ht),ys=0;
-   for(let q=0;q<NSX;q++)ys+=y0[SIX[q]];
-   const aS=this.atS||1,fs=this.kFy===y0&&this.kFs===ys;
+/* BS3(2)，最後の段の使い回し（FSAL），刻みの PI 制御（SPEC-13 の 8）．使い回せるのは，前のステップの後で状態も，右辺が使う設定も書き換えられていないときだけ（配列が同じで，右辺が使う成分がどれも同じ．設定は fsalP） */
+   let h=Math.min(s.h,BS3.cap*D/om,BS3.ht),fs=this.fsalP()&&this.kFy===y0;
+   if(fs){const kc=this.kFc;for(let q=0;q<NSX;q++)if(kc[q]!==y0[SIX[q]]){fs=false;break}}
+   const aS=this.atS||1;
    if(!this.kF){this.kF=new Array(NY).fill(0);this.kG=new Array(NY).fill(0)}
    const k1=fs?this.kF:this.f(y0,this.kF),kn=this.kG;
    if(fs)this.X=this.kFX;else s.nfe++;
@@ -1738,10 +1853,19 @@ else{
     h=he*fac
    }
   }
+/* 有限でない結果は受け入れず，状態と時刻をステップの前のまま計算を止める（REQ-13 の 19，SPEC-13 の 7） */
+  for(let i=0;i<NY;i++)
+   if(!Number.isFinite(y1[i])){
+    s.div=1;
+    s.ndv++;
+    this.kFy=null;
+    this.wx=0;
+    return 0
+   }
 /* 射影（REQ-13 7）．通常の運転では働かない */
 /* 成分の質量（m_b,in，m_b,p，m_f，m_bf，m_l，m_f,in，m_f,p）は 0 で切る．−MEPS より下へ出たときだけ回数に数える（流れの向きが変わるステップでは，誤差の許容内で 0 をわずかに下回ることがある） */
   let dty=0;
-  for(let q=0;q<7;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-ATOL[i])s.clp++;y1[i]=0;dty=1}} /* 数えるのはその成分の絶対許容誤差より下へ出たときだけ（SPEC-13 の 7） */
+  for(let q=0;q<MIX.length;q++){const i=MIX[q],v=y1[i];if(v<0){if(v<-ATOL[i])s.clp++;y1[i]=0;dty=1}} /* 数えるのはその成分の絶対許容誤差より下へ出たときだけ（SPEC-13 の 7） */
   if(y1[38]>y1[4]&&y1[4]>=0){if(y1[38]-y1[4]>MEPS)s.clp++;y1[38]=y1[4];dty=1}
 /* 余剰エンタルピーの下限 0 は γ のモデルだけ（化学平衡のモデルでは，直噴の気化で T_in より冷えた筒内ガスの逆流が負の余剰を運ぶ） */
   const SPC=P.gam===2;
@@ -1808,8 +1932,13 @@ else{
   this.pv=vals;
   s.li=i;
   s.t+=dt;
-  if(hit||(ed<Infinity&&y1[0]>=ea-1e-9)){s.eve=Math.max(s.eve,Math.abs(ea-y1[0]));this.doEv(y1,ea);dty=1}
-  if(P.sol===2){if(dty)this.kFy=null;else{let ys=0;for(let q=0;q<NSX;q++)ys+=y1[SIX[q]];this.kFs=ys}}
+  if(hit||(ed<Infinity&&y1[0]>=ea-1e-9)){
+   s.eve=Math.max(s.eve,Math.abs(ea-y1[0]));
+   y1[0]=ea;/* 角度を揃える（SPEC-13 の 4．REQ-13 の 3） */
+   this.doEv(y1,ea);
+   dty=1
+  }
+  if(P.sol===2){if(dty)this.kFy=null;else{const kc=this.kFc;for(let q=0;q<NSX;q++)kc[q]=y1[SIX[q]]}}
   this.ecu(dt,y1[1]);
   if(s.t>=s.hn*.05){
    s.hn++;
@@ -1950,6 +2079,7 @@ else{
    s.mode=md
   }
   const e=P.nt-s.Nb,Tm=dynMax(P,om);
+  let fa=0;
   if(!s.fired){s.al=P.alc;s.fc=0}
 else if(s.mode===0){
    const ab=alff(P),am=almin(P),u=ab+P.Kp*e+s.Ip;
@@ -1957,14 +2087,16 @@ else if(s.mode===0){
    s.al=Math.min(P.amax,Math.max(am,ab+P.Kp*e+s.Ip));
    s.fc=Math.min(P.Tl,Tm)
   }
-else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd (N − N_target) + I_T を ±T_max で頭打ち（比例は瞬時の回転数 N，積分は平均回転数 N̄ の偏差 e_d）．張り付いて偏差がそれを深める向きなら積分しない */
-   const ed=-e,ei=om*30/PI-P.nt,u=P.Kpd*ei+s.If;
+else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd (N − N_target) + I_T を ±T_max で頭打ち（比例は瞬時の回転数 N，積分は平均回転数 N̄ の偏差 e_d）．
+     張り付きの判定（積分を止めること，容量の判定）は平均回転数の偏差で作った指令 T̄_c = K_pd e_d + I_T で行う（REQ-11 の 6）．張り付いて偏差がそれを深める向きなら積分しない */
+   const ed=-e,ei=om*30/PI-P.nt,u=P.Kpd*ed+s.If;
    if(!((u>=Tm&&ed>0)||(u<=-Tm&&ed<0)))s.If+=P.Kid*ed*dt;
    s.al=P.alm;
-   s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ei+s.If))
+   s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ei+s.If));
+   fa=Math.min(Tm,Math.max(-Tm,P.Kpd*ed+s.If))
   }
   s.fe=s.fc+(s.fe-s.fc)*Math.exp(-dt/P.td);
-  if(s.fired&&s.mode===1){s.ov=(s.fc>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(s.fc<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}
+  if(s.fired&&s.mode===1){s.ov=(fa>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(fa<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}
   this.veh(dt,om)
  }
 /* 車両（SPEC-35 C）：車速を陽的 Euler で進める．機関の計算には影響しない */
@@ -1986,6 +2118,7 @@ else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd
 /* SPEC-11 の 9：動力計制御（とシャシー）では動力計が回して始動し，FUEL CUT は燃料だけを止める（モータリング）．もう一度で停止 */
  start(){
   const s=this.s;
+  this.kFy=null; /* 入力が不連続に変わる：最後の段を使い回さない（REQ-13 の 17） */
   s.fuel=1;
   if(!s.fired){
    if(dynOn(this.P)){
@@ -2001,6 +2134,7 @@ else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd
  }
  stop(){
   const s=this.s;
+  this.kFy=null;
   if(dynOn(this.P)&&s.fired&&s.fuel){s.fuel=0;s.C.on=0;s.C.Q=0;return}
   s.fuel=0;
   s.starter=0;
@@ -2022,7 +2156,7 @@ else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd
   c.fixTw=this.fixTw;
   return c
  }
- run(T){const t1=this.s.t+T;while(this.s.t<t1)this.step()}
+ run(T){const t1=this.s.t+T;while(this.s.t<t1&&!this.s.div)this.step()}
 }
 /* ===== metrics display (validity rule) ===== */
 const fmtv=(x,n,u,lo,hi)=>x==null||!isFinite(x)||(lo!=null&&(x<lo||x>hi))?'–':x.toFixed(n)+u;
@@ -2047,6 +2181,8 @@ const SWC={
  procD:'up'
 };
 /* 回転数の点：刻みの 1 つ目から N1 まで（SPEC-26 の 5．N = 0 はサイクルが進まないので含めない） */
+/* 計測の機関の壁温：化学平衡のモデルでは設定の壁温，ほかは SWC.Tw（前提の表もこの値を示す．REQ-26 の 8） */
+const swTw=P=>P.gam===2&&P.Tw!=null?P.Tw:SWC.Tw;
 const swN=st=>Array.from({length:Math.round(SWC.N1/st)},(_,i)=>st*(i+1)),SWN=swN(SWC.step),SWN7=swN(1000);
 const swOpt=o=>({crit:SWC.critD,flow:SWC.flowD,proc:SWC.procD,...(o||{})});
 const swR=a=>Math.max(...a)-Math.min(...a),swM=a=>a.reduce((x,v)=>x+v,0)/a.length;
@@ -2061,7 +2197,7 @@ class Sweep{
   const c=this.c=new Core({...P0,cvar:0,sauto:1,mode:1,alm:this.al*D});
   c.fixw=1;
   c.fixTw=1;
-  c.s.y[5]=c.P.gam===2&&c.P.Tw!=null?c.P.Tw:SWC.Tw;
+  c.s.y[5]=swTw(c.P);
   this.pts=[];
   this.i=0;
   this.done=false;
@@ -2085,10 +2221,10 @@ class Sweep{
   if(c.P.gam===2&&!GAS.warm(ms))return false;
   while(!this.done){
    c.step();/* エンスト（燃料 OFF）：点をエンストとして記録し，描かない（SPEC-26 の 4） */
-   if(!c.s.fuel){
-    this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length});
+   if(!c.s.fuel||c.s.div){/* 発散（SPEC-13 の 7）もエンストと同じく記録して描かない．同じ機関で続けられないので掃引を終える */
+    this.pts.push({N:this.Ns[this.i],st:1,ok:false,cyc:this.h.length,dv:c.s.div});
     this.i++;
-    if(this.i>=this.Ns.length)this.done=true;else this.begin();
+    if(this.i>=this.Ns.length||c.s.div)this.done=true;else this.begin();
     continue
    }
    if(c.s.cyc!==this.cy){this.cy=c.s.cyc;this.nc++;if(c.s.fired&&c.lastM)this.h.push(c.lastM);this.check()}/* 経過時間は毎ステップ調べる（最初の点で表の節点を作る遅いステップが続くため．SPEC-26 B の 1） */
@@ -2360,12 +2496,12 @@ class OpMap{
   if(!L)return null;
   const{a,b,u,lo,hi}=L,e=1e-9*hi;
   if(!(T>=lo-e&&T<=hi+e))return null;
-  const s=Math.max(0,Math.min(1,(T-lo)/(hi-lo))),
+  const s=hi>lo?Math.max(0,Math.min(1,(T-lo)/(hi-lo))):0/* 幅の無い列では 0（0 で割らない） */,
    cu=(c,t)=>{
     const d=c.nd;
     let k=0;
     while(k<d.length-2&&d[k+1].T<t)k++;
-    return[d[k],d[k+1],Math.max(0,Math.min(1,(t-d[k].T)/(d[k+1].T-d[k].T)))]
+    return[d[k],d[k+1],d[k+1].T>d[k].T?Math.max(0,Math.min(1,(t-d[k].T)/(d[k+1].T-d[k].T))):0]
    },
    [a0,a1,wa]=cu(a,a.lo+s*(a.hi-a.lo)),
    [b0,b1,wb]=a===b?[a0,a1,wa]:cu(b,b.lo+s*(b.hi-b.lo)),
@@ -2382,11 +2518,26 @@ class OpMap{
   return b
  }
 }
+/* サイクルの時間で割る量（出力，燃料流量，各断面の平均流量）：時間で重みを付けた平均 Σ X t_c / Σ t_c（SPEC-14） */
+const AVT=['pi','pb','Pd','Pf','Pwall','mfd','mth','mr','min','mexv','mepp','mtl'];
 const avgM=s=>{
  const h=s.Mx&&s.Mh&&s.Mh.length?s.Mh:null;
  if(!h)return{};
  const o={};
  for(const k in h[0]){const v=h[0][k];if(typeof v==='number')o[k]=h.reduce((a,q)=>a+q[k],0)/h.length}
+ /* 比で定義する指標は，分子の和と分母の和の比（REQ-14 の 4，SPEC-14）．どれかのサイクルで定義されない（NaN）効率と bsfc は NaN */
+ const S=f=>h.reduce((a,q)=>a+f(q),0),
+  T=S(q=>q.tc),
+  mF=S(q=>q.mfd*q.tc),
+  wB=S(q=>q.pb*q.tc),
+  all=k=>h.every(q=>q[k]===q[k]);
+ for(const k of AVT)o[k]=S(q=>q[k]*q.tc)/T;
+ o.wb=P4*h.length/T;
+ o.N=o.wb*30/PI;
+ o.ei=all('ei')?S(q=>q.W)/(S(q=>q.mf)*K.Hu):NaN;
+ o.em=all('em')?S(q=>q.bmep)/S(q=>q.imep):NaN;
+ o.bsfc=all('bsfc')?mF/wB*3.6e9:NaN;
+ o.eb=all('eb')?wB/(mF*K.Hu):NaN;
  return o
 };
 function metricList0(c,pg){
@@ -2561,10 +2712,7 @@ function* vtSearch(x0,feas,O){
   for(let i=0;i<nd;i++)for(const sg of[1,-1]){const xn=x.slice();xn[i]+=sg;const Jn=yield*ev(xn,'fine');if(Jn>bJ){bJ=Jn;bx=xn}}
   if(bx){x=bx;J=bJ;more=true}
  }
- /* 探索の前の点も細かい許容で評価して並べる */
- R.stage='x0';
- const J0=yield*ev(x0,'fine');
- return Object.assign(R,{x,J,J0,local:!R.stop})
+ return Object.assign(R,{x,J,local:!R.stop})
 }
 /* ===== 2 次のモデルを使う信頼領域法（SPEC-32 C） ===== */
 /* 連立 1 次方程式 A x = b（部分ピボットの消去法）．特異なら null */
@@ -2794,6 +2942,7 @@ class VTEval{
   let k=0;
   for(;;){
    c.step();
+   if(c.s.div){this.nu++;this.n++;this.ok=false;this.J=-Infinity;this.M={tb:NaN,eb:NaN};return true} /* 発散した評価（SPEC-13 の 7）：周期定常に達しない評価と同じく数え，次の評価をこの状態から始めない */
    if(c.s.cyc!==this.cy){this.cy=c.s.cyc;if(c.lastM)this.h.push(c.lastM);if(this.check())return true}
    if((++k&3)===0&&performance.now()-t0>ms)return false
   }
@@ -2905,12 +3054,12 @@ class LossBk{
   let k=0;
   const st=()=>{c.step();return(++k&3)===0};
   let cy=s.cyc;
-  while(s.cyc===cy){if(st())yield}
+  while(s.cyc===cy&&!s.div){if(st())yield}
   /* 実際のサイクル */
   cy=s.cyc;
   const z0=s.y[19],SPC=c.P.gam===2,bf=q=>SPC?q.s.y[39]:q.s.y[31];
   let rep=null,zI=0,pE=NaN,ivc=null,bI=0,bE_=NaN,vE=NaN;
-  while(s.cyc===cy){
+  while(s.cyc===cy&&!s.div){
    const n2=s.evn[2],n3=s.evn[3];
    c.step();
    if(s.cyc!==cy)break;
@@ -2918,6 +3067,7 @@ class LossBk{
    if(s.evn[3]!==n3){pE=s.y[2];bE_=bf(c);vE=kinV(c.G,s.y[0])}
    if((++k&3)===0)yield
   }
+  if(s.div)return{ok:false,why:'計算が発散した'};
   const M=c.lastM,C={...s.C},G=c.G;
   if(!rep||!M||!(M.ei>0)||!C.on)return{ok:false,why:'燃焼したサイクルが得られない'};
   const Qf=M.W/M.ei,W180=zI-z0,xi=d=>SPC?K.etac*d*K.Hu/Qf:d/Qf; /* 燃えた燃料の熱の割合 ξ（SPEC-33 A）：化学平衡では既燃の側へ移った燃料 × η_c，ほかは発熱の積分 */
@@ -2934,13 +3084,14 @@ class LossBk{
    const zs=q.s.y[19],b0=bf(q);
    let pe=NaN;
    /* 段 F の間だけ，既燃ガスの表を解離の無いものに替える（1 ステップごとに戻す．運転中の機関と交互に進むため） */
-   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc){
+   while(q.s.y[0]<3*PI&&q.s.cyc===rep.s.cyc&&!q.s.div){
     const n3=q.s.evn[3];
     if(nd)GAS.nd(1);
     try{q.step()}finally{if(nd)GAS.nd(0)}
     if(q.s.evn[3]!==n3)pe=q.s.y[2];
     if((++k&3)===0)yield
    }
+   if(q.s.div)return{ok:false,why:'計算が発散した'};
    R[nm]={W:q.s.y[19]-zs,pe,xi:xi(bf(q)-b0)}
   }
   if(!R.F)R.F=R.FA;

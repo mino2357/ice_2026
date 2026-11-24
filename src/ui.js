@@ -5,7 +5,7 @@ const LP=mkP();
 let live=new Core(LP),AX=mkAX();
 const U={mj:{},swTest:0,tab:0,hap:HAP0,sub:0,pg:4,mpg:0,x10:0,log:0,pend:{},undo:null,cross:[null,null,null,null,null,null,null,null],sel:1,ix:0,busy:0};
 /* spd：再生速度（Infinity = 最速）．rs：速さの倍率（最速のときに表示．SPEC-15 F の 4），w0，t0：その計測の区間の始まり */
-const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24};
+const Sim={debt:0,spd:.1,rs:NaN,w0:null,t0:0},FB={n:9,mx:24,el:.05};
 const Base={
  ref:null,
  tl:-1e9,
@@ -16,19 +16,34 @@ const Base={
  vtc:()=>({ivo:LP.ivo,ivc:LP.ivc,evo:LP.evo,evc:LP.evc}),
  change(c,now){
   if(now-this.tl>=3000){
-   if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}
+   if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc();chgRef(c)}
    this.cam=valves({...LP},geo(LP));
    this.camC=LP.cam
   }
   this.tl=now
  },
  set(c){
-  if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc()}
+  if(c.last){this.ref=this.cp(c.last);this.vt=this.vtc();chgRef(c)}
   this.cam=valves({...LP},geo(LP));
   this.camC=LP.cam
  },
- clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9}
+ clear(){this.ref=null;this.vt=null;this.cam=null;this.tl=-1e9;CHG.rt=null}
 };
+/* 設定の変更の記録（SPEC-15 K の 3）：基準サイクルを取るたびに空にする．同じ項目を続けて変えたら 1 件にまとめ，元の値に戻ったら消す．rt：基準サイクルを取ったときの時刻とサイクル数 */
+const CHG={l:[],drop:0,rt:null,N:50};
+function chgRef(c){CHG.l=[];CHG.drop=0;CHG.rt={t:c.s.t,cyc:c.s.cyc}}
+function chgLog(k,o,v){
+ if(o===v)return;
+ const L=CHG.l,e=L[L.length-1];
+ if(e&&e.k===k){
+  e.v=v;
+  e.t=live.s.t;
+  if(e.o===v)L.pop();
+  return
+ }
+ L.push({k,o,v,t:live.s.t});
+ if(L.length>CHG.N){L.shift();CHG.drop++}
+}
 let COL={};
 const readCol=()=>{
  const cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();
@@ -37,20 +52,26 @@ const readCol=()=>{
 /* ===== input helpers ===== */
 function tap(el,fn){
  let d;
- el.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:NOW()}});
- el.addEventListener('pointerup',e=>{if(d&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);d=0});
- el.addEventListener('pointercancel',()=>d=0)
+ /* 押した指（pointerId）の入力だけを見る．別の指の接触・離れでは，押した位置も判定も変えない（REQ-15 の 13） */
+ el.addEventListener('pointerdown',e=>{if(!d||e.pointerId===d.id||NOW()-d.t>=500)d={x:e.clientX,y:e.clientY,t:NOW(),id:e.pointerId}}); /* 要素の外で離して pointerup が届かなかった古い押しは捨てる（500 ms を過ぎた押しはタップにならない） */
+ el.addEventListener('pointerup',e=>{
+  if(!d||e.pointerId!==d.id)return;
+  if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<8&&NOW()-d.t<500)fn(e);
+  d=0
+ });
+ el.addEventListener('pointercancel',e=>{if(d&&e.pointerId===d.id)d=0})
 }
 /* ===== time advance (frame-rate independent) ===== */
 /* 最速（spd = Infinity）：毎フレーム，上限の時間まで進める．止まっている機関（完爆前でスターターも回っていない，ω = 0）は 1× で進める（計算することが無い） */
 const atRest=c=>!!c.s&&!c.s.fired&&!c.s.starter&&c.s.y[1]===0;
 function advance(st,c,el,budget){
  const mx=st.spd===Infinity&&!atRest(c);
- if(mx){st.debt=Infinity;budget=budget||FB.mx}else st.debt+=Math.min(el,.05)*(st.spd===Infinity?1:st.spd);
+ if(mx){st.debt=Infinity;budget=budget||FB.mx}else st.debt+=Math.min(el,FB.el)*(st.spd===Infinity?1:st.spd);
  const t0=performance.now();
  let n=0;
  while(st.debt>0){
   st.debt-=c.step();/* 上限の判定は 4 ステップごと（既燃ガスの表の節点を作るステップは 1 ステップが長い．SPEC-15 F の 2） */
+  if(c.s&&c.s.div){st.debt=0;break} /* 発散して止まった計算では回らない（SPEC-13 の 7） */
   if(budget&&(++n&3)===0&&performance.now()-t0>budget){st.debt=Math.min(st.debt,0);break}
  }
  if(mx)st.debt=0
@@ -72,6 +93,8 @@ function setParam(k,v,noUndo){
   const sv=LP.spb;
   LP.spb=gv(IT.spb,gi(IT.spb,live.s.spa));
   live.s.spa=LP.spb;
+  chgLog('spb',sv,LP.spb);
+  chgLog(k,old,v);
   if(!noUndo)U.undo=null;
   note(`点火の自動最適化：ON → OFF（自動値 ${LP.spb}° を手動値へ引継ぎ，前の手動値 ${sv}°）`);
   LP[k]=v;
@@ -79,6 +102,7 @@ function setParam(k,v,noUndo){
   return
  }
  LP[k]=v;
+ chgLog(k,old,v);
  if(!noUndo)U.undo={k,old};
  note(`${it.n}：${disp(it,old)} → ${disp(it,v)}${it.u?' '+it.u:''}`);
  rs()
@@ -100,7 +124,7 @@ const lamOK=()=>pval('S')/2/pval('lr')<=.5+1e-12;
 function applyPend(){
  if(!Object.keys(U.pend).length||!lamOK())return;
  const ks=Object.keys(U.pend);
- ks.forEach(k=>LP[k]=U.pend[k]);
+ ks.forEach(k=>{chgLog(k,LP[k],U.pend[k]);LP[k]=U.pend[k]});
  U.pend={};
  U.undo=null;
  live.reset();
@@ -116,7 +140,7 @@ function undo(){
  U.undo=null;
  if(u.ks){
   Base.change(live,NOW());
-  u.ks.forEach((k,i)=>LP[k]=u.olds[i]);
+  u.ks.forEach((k,i)=>{chgLog(k,LP[k],u.olds[i]);LP[k]=u.olds[i]});
   note(`元に戻しました：${u.ks.map((k,i)=>IT[k].n+' '+disp(IT[k],u.olds[i])).join('，')}`);
   rs();
   optText();
@@ -131,7 +155,7 @@ function setParams(o){
  if(!ks.length)return;
  Base.change(live,NOW());
  U.undo={ks,olds:ks.map(k=>LP[k])};
- ks.forEach(k=>LP[k]=o[k]);
+ ks.forEach(k=>{chgLog(k,LP[k],o[k]);LP[k]=o[k]});
  note(`${ks.map(k=>IT[k].n+' '+disp(IT[k],o[k])).join('，')}`);
  rs()
 }
@@ -143,7 +167,7 @@ function defaults(){
 }
 function coldReset(){live.reset();Base.clear();axReset(AX);Sim.debt=0}
 /* [START]：状態に有限でない値があるときは，初期値に戻してから始動する（SPEC-15 D の 4） */
-function startTap(){if(!live.s.y.every(Number.isFinite))coldReset();live.start();if(SND.on)sndEnsure()}
+function startTap(){if(!live.s.y.every(Number.isFinite)||live.s.div)coldReset();live.start();if(SND.on)sndEnsure()}
 /* ===== rendering: settings ===== */
 /* SPEC-18 B.7：回転数の制御で使わない項目．'a' = 制御が操作中（現在の値を表示），'n' = 不使用，'' = 有効 */
 /* SPEC-30 の 9：熱物性が「化学平衡」でないときは噴射の 4 項目，ポート噴射では噴射開始・インジェクタ流量・気化の時定数が不使用 */
@@ -166,7 +190,9 @@ function liveVals(){
   if(l&&l.textContent!==ctlLab(k))l.textContent=ctlLab(k)
  }
 }
-function rs(){/* 設定の行のスライダをドラッグしている間は，行を作り直さずに値だけ書き換える（つまみの要素を保つ） */
+function rs(){/* 設定のページは，設定タブを表示している間だけ作り直す（表示したときに show が呼ぶ．ほかのタブでの設定の変更のたびに，見えていないページを作り直さない．SPEC-15 の J） */
+ if(U.tab!==2){swFresh();return} /* 性能曲線の「前提」の表と古さの注記は，どのタブでも設定の変更に合わせる */
+/* 設定の行のスライダをドラッグしている間は，行を作り直さずに値だけ書き換える（つまみの要素を保つ） */
  if(U.sld&&$('tsr')){
   const b=$('Pg').querySelector('b[data-v="alm"]');
   if(b)b.textContent=disp(IT.alm,LP.alm);
@@ -323,10 +349,10 @@ function swCond(){
   dg=r=>f(r/D,0)+'°',
   row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`,
   C=SWC.crit[SW.crit];
- $('swa').innerHTML=`<table><tr><th colspan="2">固定する条件</th></tr>${row('スロットル開度',`<b data-c="al">${SW.als.join('・')}</b>°（90° = 全開）`)}${row('回転数の保持','速度一定の理想動力計（dω/dt = 0）')}${row('点火・変動','MBT（CA50 = 10° ATDC），サイクル変動 OFF')}${row('壁温 T_w',`<b data-c="Tw">${SWC.Tw}</b> K 固定`)}
+ $('swa').innerHTML=`<table><tr><th colspan="2">固定する条件</th></tr>${row('スロットル開度',`<b data-c="al">${SW.als.join('・')}</b>°（90° = 全開）`)}${row('回転数の保持','速度一定の理想動力計（dω/dt = 0）')}${row('点火・変動','MBT（CA50 = 10° ATDC），サイクル変動 OFF')}${row('壁温 T_w',`<b data-c="Tw">${swTw(P)}</b> K 固定`)}
 <tr><th colspan="2">回転数の点</th></tr>${row('範囲・刻み',`<b data-c="st">${st}</b>, ${2*st}, …, ${SWC.N1} rpm（<b data-c="n">${n}</b> 点）`)}${row('手順',SWC.procs[SW.proc]+(SW.proc==='up'?'（前の点から継続）':SW.proc==='updown'?'（上りと下りの平均）':'（各点を単独に開始）'))}
 <tr><th colspan="2">収束の判定：${C.n}（直近 <b data-c="last">${SWC.last}</b> サイクルの幅）</th></tr>${row('T_b',`≤ <b data-c="tolR">${f(C.tolR*100,1)}</b>%·|T_b| + <b data-c="tolA">${C.tolA}</b> N·m`)}${row('MBT・流量',`≤ <b data-c="tolS">${C.tolS}</b>°，${SW.flow?`η_v・ṁ_th・p_in ≤ ${f(C.tolR*100,1)}%`:'流量・状態量は判定しない'}`)}${row('サイクル数',`最少 <b data-c="nmin">${SW.nmin}</b>，最多 <b data-c="nmax">${SW.nmax}</b>，最後の値を採る`)}
-<tr><th colspan="2">${R?'<span data-c="run">計測中の設定</span>':'現在の設定（次の計測に使う）'}${old?'<br><span data-c="old">表示中の曲線は変更前の設定で計測（再計測で更新）</span>':''}${pend?'<br><span data-c="pend">保留中の変更は [適用] の後に使う</span>':''}</th></tr>${row('大気圧・φ',`${f(P.pa/1e3,1)} kPa，${f(P.phi,2)}`)}${row('ε・B×S',`<b data-c="eps">${f(P.eps,1)}</b>，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('カム・リフト・弁径',`<b data-c="cam">${IT.cam.ch[P.cam]}</b>，<b data-c="Lv">${f(P.Lv*1e3,1)}</b> mm，${f(P.dv*1e3,0)} mm`)}${row('IVO・IVC・EVO・EVC',`<b data-c="ivo">${dg(V.i.o)}</b>・<b data-c="ivc">${dg(V.i.c)}</b>・${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('排気系',P.exs?`ON，L_e ${f(P.Lex,2)} m，d_e ${f(P.dex*1e3,0)} mm`:`OFF，圧損 ${f(P.dpx/1e3,1)} kPa`)}${row('補機負荷',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`
+<tr><th colspan="2">${R?'<span data-c="run">計測中の設定</span>':'現在の設定（次の計測に使う）'}${old?'<br><span data-c="old">表示中の曲線は変更前の設定で計測（再計測で更新）</span>':''}${pend?'<br><span data-c="pend">保留中の変更は [適用] の後に使う</span>':''}</th></tr>${row('大気圧・φ',`${f(P.pa/1e3,1)} kPa，${f(P.phi,2)}`)}${row('ε・B×S',`<b data-c="eps">${f(P.eps,1)}</b>，${f(P.B*1e3,0)}×${f(P.S*1e3,0)} mm`)}${row('カム・リフト・弁径',`<b data-c="cam">${IT.cam.ch[P.cam]}</b>，<b data-c="Lv">${f(P.Lv*1e3,1)}</b> mm，吸 <b data-c="dv">${f(P.dv*1e3,0)}</b>／排 <b data-c="dve">${f(P.dve*1e3,0)}</b> mm`)}${row('IVO・IVC・EVO・EVC',`<b data-c="ivo">${dg(V.i.o)}</b>・<b data-c="ivc">${dg(V.i.c)}</b>・${dg(V.e.o)}・${dg(V.e.c)}`)}${row('吸気ランナ',P.run?`ON，${f(P.Lr*1e3,0)} mm，内径 ${f(P.dr*1e3,0)} mm`:'OFF')}${row('排気系',P.exs?`ON，L_e ${f(P.Lex,2)} m，d_e ${f(P.dex*1e3,0)} mm`:`OFF，圧損 ${f(P.dpx/1e3,1)} kPa`)}${row('補機負荷',`<b data-c="Ta">${f(P.Ta,1)}</b> N·m`)}</table>`
 }
 function swText(){
  const r=$('swt').children,R=SW.run;
@@ -458,7 +484,7 @@ function drawEng(){
 /* 運転タブの帯の高さ：目標回転数の帯，動力計制御ではスロットル開度の帯を重ねる（SPEC-23 の 6） */
 const bandH=()=>NTB*(dynOn(LP)?2:1);
 /* ===== target-rpm slider (REQ-23) ===== */
-const NTD={on:0,off:0,v:NaN,u:NaN};
+const NTD={on:0,off:0,v:NaN,u:NaN,id:-1};
 const ntW=()=>Math.max(1,$('ntr').clientWidth-44);
 /* SPEC-23 の 2：位置 u と値の対応（u ≤ 0.7 で 500〜8000 rpm，その右で 8000〜40000 rpm） */
 const ntU=v=>Math.max(0,Math.min(1,v<=NTS.mid?NTS.um*(v-NTS.lo)/(NTS.mid-NTS.lo):NTS.um+(1-NTS.um)*(v-NTS.mid)/(NTS.hi-NTS.mid)));
@@ -474,7 +500,7 @@ function ntRender(){
 }
 function ntStep(d){const it=IT.nt,v=gv(it,Math.max(gmin(it),gi(it,LP.nt)+d));if(v!==LP.nt)setParam('nt',v);ntRender()}
 /* ===== バルブタイミングの操作の列（SPEC-15 I）：設定の IVO，IVC，EVO，EVC を，つまみのドラッグと [−][＋] で変える ===== */
-const VTK=['ivo','ivc','evo','evc'],VTD={k:null,off:0,sig:''};
+const VTK=['ivo','ivc','evo','evc'],VTD={k:null,off:0,sig:'',id:-1};
 const vtRow=k=>$('vt').querySelector(`.vtr[data-k="${k}"]`),
  vtW=k=>Math.max(1,vtRow(k).querySelector('.vts').clientWidth-44);
 function vtRender(){
@@ -508,22 +534,24 @@ function initVT(){
   kn.addEventListener('pointerdown',e=>{
    e.preventDefault();
    e.stopPropagation();
+   if(VTD.k&&e.pointerId!==VTD.id)return;
    VTD.k=k;
+   VTD.id=e.pointerId;
    const R=tr.getBoundingClientRect();
    VTD.off=e.clientX-(R.left+22+Math.max(0,Math.min(1,gi(it,LP[k])/gmax(it)))*vtW(k));
    try{kn.setPointerCapture(e.pointerId)}catch(x){}
    kn.classList.add('on')
   });
   const mv=e=>{
-    if(VTD.k!==k)return;
+    if(VTD.k!==k||e.pointerId!==VTD.id)return;
     e.preventDefault();
     const R=tr.getBoundingClientRect(),u=(e.clientX-VTD.off-R.left-22)/vtW(k);
     vtSet(k,Math.round(Math.max(0,Math.min(1,u))*gmax(it)),1)
    },
-   up=e=>{if(VTD.k!==k)return;mv(e);VTD.k=null;kn.classList.remove('on')};
+   up=e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;mv(e);VTD.k=null;kn.classList.remove('on')};
   kn.addEventListener('pointermove',mv);
   kn.addEventListener('pointerup',up);
-  kn.addEventListener('pointercancel',()=>{VTD.k=null;kn.classList.remove('on')});
+  for(const t of['pointercancel','lostpointercapture'])kn.addEventListener(t,e=>{if(VTD.k!==k||e.pointerId!==VTD.id)return;VTD.k=null;kn.classList.remove('on')});
   for(const b of r.querySelectorAll('button'))tap(b,()=>{if(!b.disabled)vtSet(k,gi(it,LP[k])+(+b.dataset.d))})
  }
 }
@@ -539,12 +567,14 @@ function thStep(d){const g=LP.alm/D,n=d>0?Math.floor(g/THS.st+1e-9)+1:Math.ceil(
 const slPos=(tr,kn,u)=>{const x=Math.round(u*Math.max(1,tr.clientWidth-44)*10)/10;kn.style.transform=`translateX(${x}px)`};
 /* つまみから始めたドラッグだけで値を変える（SPEC-23 の 3）．get：現在の位置 [0, 1]，set：位置 [0, 1] を値にする */
 function slBind(tr,kn,get,set){
- let on=0,off=0;
+ let on=0,off=0,pid=-1;
  const W=()=>Math.max(1,tr.clientWidth-44),end=()=>{on=0;U.sld=0;kn.classList.remove('on');if(tr.id==='tsr')rs()};
  kn.addEventListener('pointerdown',e=>{
   e.preventDefault();
   e.stopPropagation();
+  if(on&&e.pointerId!==pid)return;
   on=1;
+  pid=e.pointerId;
   U.sld=1;
   const R=tr.getBoundingClientRect();
   off=e.clientX-(R.left+22+get()*W());
@@ -552,14 +582,14 @@ function slBind(tr,kn,get,set){
   kn.classList.add('on')
  });
  const mv=e=>{
-  if(!on)return;
+  if(!on||e.pointerId!==pid)return;
   e.preventDefault();
   const R=tr.getBoundingClientRect();
   set(Math.max(0,Math.min(1,(e.clientX-off-R.left-22)/W())))
  };
  kn.addEventListener('pointermove',mv);
- kn.addEventListener('pointerup',e=>{if(!on)return;mv(e);end()});
- kn.addEventListener('pointercancel',()=>{if(on)end()})
+ kn.addEventListener('pointerup',e=>{if(!on||e.pointerId!==pid)return;mv(e);end()});
+ for(const t of['pointercancel','lostpointercapture'])kn.addEventListener(t,e=>{if(on&&e.pointerId===pid)end()})
 }
 function thRender(){
  const on=dynOn(LP),b=$('thb'),u=thU(),g=LP.alm/D;
@@ -587,23 +617,25 @@ function initNT(){
  k.addEventListener('pointerdown',e=>{
   e.preventDefault();
   e.stopPropagation();
+  if(NTD.on&&e.pointerId!==NTD.id)return;
   NTD.on=1;
+  NTD.id=e.pointerId;
   const R=r.getBoundingClientRect();
   NTD.off=e.clientX-(R.left+22+ntU(LP.nt)*ntW());
   try{k.setPointerCapture(e.pointerId)}catch(x){}
   k.classList.add('on')
  });
  const mv=e=>{
-  if(!NTD.on)return;
+  if(!NTD.on||e.pointerId!==NTD.id)return;
   e.preventDefault();
   const R=r.getBoundingClientRect(),u=(e.clientX-NTD.off-R.left-22)/ntW(),v=ntVal(u);
   if(v!==LP.nt)setParam('nt',v);
   ntRender()
  };
- const up=e=>{if(!NTD.on)return;mv(e);NTD.on=0;k.classList.remove('on')};
+ const up=e=>{if(!NTD.on||e.pointerId!==NTD.id)return;mv(e);NTD.on=0;k.classList.remove('on')};
  k.addEventListener('pointermove',mv);
  k.addEventListener('pointerup',up);
- k.addEventListener('pointercancel',()=>{NTD.on=0;k.classList.remove('on')});
+ for(const t of['pointercancel','lostpointercapture'])k.addEventListener(t,e=>{if(!NTD.on||e.pointerId!==NTD.id)return;NTD.on=0;k.classList.remove('on')});
  tap($('ntm'),()=>{if(LP.nt>NTS.lo)ntStep(-1)});
  tap($('ntp'),()=>ntStep(1));
  ntRender()
@@ -675,8 +707,9 @@ function ctlRender(){
   const lb=dynOn(LP)&&live.s.fired&&!live.s.fuel?'STOP':'FUEL CUT',b=$('b2');
   if(b.textContent!==lb)b.textContent=lb
  }
- const t=ctlText(live);
- $('ctl').innerHTML=t.map(x=>`<div>${x||'&nbsp;'}</div>`).join('')
+ /* 文字が変わったときだけ書き換える（毎フレーム要素を作り直さない．SPEC-15 の J）．前に書いた HTML は要素そのものに持たせる（U に持たせると，全テストの実行の後で U を戻したときに表示と食い違う） */
+ const h=ctlText(live).map(x=>`<div>${x||'&nbsp;'}</div>`).join(''),e=$('ctl');
+ if(h!==e._h||!e.firstChild){e._h=h;e.innerHTML=h}
 }
 const wTier=()=>innerWidth>=900?2:innerWidth>=700?1:0; /* 画面の段階（REQ-15 H）：0 小，1 中，2 大 */
 function met(){
@@ -697,6 +730,7 @@ function met(){
 }
 /* ===== tabs ===== */
 function show(i){
+ if(i!==U.tab&&document.querySelector('.ew .rbx'))runBox(0); /* タブを切り替えたら運転の状態の枠を消す（SPEC-15 K の 4） */
  if(U.tab===4)DV.top[DV.cur]=$('s4').scrollTop;
  U.tab=i;
  [...$('N').children].forEach(b=>b.className=+b.dataset.t===(i===6?0:i)?'on':'');
@@ -740,7 +774,9 @@ function optObj(o){
  [...$('oob').children].forEach(b=>b.className=+b.dataset.o===o?'on':'');
  optText()
 }
-const optReady=()=>live.s.fired&&live.s.Nb>=300;
+/* 探索・マップ・内訳は運転中の機関の状態を引き継ぐので，燃料を噴いて回っているときだけ始める（REQ-32 の 9，REQ-33 の 7，REQ-34 の 6） */
+const optReady=()=>!!(live.s.fired&&live.s.fuel&&live.s.Nb>=300),
+ optWhy=()=>live.s.fired&&!live.s.fuel?'燃料を噴いていません（燃料カット中は計算しません）':'運転タブで START してください';
 /* 表示の切替（0：結果の表と評価の履歴，1：弁時期の図，2：探索の軌跡．SPEC-32 A の 3） */
 function optView(n){
  OP.v=n;
@@ -758,7 +794,7 @@ function optFig(){
 }
 function optStart(){
  if(OP.run){optStop();return}
- if(!optReady()){$('opr').textContent='運転タブで START してください';return}
+ if(!optReady()){$('opr').textContent=optWhy();return}
  OP.run=new VTOpt(live,OP.obj);
  OP.rs=OP.run;
  OP.h=OP.run.h;
@@ -794,7 +830,7 @@ function optText(){
  $('oun').disabled=!U.undo;
  $('oap').disabled=!OP.res||!!OP.run;
  [...$('oob').children].forEach(b=>b.className=+b.dataset.o===OP.obj?'on':'');
- $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:'運転タブで START してください';
+ $('ost').textContent=optReady()?`運転状態：N̄ ${live.s.Nb.toFixed(0)} rpm，開度 ${(live.s.al/D).toFixed(1)}°，φ ${LP.phi.toFixed(2)}（固定して評価）`:optWhy();
  {
   const q=OP.run||OP.rs,
    sg=q?vtSegs(q.S):[],
@@ -835,18 +871,20 @@ function drawOpt(){
  return null
 }
 /* 熱効率タブ（SPEC-33 C） */
+/* 熱効率の図が出せないときに図に書く文 */
+const lossMsg=()=>LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?optWhy():'計算中';
 function drawLossT(){
  {
   const q=prep($('olc'));
   if(!q)return;
-  const msg=LP.gam!==2?'熱物性が「化学平衡」のときに表示します':!optReady()?'運転タブで START してください':'計算中';
+  const msg=lossMsg();
   drawLoss(q.g,q.W,q.H,LP.gam===2&&optReady()?OP.lres:null,COL,msg)
  }
 }
 /* ===== VVT マップ（SPEC-34） ===== */
 function vmStart(){
  if(OP.vm&&!OP.vm.done){vmStop();return}
- if(!optReady()){$('vpr').textContent='運転タブで START してください';return}
+ if(!optReady()){$('vpr').textContent=optWhy();return}
  OP.vm=new VVTMap(live);
  OP.vp0=OP.vm.p0;
  OP.vsel=null;
@@ -878,7 +916,7 @@ function vmText(){
  $('vrn').textContent=run?'中止':'計算';
  $('vap').disabled=!OP.vsel||run;
  $('vun').disabled=!U.undo;
- $('vst').textContent=optReady()?`運転状態：N̄ ${(m?m.E.N0:live.s.Nb).toFixed(0)} rpm，開度 ${((m?m.E.al0:live.s.al)/D).toFixed(1)}°（固定して評価．作用角は固定）`:'運転タブで START してください';
+ $('vst').textContent=optReady()?`運転状態：N̄ ${(m?m.E.N0:live.s.Nb).toFixed(0)} rpm，開度 ${((m?m.E.al0:live.s.al)/D).toFixed(1)}°（固定して評価．作用角は固定）`:optWhy();
  if(m)$('vpr').textContent=`${run?m.stage:m.stop?'中止':'終了'}：評価 ${m.ne} 回，${(m.t/1e3).toFixed(1)} s`;else if(!$('vpr').textContent.includes('START'))$('vpr').textContent='';
  const f=(x,v)=>`(${x[0]}, ${x[1]})：${v.tb.toFixed(2)} N·m，${v.be===v.be?v.be.toFixed(0)+' g/kWh':'出力なし'}`;
  if(m){
@@ -910,7 +948,7 @@ function drawVMT(){
   C,
   p0:m?m.p0:[Math.round(LP.phin/D),Math.round(LP.phex/D)],
   sel:OP.vsel,
-  msg:!optReady()?'運転タブで START してください':m&&!m.done?`計算中（${m.stage}）`:'[計算] でマップを作ります'
+  msg:!optReady()?optWhy():m&&!m.done?`計算中（${m.stage}）`:'[計算] でマップを作ります'
  },COL)
 }
 /* タップ：★ ◆ の印から 12 px 以内ならその点，それ以外は 1° に丸めた点（範囲の外は端に寄せる） */
@@ -980,6 +1018,145 @@ async function copyRes(){
  copyRes.tm=setTimeout(copyRes.done,4000);
  return'show'
 }
+/* 運転の状態のテキスト（REQ-15 の 15，SPEC-15 K の 2）：押した瞬間の運転の条件と計算の結果．e は envInfo() の値 */
+/* STN：状態ベクトルの 23 成分（仕様書 2.2 節の表の並び）．配列 y の中の位置は EIX */
+const STN=[
+ ['θ','クランク角','rad'],
+ ['ω','クランク軸の角速度','rad/s'],
+ ['p','筒内圧','Pa'],
+ ['m','筒内ガスの全質量','kg'],
+ ['m_u','筒内の未燃ガスの質量','kg'],
+ ['T_w','シリンダ壁の平均温度','K'],
+ ['p_in','吸気マニホールド圧','Pa'],
+ ['m_b,in','吸気マニホールド内の既燃ガスの質量','kg'],
+ ['ṁ_r','吸気ランナの質量流量','kg/s'],
+ ['p_p','吸気ポート圧','Pa'],
+ ['m_b,p','吸気ポート内の既燃ガスの質量','kg'],
+ ['ṁ_e','排気管の質量流量','kg/s'],
+ ['p_pe','排気ポート圧','Pa'],
+ ['p_te','排気管の出口側の圧力','Pa'],
+ ['E_in','吸気マニホールドの余剰エンタルピー','J'],
+ ['E_p','吸気ポートの余剰エンタルピー','J'],
+ ['m_f','筒内の未燃の燃料蒸気の質量','kg'],
+ ['m_bf','筒内の既燃ガスのうち燃料に由来する質量','kg'],
+ ['m_l','筒内の液体の燃料の質量','kg'],
+ ['m_f,in','吸気マニホールド内の燃料蒸気の質量','kg'],
+ ['m_f,p','吸気ポート内の燃料蒸気の質量','kg'],
+ ['T_X','排気ポートのガスの温度','K'],
+ ['m_a,p','吸気ポート内の空気の質量（化学平衡）','kg']
+];
+function runText(e){
+ const c=live,
+  s=c.s,
+  y=s.y,
+  f=v=>Number.isFinite(v)?String(v):'–',
+  u=it=>it.u?' '+it.u:'',
+  dv=it=>disp(it,defv(it)),
+  tab=U.tab===6?'全体図':([...$('N').children].find(b=>+b.dataset.t===U.tab)||{}).textContent||'',
+  sub=U.tab===1?`（画面 ${U.sub+1}）`:U.tab===2?`（${PAGES[U.pg]}）`:'',
+  rs=rsShow(),
+  wn=[...(s.ov>=2?['OVERLOAD']:[]),...(s.up>=2?['UNDERPOWER']:[]),...(c.vhit?['VALVE HIT']:[]),...(s.div?['DIVERGED']:[])],
+  T=c.X?c.X.T:NaN,
+  L=[
+   'SI機関シミュレータ 運転の状態',
+   'ビルド：'+BUILD,
+   '日時：'+new Date().toISOString(),
+   '環境：'+e.ua,
+   `画面：${e.scr}，表示領域 ${innerWidth}×${innerHeight}，画素の比 ${devicePixelRatio}，表示中 ${tab}${sub}`,
+   '',
+   '【運転】',
+   '状態：'+(s.fired?s.fuel?'RUN（燃焼して運転中）':'MOTOR（燃料を止めて回されている）':s.starter?'CRANK（始動中）':'STOP（停止）'),
+   '試験：'+(LP.bench===1?'シャシーダイナモメーター':'エンジンダイナモメーター'),
+   '回転数の制御：'+(LP.bench===1?'シャシー（車両）':s.mode?'動力計制御':'スロットル制御'),
+   '燃料カット：'+(s.fuel?'OFF':'ON'),
+   '再生速度：'+(Sim.spd===Infinity?'最速'+(rs>0?`（${rs.toFixed(1)}×）`:''):Sim.spd+'×'),
+   `時刻：${s.t.toFixed(4)} s，サイクル ${s.cyc}`,
+   '警告：'+(wn.length?wn.join('，'):'なし'),
+   '',
+   '【制御】',
+   ...ctlText(c).map(x=>x.replace(/<[^>]*>/g,'').trim()||'–'),
+   '',
+   '【指標】',
+   ...metricList(c,0).concat(metricList(c,1)).map(q=>`${q[2]}（${q[0]}）：${q[1]}`),
+   '',
+   '【状態】',
+   `回転数 N：${Number.isFinite(y[1])?(y[1]*30/PI).toFixed(1):'–'} rpm`,
+   `クランク角 θ mod 720°：${Number.isFinite(y[0])?(md4(y[0])/D).toFixed(2):'–'}°`,
+   `筒内ガスの平均温度 T：${Number.isFinite(T)?T.toFixed(1):'–'} K`,
+   '',
+   '【設定】'
+  ];
+ const i0=L.indexOf('【状態】')+1;
+ STN.forEach((q,i)=>L.splice(i0+i,0,`${i+1} ${q[0]} ${q[1]}：${f(y[EIX[i]])} ${q[2]}`));
+ let nd=0;
+ PAGES.forEach((pg,j)=>{
+  const its=ITEMS.filter(it=>it.pg===j);
+  if(!its.length)return;
+  L.push(`〔${pg}〕`);
+  its.forEach(it=>{
+   const v=disp(it,LP[it.k]),d=v!==dv(it);
+   if(d)nd++;
+   L.push(`${d?'* ':''}${it.n}：${v}${u(it)}${d?`（既定 ${dv(it)}）`:''}`)
+  })
+ });
+ ITEMS.filter(it=>!(it.pg>=0&&it.pg<PAGES.length)).forEach(it=>{
+  const v=disp(it,LP[it.k]),d=v!==dv(it);
+  if(d)nd++;
+  L.push(`${d?'* ':''}${it.n}：${v}${u(it)}${d?`（既定 ${dv(it)}）`:''}`)
+ });
+ L.push(`既定値と違う項目：${nd} 件`,'','【適用待ち】');
+ const pk=Object.keys(U.pend);
+ L.push(...(pk.length?pk.map(k=>`${IT[k].n}：${disp(IT[k],LP[k])} → ${disp(IT[k],U.pend[k])}${u(IT[k])}`):['なし']));
+ L.push('','【基準サイクル】',Base.ref&&CHG.rt?`あり（時刻 ${CHG.rt.t.toFixed(4)} s，サイクル ${CHG.rt.cyc} で取得）`:'なし');
+ if(CHG.drop)L.push(`（古い ${CHG.drop} 件を省略）`);
+ L.push(...(CHG.l.length?CHG.l.map(q=>`${q.t.toFixed(4)} s：${IT[q.k].n}：${disp(IT[q.k],q.o)} → ${disp(IT[q.k],q.v)}${u(IT[q.k])}`):['設定の変更：なし']));
+ return L.join('\n').replace(/-?Infinity|NaN/g,'–')
+}
+/* 運転の状態をコピーする（SPEC-15 K の 4）．書けたら 'ok'，書けなければ断面図の領域に選択できる枠を出して 'show' */
+function runBox(on,t){
+ let a=document.querySelector('.ew .rbx');
+ if(!on){
+  if(a)a.remove();
+  $('bcp').textContent='コピー';
+  return
+ }
+ if(!a){
+  a=document.createElement('textarea');
+  a.className='rbx';
+  a.readOnly=true;
+  $('ew').appendChild(a)
+ }
+ a.value=t;
+ a.focus();
+ a.select();
+ a.scrollTop=0;
+ $('bcp').textContent='閉じる'
+}
+async function copyRun(){
+ const b=$('bcp');
+ if(document.querySelector('.ew .rbx')){runBox(0);return'close'}
+ const t=runText(envInfo());
+ let ok=false;
+ try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+ if(!ok)try{
+  const a=document.createElement('textarea');
+  a.value=t;
+  a.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(a);
+  a.select();
+  ok=!!document.execCommand('copy');
+  a.remove()
+ }catch(e){}
+ clearTimeout(copyRun.tm);
+ if(ok){
+  b.textContent='完了';
+  copyRun.tm=setTimeout(()=>{if(b.textContent==='完了')b.textContent='コピー'},1500);
+  return'ok'
+ }
+ runBox(1,t);
+ return'show'
+}
+copyRun.tm=0;
 copyRes.tm=0;
 copyRes.done=()=>{clearTimeout(copyRes.tm);$('rcp').textContent='結果をコピー'};
 if(navigator.userAgentData&&navigator.userAgentData.getHighEntropyValues)navigator.userAgentData.getHighEntropyValues(['model','platformVersion','architecture']).then(v=>{ENV.hi=v},()=>{});
@@ -989,9 +1166,13 @@ const HAP=new Hap(),
  vib=p=>{if(!hapOK())return;try{navigator.vibrate(p)}catch(e){}};
 function hapBtn(){const b=$('hap');b.disabled=!hapOK();if(b.disabled)U.hap=0;b.className=U.hap?'on':''}
 /* 燃焼の時刻を取り出して Hap に渡す（tS：このフレームの積分の前のシミュレーションの時刻，el：実経過 [s]） */
+/* 振動の判断に渡す値：機関 c がこのフレームで tS から進んだ間の燃焼を，実際に進めた時間に当たる長さ（経過 el を advance と同じ上限 FB.el で切ったもの）の中に置く（REQ-36 の 7） */
+function hapIn(c,on,tS,el){
+ const ev=c.igT.splice(0),t1=c.s.t;
+ return on&&tS!=null&&t1>=tS?{on:1,ev,t0:tS,t1,dt:Math.min(el,FB.el)*1e3}:{on:on?1:0,ev:[],t0:0,t1:0,dt:0}
+}
 function hapTick(now,tS,el){
- const ev=live.igT.splice(0),t1=live.s.t,on=U.hap&&!U.busy&&!document.hidden&&hapOK();
- const r=HAP.tick(now,on&&tS!=null&&t1>=tS?{on:1,ev,t0:tS,t1,dt:el*1e3}:{on:on?1:0,ev:[],t0:0,t1:0,dt:0});
+ const r=HAP.tick(now,hapIn(live,U.hap&&!U.busy&&!document.hidden&&hapOK(),tS,el));
  if(r!=null)vib(r)
 }
 const sp=()=>[...$('sp').children].forEach(b=>{if(b.dataset.v)b.className=+b.dataset.v===Sim.spd?'on':''});
@@ -1006,6 +1187,7 @@ function initUI(){
  });
  tap($('N'),e=>{const b=e.target.closest('button');if(b)show(+b.dataset.t)});
  tap($('bsys'),()=>show(6));
+ tap($('bcp'),()=>{copyRun()});
  tap($('bback'),()=>show(0));
  tap($('swg'),()=>{if(SW.sub===6){if(MP.run)mpStop();else mpStart()}else if(SW.run)swStop();else swStart()});
  tap($('mpq'),e=>{const b=e.target.closest('button');if(b)mpQ([...$('mpq').children].indexOf(b))});
@@ -1093,7 +1275,7 @@ function initUI(){
  rchips();
  show(0);
  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readCol);
- new MutationObserver(readCol).observe(document.documentElement,{attributes:true});
+ new MutationObserver(readCol).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
  let last=performance.now(),lastDraw=0,slow=0;
  function loop(now){
   requestAnimationFrame(loop);

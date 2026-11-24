@@ -13,6 +13,7 @@
 | `fmt.js` | `src/*.js` の整形（`npm run fmt`）．空白だけを変え，構文木が同じことを確かめる | Node.js（`--expose-internals`） |
 | `unused.js` | `src/` の最上位で定義した名前と定数表（`K`，`SWC`）のキーのうち，どこからも使われていないもの | Node.js |
 | `run.js` | アプリ内テストを 1 つのビューポートで実行．`--only 24,26` で一部だけ，`--names` で全検査，`--time` でテストごとの所要時間，`--ui` で画面のモード（[U] の項目だけ），`--json`／`--md` で一覧を保存 | ビルド済みの成果物，Playwright |
+| `shard.js` | 全項目を組に分けて `run.js` を同時に実行（既定は CPU の数の半分，上限 4 組．`--n 2` で組の数）．分け方は `times.json`（テストごとの所要時間の実測）．性能の記録は判定しない．段階 1 の全項目に使う | `run.js`，`times.json` |
 | `coverage.js` | 仕様書のテスト項目と，`run.js --json` の検査の名前を，テストごとに並べて表示（漏れは人が読んで判定） | `run.js` の出力 |
 | `bitcheck.js` | 熱物性 γ(T) の経路が第25版（commit `1ef8ff1`）とビット単位で一致するか．`--chromium` でブラウザでも比べる | git，（Playwright） |
 | `node_core.js` | `src/core.js` を Node.js で読み込む（`require('./node_core').load()`）．`sub` でソースを書き換えて感度を調べられる | Node.js |
@@ -23,7 +24,35 @@
 | `vtopt.js` | バルブタイミングの探索（SPEC-32）を Node.js で実行し，結果の 8 近傍を別の評価器で確かめる | Node.js |
 | `lossbk.js` | 熱効率の損失の内訳（SPEC-33）を Node.js で計算する | Node.js |
 | `bench_core.js` | 全開・3000 rpm 固定の 1 サイクルあたりの計算時間とステップ数（熱物性・噴射方式ごと） | Node.js |
+| `alloc.js` | 積分のヒープの割り当て：1 ステップあたりのバイト数と，割り当てた関数ごとの内訳（V8 の標本のヒーププロファイラ）．3 つ目の引数でソースを書き換えて，割り当てを 1 つ外したときの差を測れる（`docs/report_alloc.md`） | Node.js（`--expose-gc`） |
+| `kink.js` | 流量関数 $\Psi$ の折れ目（$r_p = 1 - 10^{-3}$）をまたぐ BS3 の試行と，ステップの棄却の率（`docs/report_alloc.md` の 2 節） | Node.js |
+| `vtwarm.js` | バルブタイミングの探索の評価を「前の評価の状態から始める」ことが値にどれだけ効くか（探索の中の値と，探索の前の状態から評価し直した値の差） | Node.js |
+| `portmass.js` | 試算：吸気ポートの空気の質量を状態にしたときの定常の値の変化（外部のレビューの C-4 の設計案の材料） | Node.js |
 | `idle.js` | 始動からのアイドルの回転数の偏差（設定の上書きを JSON で渡す） | Node.js |
+
+## 環境
+
+必要なもの：Node.js 22（CI と同じ系列），npm，pandoc 3.1.3（CI の ubuntu-24.04 と同じ版），Python 3，Playwright の Chromium．
+
+管理者の権限があるとき：
+
+```
+sudo apt-get install -y pandoc libnspr4 libnss3 libasound2t64
+npm install && npx playwright install chromium
+```
+
+管理者の権限が無いとき（ホームの下に入れる．2026-11-22 に WSL2 の Ubuntu 26.04 で行った手順）：
+
+1. Node.js：`https://nodejs.org/dist/latest-v22.x/` の `node-v22.*-linux-x64.tar.xz` を `~/.local/opt` に展開し（`SHASUMS256.txt` で確かめる），`node`，`npm`，`npx` を `~/.local/bin` にリンクする．
+2. pandoc：`https://github.com/jgm/pandoc/releases/download/3.1.3/pandoc-3.1.3-linux-amd64.tar.gz` を同じように展開してリンクする．
+3. `npm install`，`npx playwright install chromium`（Chromium は `~/.cache/ms-playwright` に入る）．
+4. Chromium が要るシステムのライブラリ（`libnspr4`，`libnss3`，`libasound2t64`）が無いと，起動に失敗する（`ldd` で `not found` と出る）．`apt` の deb を取って（署名のある `InRelease` → `Packages.xz` のハッシュ → deb のハッシュの順に確かめる），`dpkg-deb -x` で `~/.local/opt/chromium-libs` に展開し，実行のときに `LD_LIBRARY_PATH=$HOME/.local/opt/chromium-libs/usr/lib/x86_64-linux-gnu` を付ける．
+5. GitHub CLI（`gh`．プルリクエストと CI の結果を見るのに使う．道具の実行には要らない）：`https://github.com/cli/cli/releases` の最新版の `gh_*_linux_amd64.tar.gz` と `gh_*_checksums.txt` を取り，`sha256sum -c` で確かめてから，`bin/gh` を `~/.local/bin` に置く（2026-11-23 に 2.105.0 で行った）．ログインは端末で `gh auth login`（利用者が行う）．
+6. 新しく開いた端末では `~/.profile` が `~/.local/bin` を `PATH` に入れる．入っていない殻では `export PATH=$HOME/.local/bin:$PATH` を付ける．
+
+`git fetch`／`git push` が `Permission denied (publickey)` になるとき：鍵にパスフレーズがあり，エージェントに鍵が載っていない．端末で `ssh-add` する（`~/.ssh/config` の `IdentityAgent` の場所のエージェントに載せる）．
+
+この PC（Core i5-8350U）では，性能の記録のうち，TEST-16 のページの切り替えと相互参照の移動，TEST-20 の最長フレーム間隔と総所要時間，TEST-34 の VVT マップの所要が，手を入れる前のコードでも上限を超える（2026-11-23 の実測．`docs/changes/2026-11-22-review-gemini-1.md`）．
 
 ## 使い方の例
 

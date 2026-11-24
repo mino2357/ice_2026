@@ -4,7 +4,7 @@
 
 **受入基準**：
 
-1. 定比熱比・断熱・閉じた系で $pV^{\gamma_0}$ が一定：$p(2\pi) = p(\pi)\,\varepsilon^{\gamma_0}$（相対誤差 $10^{-5}$），1 往復の図示仕事が $0$（TEST-09 項目 1）．
+1. 定比熱比・断熱・閉じた系で $pV^{\gamma_c}$ が一定：$p(2\pi) = p(\pi)\,\varepsilon^{\gamma_c}$（相対誤差 $10^{-5}$），1 往復の図示仕事が $0$（TEST-09 項目 1）．
 2. 温度依存比熱・断熱・閉じた系で $m\left[e_k(T_{\text{end}}) - e_k(T_{\text{start}})\right] = -\displaystyle\int p\,dV$（相対誤差 $10^{-6}$．未燃ガスだけ，既燃ガスだけのそれぞれ．項目 2）．
 3. 周期定常（アイドル，部分負荷，全開）で，第一法則の残差が発熱の $10^{-4}$ 以下（項目 3）：
    $$\left|\Delta U_s + \Delta W + \Delta Q_w - \Delta Q_c - \Delta H_i + \Delta H_o\right| \le 10^{-4}\,\Delta Q_c$$
