@@ -41,9 +41,9 @@
 | 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（2040） | `specification/SPEC-29.md`（7178） `specification/SPEC-29B.md`（10900） | `specification/TEST-29.md`（6017） | 5014–5021 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,391,399,448… |
 | 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 5261–5275 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,675,1105,1279,1571 `plot.js`:480 `ui.js`:173 |
 | 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2954） | `gui/TEST-31.md`（1761） | 5484–5489 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:476 |
-| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5721–5724 | 03 21 33 34 | `core.js`:2585,2702,2717,2740,2759,2884… `plot.js`:1138,1264 `ui.js`:763,777,780 |
-| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5939–5967 | 01 03 10 12 14 29 30 32 | `core.js`:452,2996,3058,3085,3095 `plot.js`:1138,1189,1197,1213 `ui.js`:763,777,873 |
-| 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 6068–6072 | 32 | `core.js`:2620,3143,3145 `plot.js`:1452,1504 `ui.js`:777,884 |
+| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5721–5724 | 03 21 33 34 | `core.js`:2585,2699,2714,2737,2756,2881… `plot.js`:1138,1264 `ui.js`:763,777,780 |
+| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5939–5967 | 01 03 10 12 14 29 30 32 | `core.js`:452,2993,3055,3082,3092 `plot.js`:1138,1189,1197,1213 `ui.js`:763,777,873 |
+| 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 6068–6072 | 32 | `core.js`:2620,3140,3142 `plot.js`:1452,1504 `ui.js`:777,884 |
 | 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 6239–6242 | 11 18 22 23 26 | `core.js`:238,242,247,2099 `plot.js`:446 `ui.js`:670 |
 | 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1356） | `specification/SPEC-36.md`（2141） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1861） | 6587–6588 | 07 13 15 | `core.js`:1526 `audio.js`:363,408 `ui.js`:991,993,1169 |
 | 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2589） | 6750–6757 | 26 | `core.js`:2331,2334,2490 `plot.js`:1551 `ui.js`:316,378 |
@@ -132,7 +132,7 @@
 | `docs/report_vt.md` | 8968 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
-| `src/core.js` | 104126 |
+| `src/core.js` | 104049 |
 | `src/audio.js` | 15516 |
 | `src/plot.js` | 65091 |
 | `src/doc.js` | 58599 |
@@ -165,3 +165,4 @@
 | `docs/changes/2026-11-24-omega-neg-stage.md` | 1402 |
 | `docs/changes/2026-11-24-phir-table-range.md` | 1955 |
 | `docs/changes/2026-11-24-review-gemini-6.md` | 9920 |
+| `docs/changes/2026-11-24-vtsearch-j0.md` | 963 |

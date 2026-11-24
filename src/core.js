@@ -2694,10 +2694,7 @@ function* vtSearch(x0,feas,O){
   for(let i=0;i<nd;i++)for(const sg of[1,-1]){const xn=x.slice();xn[i]+=sg;const Jn=yield*ev(xn,'fine');if(Jn>bJ){bJ=Jn;bx=xn}}
   if(bx){x=bx;J=bJ;more=true}
  }
- /* 探索の前の点も細かい許容で評価して並べる */
- R.stage='x0';
- const J0=yield*ev(x0,'fine');
- return Object.assign(R,{x,J,J0,local:!R.stop})
+ return Object.assign(R,{x,J,local:!R.stop})
 }
 /* ===== 2 次のモデルを使う信頼領域法（SPEC-32 C） ===== */
 /* 連立 1 次方程式 A x = b（部分ピボットの消去法）．特異なら null */

@@ -1,11 +1,11 @@
 {
  "tier1": {
-  "at": "2026-11-24T09:25:24.823Z",
+  "at": "2026-11-24T10:16:06.032Z",
   "plan": "第25版とのビット比較 ＋ 全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "e9629d00136f7b24",
-   "src/core.js": "f820be9f58635ea5",
+   "src/core.js": "c366ed78d394e9ba",
    "src/doc.js": "45ec3f9388500f80",
    "src/index.tpl.html": "1508974b8d56c054",
    "src/plot.js": "b05d00519ca62221",
