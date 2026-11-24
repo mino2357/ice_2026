@@ -2235,6 +2235,85 @@ TST[15]=function*(){
   setSub(0);
   uiDefault()
  }
+/* 22：重い計算の Worker（REQ-15 の 17，SPEC-15 L）．5 種類を小さい設定で Worker とメインスレッドの両方で進め，データの欄（時刻 t を除く）を比べる */
+ if(!RUN.ui){
+  const s4=(yield*scen('S4')).c,
+   J=[
+    ['SweepSet',()=>[mkPT(),[1000,2000],[90],{}]],
+    ['Sweep',()=>[mkPT(),[1000,2000],90,{crit:'std',flow:false}]],
+    ['OpMap',()=>[mkPT(),[3000],{}]],
+    ['VTOpt',()=>[s4,0,{...OPT,nmax:6}]],
+    ['VVTMap',()=>[s4,{...OPT,cmin:2,cmax:3}]]
+   ],
+   /* 比べる値：データの欄から，経過時間 t と 1 回の持ち時間 ms（計算の結果ではない），sig（Sweep では引数の JSON．検査では画面の印を書く）を除く */
+   cut=s=>{delete s.t;delete s.ms;delete s.sig;return JSON.stringify(s)},
+   key=(o,k)=>cut(wkSnap(o,WKD[k])),
+   /* 写した後の計算のオブジェクトから，Worker が送った欄だけを取り出す */
+   pick=(o,r,k)=>{
+    const x={};
+    for(const j of Object.keys(r))x[j]=k&&WKD[k]&&WKD[k].includes(j)?pick(o[j],r[j]):o[j];
+    return x
+   },
+   loc=function*(k,a){const o=new WKC[k](...a);while(!o.run(10))yield;return key(o,k)},
+   /* Worker で最後まで：メインスレッドの run は wkRun のまま（計算しない）であること，run の 1 回の時間の最大 */
+   wrk=function*(k,a,f){
+    const o=wkJob(k,a);
+    /* 画面が後から書く欄（Sweep は自分でも sig を持つ）が写しで上書きされないこと */
+    o.sig='画面の印';
+    let mx=0,w=!!o.wk,n=0;
+    for(;;){
+     if(f&&f(o,n))f=null;
+     const t0=performance.now(),d=o.run(10);
+     mx=Math.max(mx,performance.now()-t0);
+     if(o.run!==wkRun)w=false;
+     if(d)break;
+     if(++n>60000)return{o,key:'打ち切り',mx,w:false};
+     yield'frame'
+    }
+    const r=o.wk&&o.wk.last;
+    const r2=r&&structuredClone(r);
+    if(r2)delete r2.sig;
+    return{o,key:r?cut(structuredClone(r)):key(o,k),sync:!r||cut(wkSnap(pick(o,r2,k),WKD[k]))===cut(structuredClone(r2)),ui:o.sig==='画面の印',mx,w}
+   };
+  onEnd(()=>{U.noWk=0;if(WK.ok===false){WK.ok=null;WK.w=null}});
+  WK.ok=null;
+  U.noWk=0;
+  const R={},out=[];
+  let okA=true,mx=0;
+  for(const [k,a] of J){
+   const L=yield*loc(k,a()),W=yield*wrk(k,a());
+   R[k]=L;
+   mx=Math.max(mx,W.mx);
+   const same=W.key===L;
+   if(!(same&&W.w&&W.sync&&W.ui))okA=false;
+   out.push(`${k} ${same?'一致':'不一致'}${W.w?'':'（Worker で計算していない）'}${W.sync?'':'（写しが違う）'}${W.ui?'':'（画面の欄が上書きされた）'}（${L.length} 字）`)
+  }
+  chkB(15,'重い計算の Worker：性能曲線の計測，車両の最高出力の掃引，運転点のマップ，バルブタイミングの探索，VVT マップ（小さい設定）を Worker で計算した結果が，メインスレッドで計算したものと一致する（時刻を除くデータの欄）',okA&&WK.ok===true,out.join('，'));
+  chkB(15,'重い計算の Worker：計算の間，メインスレッドの run の 1 回の時間の最大 ≤ 2 ms',mx<=2,mx.toFixed(2)+' ms','≤ 2 ms');
+  {
+   /* (c) 写しが 1 回届いた後に終える → その後の写しを使わない */
+   const o=wkJob('SweepSet',J[0][1]());
+   let n=0;
+   while(!o.wk.ks.size&&n++<6000){o.run(10);yield'frame'}
+   wkEnd(o);
+   const k0=key(o,'SweepSet'),t0=performance.now();
+   while(performance.now()-t0<600){o.run(10);yield'frame'}
+   const k1=key(o,'SweepSet');
+   chkB(15,'重い計算の Worker：写しが 1 回届いた後に wkEnd で終えると，その後に届いた写しを使わない（データの欄が変わらない），計算は終わっていない',n<6000&&k0===k1&&!o.run(0)&&!WK.J.has(o.wk.id),`写しまで ${n} フレーム，変化 ${k0===k1?'なし':'あり'}`)
+  }
+  {
+   /* (d) Worker を使えない状態と，Worker の中の例外 */
+   U.noWk=1;
+   const a=wkJob('Sweep',J[1][1]()),loc1=!a.wk;
+   while(!a.run(10))yield;
+   const kA=key(a,'Sweep');
+   U.noWk=0;
+   let thr=false;
+   const W=yield*wrk('Sweep',J[1][1](),o=>{if(o.wk&&o.wk.ks.size&&WK.w){WK.w.postMessage({t:'throw'});thr=true;return true}return false}),
+    fb=thr&&WK.ok===false&&!!W.o.wk&&!!W.o.wk.F&&W.o.run===wkLoc;
+   chkB(15,'重い計算の Worker が使えないとき：U.noWk ではメインスレッドで進み結果が同じ．Worker の中で例外が起きると，計算中のものを始めたときの引数で作り直してメインスレッドで最後まで進み，結果が同じ',loc1&&kA===R.Sweep&&fb&&W.key===R.Sweep,`メインスレッド ${loc1?1:0}${kA===R.Sweep?1:0}，例外 ${thr?1:0}，戻してメインスレッド ${fb?1:0}，結果 ${W.key===R.Sweep?'一致':'不一致'}`)
+  }
+ }
 };
 TST[16]=function*(){
  uiDefault();

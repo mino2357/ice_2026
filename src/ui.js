@@ -259,6 +259,89 @@ function prep(c){
  return{g,W,H}
 }
 /* ===== WOT sweep tab (REQ-26) ===== */
+/* ===== 重い計算の Worker：メインスレッドの側（REQ-15 の 17，SPEC-15 L） =====
+   wkJob(種類, 引数)：計算のオブジェクトを作って返す．Worker が使えるときは，その run を Worker の写しを写すものに替える（使えなければそのまま．これまでと同じ） */
+const WK={w:null,ok:null,id:0,J:new Map()};
+function wkGet(){
+ if(WK.ok===false||U.noWk)return null;
+ if(WK.w)return WK.w;
+ try{
+  if(typeof Worker!=='function')throw 0;
+  const w=new Worker(URL.createObjectURL(new Blob([$('coresrc').textContent+'\n;wkMain();'],{type:'text/javascript'})));
+  w.onmessage=e=>{const m=e.data,o=WK.J.get(m.id);if(o)o.wk.q=m};
+  w.onerror=e=>{if(e&&e.preventDefault)e.preventDefault();wkFail()};
+  WK.w=w;
+  WK.ok=true;
+  return w
+ }catch(e){WK.ok=false;return null}
+}
+/* 写す（届くのは変わった欄だけ）：一番上の配列と素のオブジェクトは作り直さずに中身を入れ替え（画面が持つ別名，例えば OP.h，が古くならないように），その要素は届いたものをそのまま使う（1 つの写しの中の共有を保つ）．WKD のインスタンスの欄は中へ写す（SPEC-15 L の 5） */
+function wkSync(d,s,k){
+ const D=k&&WKD[k];
+ for(const j of Object.keys(s)){
+  const a=d[j],b=s[j];
+  if(D&&D.includes(j)&&a&&typeof a==='object'&&b&&typeof b==='object')wkSync(a,b);
+  else if(Array.isArray(a)&&Array.isArray(b)){a.length=b.length;for(let i=0;i<b.length;i++)a[i]=b[i]}
+  else if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b)&&!ArrayBuffer.isView(a)&&!ArrayBuffer.isView(b)&&Object.getPrototypeOf(a)===Object.prototype){for(const q of Object.keys(a))if(!(q in b))delete a[q];Object.assign(a,b)}
+  else d[j]=b
+ }
+}
+function wkRun(){
+ const q=this.wk;
+ if(q.q){
+  const m=q.q;
+  q.q=null;
+  for(const j of Object.keys(m.s))q.ks.add(j);
+  wkSync(this,m.s,q.k);
+  if(m.d){q.d=true;q.last=m.f;wkEnd(this)}
+ }
+ return q.d
+}
+/* Worker が使えなくなった後：始めたときの引数で作り直したもの（F）をメインスレッドで進め，変わった欄を同じ写し方で写す */
+function wkLoc(ms){
+ const q=this.wk,d=q.F.run(ms);
+ wkSync(this,wkDiff(q.F,q.k,q.p),q.k);
+ if(d)wkEnd(this);
+ return d
+}
+/* 画面の欄（SW.run など）から外れた計算を終える（直接 null にされたものが Worker に残って，ほかの計算を遅らせないように．SPEC-15 L の 6） */
+function wkGc(){
+ const L=new Set([SW.run,MP.run,VP.run,OP.run,OP.vm]);
+ for(const o of[...WK.J.values()])if(!L.has(o))wkEnd(o)
+}
+function wkJob(k,a){
+ wkGc();
+ const o=new WKC[k](...a),w=wkGet();
+ if(!w)return o;
+ const id=++WK.id;
+ /* 運転中の機関は，始めた時点の写しを控える（作り直すときに使う．Worker に送るのも同じ時点の値） */
+ const a0=a.map(v=>v instanceof Core?v.clone():v);
+ o.wk={id,k,a:a0,q:null,d:false,ks:new Set(),last:null,F:null,p:null};
+ o.run=wkRun;
+ WK.J.set(id,o);
+ w.postMessage({t:'go',id,k,a:a0.map(v=>v instanceof Core?wkPack(v):v)});
+ return o
+}
+/* 終わり（中止，作り直し，完了）：Worker に知らせ，後から届いた写しは使わない */
+function wkEnd(o){
+ if(!o||!o.wk||!WK.J.has(o.wk.id))return;
+ WK.J.delete(o.wk.id);
+ if(WK.w&&!o.wk.F)WK.w.postMessage({t:'end',id:o.wk.id})
+}
+/* 使えなくなった：計算中のものを，始めたときの引数で作り直してメインスレッドで最初から進める（SPEC-15 L の 7） */
+function wkFail(){
+ WK.ok=false;
+ if(WK.w){try{WK.w.terminate()}catch(e){}WK.w=null}
+ for(const o of WK.J.values()){
+  const q=o.wk,F=q.F=new WKC[q.k](...q.a),s=wkSnap(F,WKD[q.k]),b={};
+  /* Worker の写しで変わった欄だけを，作り直したものの値に戻す */
+  for(const j of q.ks)if(j in s)b[j]=s[j];else delete o[j];
+  q.q=null;
+  q.p=wkPrev(F,q.k);
+  wkSync(o,b,q.k);
+  o.run=wkLoc
+ }
+}
 const SW={
  run:null,
  cur:null,
@@ -278,7 +361,7 @@ const swO=()=>({crit:SW.crit,flow:SW.flow,proc:SW.proc,nmin:SW.nmin,nmax:SW.nmax
  swSig=()=>JSON.stringify(LP)+'|'+JSON.stringify([SW.step,SW.als.slice().sort((a,b)=>b-a),SW.crit,SW.flow,SW.proc,SW.nmin,SW.nmax]);
 function swStart(){
  if((U.busy&&!U.swTest)||SW.run||MP.run)return;
- SW.run=new SweepSet({...LP},swN(SW.step),SW.als,swO());
+ SW.run=wkJob('SweepSet',[{...LP},swN(SW.step),SW.als,swO()]);
  SW.run.sig=swSig();
  SW.run.P={...LP};
  SW.run.step=SW.step;
@@ -287,7 +370,7 @@ function swStart(){
  swText();
  swFresh()
 }
-function swStop(){SW.run=null;$('swg').textContent='計測開始';swText();swFresh()}
+function swStop(){wkEnd(SW.run);SW.run=null;$('swg').textContent='計測開始';swText();swFresh()}
 function swTick(ms){
  if(!SW.run)return false;
  const t=performance.now(),d=SW.run.run(ms);
@@ -382,7 +465,7 @@ const mpSig=()=>JSON.stringify(LP)+'|'+JSON.stringify([SW.crit,SW.flow,SW.nmin,S
  mpCur=()=>{const s=live.s,m=avgM(s);return s.fuel&&s.fired&&m.tb===m.tb?{N:m.N,T:m.tb}:null};
 function mpStart(){
  if((U.busy&&!U.swTest)||MP.run||SW.run)return;
- MP.run=new OpMap({...LP},SWN,swO());
+ MP.run=wkJob('OpMap',[{...LP},SWN,swO()]);
  MP.run.sg=mpSig();
  MP.sel=null;
  mpText()
@@ -391,6 +474,7 @@ function mpStart(){
 function mpStop(){
  const m=MP.run;
  if(!m)return;
+ wkEnd(m);
  m.stop=true;
  MP.cur=m;
  MP.run=null;
@@ -678,7 +762,7 @@ function vpTick(ms){
  if(!(U.tab===2&&vehPg()))return;
  const sg=vpSig();
  if(VP.sig===sg&&!VP.run)return;
- if(!VP.run||VP.run.sig!==sg){VP.run=new Sweep({...LP},VPN(),90,{crit:'std',flow:false});VP.run.sig=sg}
+ if(!VP.run||VP.run.sig!==sg){wkEnd(VP.run);VP.run=wkJob('Sweep',[{...LP},VPN(),90,{crit:'std',flow:false}]);VP.run.sig=sg}
  const t0=performance.now(),done=VP.run.run(ms);
  VP.maxMs=Math.max(VP.maxMs,performance.now()-t0);
  if(done){
@@ -795,7 +879,7 @@ function optFig(){
 function optStart(){
  if(OP.run){optStop();return}
  if(!optReady()){$('opr').textContent=optWhy();return}
- OP.run=new VTOpt(live,OP.obj);
+ OP.run=wkJob('VTOpt',[live,OP.obj]);
  OP.rs=OP.run;
  OP.h=OP.run.h;
  OP.res=null;
@@ -805,6 +889,7 @@ function optStart(){
 function optStop(){
  const r=OP.run;
  if(!r)return;
+ wkEnd(r);
  OP.run=null;
  const b=r.best;
  OP.res=b?{x0:r.x0,x:b.x,J:b.J,J0:r.S.J0,ne:r.h.length,nu:r.E.nu,t:r.t/1e3,obj:r.E.obj,N:r.E.N0,al:r.E.al0,part:true}:null;
@@ -885,14 +970,14 @@ function drawLossT(){
 function vmStart(){
  if(OP.vm&&!OP.vm.done){vmStop();return}
  if(!optReady()){$('vpr').textContent=optWhy();return}
- OP.vm=new VVTMap(live);
+ OP.vm=wkJob('VVTMap',[live]);
  OP.vp0=OP.vm.p0;
  OP.vsel=null;
  OP.vkey='';
  vmText()
 }
 /* 中止：計算中の評価を待たずに止める（それまでに埋まった格子と詰めた点は残す） */
-function vmStop(){const m=OP.vm;if(!m||m.done)return;m.stop=true;m.done=true;vmText()}
+function vmStop(){const m=OP.vm;if(!m||m.done)return;wkEnd(m);m.stop=true;m.done=true;vmText()}
 function vmTick(ms){
  const m=OP.vm;
  if(!m||m.done)return;

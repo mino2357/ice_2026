@@ -3240,3 +3240,83 @@ class VVTMap{
   return L
  }
 }
+/* ===== 重い計算の Worker（REQ-15 の 17，SPEC-15 L） =====
+   Worker の中は，このファイル（coresrc）に wkMain() の呼び出しを足したものを実行する．メインスレッドの側（wkJob など）は ui.js */
+const WKC={SweepSet,Sweep,OpMap,VTOpt,VVTMap},
+ /* 写しで中まで送るクラスのインスタンスの欄（SPEC-15 L の 4） */
+ WKD={VTOpt:['E']},
+ /* 運転中の機関を送る形：clone() が写すもの */
+ wkPack=c=>({wkCore:1,P:{...c.P},s:c.s,last:c.last,lastM:c.lastM,fixw:c.fixw,fixTw:c.fixTw});
+/* clone() と同じ手順で組み立てる */
+function wkCore(o){
+ const c=new Core({...o.P});
+ c.s=o.s;
+ c.G=geo(c.P);
+ c.sig=NaN;
+ c.updV();
+ if(o.last)c.last=o.last;
+ c.lastM=o.lastM;
+ c.fixw=o.fixw;
+ c.fixTw=o.fixTw;
+ return c
+}
+/* データの欄か：数・文字列・真偽・null・undefined，型付き配列，それらだけからなる配列と素のオブジェクト */
+function wkPlain(v){
+ if(v===null||typeof v!=='object')return typeof v!=='function'&&typeof v!=='symbol'&&typeof v!=='bigint';
+ if(ArrayBuffer.isView(v))return true;
+ if(Array.isArray(v)){for(let i=0;i<v.length;i++)if(!wkPlain(v[i]))return false;return true}
+ const p=Object.getPrototypeOf(v);
+ if(p!==Object.prototype&&p!==null)return false;
+ for(const k in v)if(!wkPlain(v[k]))return false;
+ return true
+}
+/* データの欄の写し（d：中まで送るインスタンスの欄） */
+function wkSnap(o,d){
+ const r={};
+ for(const k of Object.keys(o)){
+  const v=o[k];
+  if(d&&d.includes(k)&&v&&typeof v==='object')r[k]=wkSnap(v);else if(wkPlain(v))r[k]=v
+ }
+ return r
+}
+/* 欄ごとの JSON（前の写しと比べるため） */
+function wkPrev(o,k){
+ const s=wkSnap(o,WKD[k]),p={};
+ for(const j of Object.keys(s))p[j]=JSON.stringify(s[j]);
+ return p
+}
+/* 前の写しから変わった欄だけ（prev を更新する）．計算の中で変わらない欄は送らないので，画面が後から書いた値（例：Sweep の sig に画面が入れる設定の印）を上書きしない（SPEC-15 L の 4） */
+function wkDiff(o,k,prev){
+ const s=wkSnap(o,WKD[k]),r={};
+ for(const j of Object.keys(s)){
+  const v=JSON.stringify(s[j]);
+  if(v!==prev[j]){prev[j]=v;r[j]=s[j]}
+ }
+ return r
+}
+function wkMain(){
+ const J=new Map(),ch=new MessageChannel();
+ let on=false;
+ const kick=()=>{if(!on&&J.size){on=true;ch.port2.postMessage(0)}};
+ ch.port1.onmessage=()=>{
+  on=false;
+  for(const [id,j] of J){
+   const d=j.o.run(20),now=performance.now();
+   if(d||now-j.tp>=100){
+    j.tp=now;
+    postMessage({id,d:!!d,s:wkDiff(j.o,j.k,j.p),f:d?wkSnap(j.o,WKD[j.k]):null});
+    if(d)J.delete(id)
+   }
+  }
+  kick()
+ };
+ onmessage=e=>{
+  const m=e.data;
+  if(m.t==='go'){
+   const o=new WKC[m.k](...m.a.map(v=>v&&v.wkCore?wkCore(v):v));
+   J.set(m.id,{o,k:m.k,p:wkPrev(o,m.k),tp:performance.now()})
+  }else if(m.t==='end')J.delete(m.id);
+  else if(m.t==='throw')throw new Error('検査のための例外（TEST-15 項目 22）');
+  kick()
+ }
+}
