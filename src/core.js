@@ -523,7 +523,8 @@ const GAS=(()=>{
   }
  }
  /* 補間：T は 3 次 Hermite（e と傾き c_v，R と傾き ∂R/∂T．T について C¹ で，右辺が節点で跳ばない）．ln p と φ は線形．偏微分は補間した関数の微分 */
- const cl=(x,a,b)=>x<a?a:x>b?b:x,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
+ /* 範囲に丸める．NaN は下端にする（有限でない添字で配列を読むと，読み出しが遅い汎用の経路になり，以後の計算がすべて遅くなる．REQ-13 の 19）．有限の値では x<a?a:x>b?b:x と同じ */
+ const cl=(x,a,b)=>x>=a?(x<=b?x:b):a,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
  /* ホットパス：オブジェクトと配列を作らない．o に e, R と偏微分 eT, ep, ez, RT, Rp, Rz を書く */
  function burned(T,p,z,o){
   const pr=K.etac*AF*z/(1-z),
@@ -1152,7 +1153,7 @@ class Core{
  xgas(T,o){
   const g=GAS.G,
    t=this.zc().xt,
-   Tc=Math.min(g.T0+g.dT*(g.nT-1),Math.max(g.T0,T)),
+   Tc=T>=g.T0?Math.min(g.T0+g.dT*(g.nT-1),T):g.T0 /* NaN は下端（有限の添字で読む．REQ-13 の 19） */,
    x=(Tc-g.T0)/g.dT,
    j=Math.min(g.nT-2,Math.floor(x)),
    u=x-j,

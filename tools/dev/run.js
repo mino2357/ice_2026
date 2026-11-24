@@ -19,9 +19,9 @@ const URL='file://'+path.resolve(typeof opt('file')==='string'?opt('file'):path.
 (async()=>{const b=await chromium.launch(),c=await b.newContext({viewport:{width:W,height:H},hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
 await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!opt('off')&&u.startsWith(MJ)){const f=path.join(MJD,u.slice(MJ.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}})}return rt.abort()});
 p.on('pageerror',e=>errs.push(e.message));await p.goto(URL);await p.waitForTimeout(300);
-await p.evaluate(([only,ui,pj])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{d=v}});
-  /* テストごとの所要時間：ST[i] が 'run' になった時刻の差 */
-  const tm=setInterval(()=>{for(let i=1;i<=NT;i++)if(ST[i]==='run'&&cur!==i){const now=performance.now();if(cur)window.__t[cur]=(window.__t[cur]||0)+now-last;cur=i;last=now}if(d===1){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;clearInterval(tm)}},20);
+await p.evaluate(([only,ui,pj])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{if(v===1&&cur){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;cur=0}d=v}});
+  /* テストごとの所要時間：ST[i] が 'run' になった時刻の差．最後のテストは __done が 1 になった時点で締める（以前は 20 ms ごとの見回りで締めていたので，結果を読むのが先になると最後のテストが落ちた） */
+  const tm=setInterval(()=>{for(let i=1;i<=NT;i++)if(ST[i]==='run'&&cur!==i){const now=performance.now();if(cur)window.__t[cur]=(window.__t[cur]||0)+now-last;cur=i;last=now}if(d===1)clearInterval(tm)},20);
   show(3);runAll(only||null,ui,pj)},[only,!!opt('ui'),opt('noperf')?0:1]);
 /* 打ち切りは固まったときの止め．所要時間でテストを規定しない（利用者の方針．CLAUDE.md の 10）ので長めにとる */
 await p.waitForFunction(()=>window.__done===1,null,{timeout:1800000});
