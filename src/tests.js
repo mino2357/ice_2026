@@ -5348,7 +5348,19 @@ TST[29]=function*(){
    r.push([inj,phi,GAS.stat.of-n0,c.s.cyc,c.s.div])
   }
   chkB(29,'表の当量比の範囲：ポート噴射と直噴，φ 0.6 と 1.4，始動から 1 s で，既燃ガスの物性を求めた φ_r が表の範囲の外に出た回数が 0',r.every(q=>q[2]===0&&q[3]>=5&&!q[4]),r.map(q=>`${q[0]?'直噴':'ポート噴射'} φ ${q[1]}：${q[2]} 回（${q[3]} サイクル）`).join('／'))
- }/* 16：長い時間の収支（REQ-29 の 12）．サイクル変動あり，始動から 1 s の後の 30 s の通算．途中で開度と目標回転数を 3 回変える */
+ }/* 17：有限でない入力でも物性の表を有限の添字で読む（REQ-13 の 19，SPEC-29 A の 6，SPEC-27 の 9）．添字が NaN だと配列の読み出しが遅い汎用の経路になり，以後の計算が遅くなる */
+ {
+  const o=mkGB(),z=GAS.phi2z(1),bad=[];
+  for(const[nm,T,p,zz]of[['T = NaN',NaN,2e6,z],['p = NaN',1500,NaN,z],['ζ = NaN',1500,2e6,NaN],['T = +∞',Infinity,2e6,z],['p = −∞',1500,-Infinity,z]]){
+   GAS.burned(T,p,zz,o);
+   if(!Number.isFinite(o.R))bad.push(`burned（${nm}）：R ${o.R}`)
+  }
+  const c=new Core({...mkP(),cvar:0});
+  c.start();
+  for(const T of[NaN,Infinity,-Infinity]){const r=c.xgas(T,{});if(!Number.isFinite(r.R))bad.push(`xgas（T = ${T}）：R ${r.R}`)}
+  chkB(29,'有限でない入力（T，p，ζ が NaN・±∞）でも，既燃ガスの物性の表と排気ポートのガスの表を有限の添字で読む（読んだ気体定数が有限）',bad.length===0,bad.join('；')||'8 / 8')
+ }
+/* 16：長い時間の収支（REQ-29 の 12）．サイクル変動あり，始動から 1 s の後の 30 s の通算．途中で開度と目標回転数を 3 回変える */
  {
   const r=[];
   for(const[nm,o]of[['直噴・動力計制御',{inj:1}],['ポート噴射・動力計制御',{inj:0}],['直噴・スロットル制御',{inj:1,mode:0}]]){
