@@ -387,8 +387,9 @@ const GAS=(()=>{
   NS=10,
   A=EL.map(e=>SP.map(s=>s.c[e]||0));
  const elem=(z,ec)=>[ec*z*nC/Mf,ec*z*y*nC/Mf,2*(1-z)*xo,2*(1-z)*xn];
- /* 表を作るときに，収束しなかった平衡の解の数 nc と，解けなかった連立方程式の数 sg（REQ-29 の 9．検証で 0 を確かめる） */
- const ST={nc:0,sg:0};
+ /* 表を作るときに，収束しなかった平衡の解の数 nc と，解けなかった連立方程式の数 sg（REQ-29 の 9．検証で 0 を確かめる）．
+    of：物性を求めた当量比 φ_r が表の範囲の外で，端に丸めた回数（REQ-29 の 11） */
+ const ST={nc:0,sg:0,of:0};
  function solve(M,r,n){
   for(let i=0;i<n;i++){
    let p=i;
@@ -444,8 +445,8 @@ const GAS=(()=>{
   bR=(n,z,ec)=>{let N=0;for(let j=0;j<NS;j++)N+=n[j];return RU*N+(1-ec)*z*Rf},
   bCv=(n,T,z,ec)=>{let c=0;for(let j=0;j<NS;j++)c+=n[j]*(cp(SP[j],T)-RU);return c+(1-ec)*z*cvf(T)};
  const z2phi=z=>AF*z/(1-z),phi2z=ph=>ph/(AF+ph);
- /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0.50〜1.50（0.0125 刻み．量論の折れ目 φ_r = 1 を節点に置く），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
- const G={f0:.5,df:.0125,nf:81,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},
+ /* 表：反応に加わる燃料の当量比 φ_r = ηc φ_b 0〜1.50（0.0125 刻み，121 点．量論の折れ目 φ_r = 1 を節点に置く．下端 0 は始動の直後のポート噴射の薄い混合気を含めるため．REQ-29 の 11），T 250〜3500 K（50 K 刻み），p 20 kPa〜20 MPa（公比 10^(1/12)，37 点）．φ の節点ごとに初めて使うときに作る */
+ const G={f0:0,df:.0125,nf:121,T0:250,dT:50,nT:66,lp0:Math.log(2e4),dlp:Math.LN10/12,np:37},
   tab=new Array(G.nf).fill(null),
   iF=Math.round((Tfr-G.T0)/G.dT);
  /* 解離の無い既燃ガス（SPEC-33 A の段 F）：組成を T_nd = 1000 K の平衡（完全燃焼の生成物）に固定し，比熱だけ温度で変える．ND が真の間，burned はこの表を使う */
@@ -525,7 +526,8 @@ const GAS=(()=>{
  const cl=(x,a,b)=>x<a?a:x>b?b:x,FMX=G.f0+G.df*(G.nf-1),TMX=G.T0+G.dT*(G.nT-1);
  /* ホットパス：オブジェクトと配列を作らない．o に e, R と偏微分 eT, ep, ez, RT, Rp, Rz を書く */
  function burned(T,p,z,o){
-  const ph=cl(K.etac*AF*z/(1-z),G.f0,FMX),
+  const pr=K.etac*AF*z/(1-z),
+   ph=cl(pr,G.f0,FMX),
    xf=(ph-G.f0)/G.df,
    jf=Math.min(G.nf-2,Math.floor(xf)),
    wf=xf-jf,
@@ -589,9 +591,10 @@ const GAS=(()=>{
    rB=r10+(r11-r10)*wp,
    inT=T===Tc,
    inP=xp>0&&xp<G.np-1,
-   inF=ph>G.f0&&ph<FMX,
+   inF=ph===pr/* 範囲の端（φ_r = 0 など）では片側の傾き．範囲の外は 0 */,
    dzf=K.etac*AF/((1-z)*(1-z))/G.df,
    ip=1/(G.dlp*p);
+  if(ph!==pr)ST.of++;
   o.eT=(d00+(d01-d00)*wp)*(1-wf)+(d10+(d11-d10)*wp)*wf;
   o.e=eA+(eB-eA)*wf+(inT?0:o.eT*(T-Tc));
   o.R=rA+(rB-rA)*wf; /* 表の温度の範囲の外は，端の c_v で e を直線に延ばす（R は端の値．SPEC-29 A） */

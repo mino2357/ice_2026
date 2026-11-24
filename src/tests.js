@@ -5096,7 +5096,7 @@ TST[29]=function*(){
  {
   const o={},G=T.G;
   let me=0,mr=0,n=0;
-  for(const pr of[.73125,1.00625,1.26875]){
+  for(const pr of[.00625,.25625,.73125,1.00625,1.26875]){
    const z=T.phi2z(pr/K.etac);
    for(let it=0;it<G.nT-1;it++){
     for(let ip=0;ip<G.np-1;ip++){
@@ -5201,8 +5201,8 @@ TST[29]=function*(){
   const ec=K.etac,g0=T.stat.sg,sg=T.solve([[1,2],[2,4]],[1,2],2),r2=T.solve([[2,1],[1,3]],[3,5],2),cnt=T.stat.sg-g0;
   T.stat.sg=g0;
   let nb=0,n=0;
-  for(const ph of[.5,.75,1,1.25,1.5])for(const Tk of[T.Tfr,1500,2500,3500])for(const p of[2e4,1e5,2e6,2e7]){n++;if(!T.eq(Tk,p,T.phi2z(ph/ec),ec).ok)nb++}
-  chkB(29,`平衡の解の収束：表の範囲の標本 ${n} 点（φ_r 0.5〜1.5，${T.Tfr}〜3500 K，20 kPa〜20 MPa）ですべて収束．特異な行列は「解けない」と返して数える．正則な行列は解く`,nb===0&&sg===null&&cnt===1&&!!r2&&Math.abs(r2[0]-.8)<=1e-12&&Math.abs(r2[1]-1.4)<=1e-12,`未収束 ${nb}／${n}，特異：${sg===null?'解けない':'解いた'}`)
+  for(const ph of[0,.25,.5,.75,1,1.25,1.5])for(const Tk of[T.Tfr,1500,2500,3500])for(const p of[2e4,1e5,2e6,2e7]){n++;if(!T.eq(Tk,p,T.phi2z(ph/ec),ec).ok)nb++}
+  chkB(29,`平衡の解の収束：表の範囲の標本 ${n} 点（φ_r 0〜1.5，${T.Tfr}〜3500 K，20 kPa〜20 MPa）ですべて収束．特異な行列は「解けない」と返して数える．正則な行列は解く`,nb===0&&sg===null&&cnt===1&&!!r2&&Math.abs(r2[0]-.8)<=1e-12&&Math.abs(r2[1]-1.4)<=1e-12,`未収束 ${nb}／${n}，特異：${sg===null?'解けない':'解いた'}`)
  }
 /* 12：運転中に熱物性を切り替えたサイクルは平均に入れない（REQ-29 の 10） */
  {
@@ -5245,6 +5245,17 @@ TST[29]=function*(){
    if(!(wR<=1e-12&&wQ===0&&dn===0))bad.push(`φ ${ph}，${p/1e3} kPa：R の変化 ${wR.toExponential(1)}，最大の |∂R/∂T| ${wQ.toExponential(1)}，c_v の減り ${dn.toFixed(3)}`)
   }
   chkB(29,'凍結の温度の下（1650〜1700 K）：既燃ガスの R_b が一定（相対 1e-12），∂R_b/∂T = 0，c_v が温度とともに減らない（φ 0.7，1，1.3，200 kPa と 5 MPa）',bad.length===0,bad.join('；')||'6 / 6')
+ }
+/* 15：表の当量比の範囲（REQ-29 の 11）．始動の直後（ポート噴射では吸気ポートに燃料がまだ無い）から 1 s，当量比の設定の下限と上限で，物性を求めた φ_r が表の外に出ない */
+ {
+  const r=[];
+  for(const inj of[0,1])for(const phi of[.6,1.4]){
+   const c=new Core({...mkP(),cvar:0,gam:2,inj,phi}),n0=GAS.stat.of;
+   c.start();
+   yield*runC(c,1);
+   r.push([inj,phi,GAS.stat.of-n0,c.s.cyc,c.s.div])
+  }
+  chkB(29,'表の当量比の範囲：ポート噴射と直噴，φ 0.6 と 1.4，始動から 1 s で，既燃ガスの物性を求めた φ_r が表の範囲の外に出た回数が 0',r.every(q=>q[2]===0&&q[3]>=5&&!q[4]),r.map(q=>`${q[0]?'直噴':'ポート噴射'} φ ${q[1]}：${q[2]} 回（${q[3]} サイクル）`).join('／'))
  }
 };
 TST[30]=function*(){
