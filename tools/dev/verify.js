@@ -31,7 +31,8 @@ for(const f of ch){
 const steps=[['点検（npm run check）','npm',['run','check','--silent']],['ビルド','npm',['run','build','--silent']]];
 const run=(nm,a)=>steps.push([nm,'node',['tools/dev/run.js','--noperf',...a]]);
 if(bit)steps.push(['第25版とのビット比較','node',['tools/dev/bitcheck.js','--chromium']]);
-if(full)steps.push(['全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）','node',['tools/dev/shard.js']]);
+/* 全項目では重い検査（仕様書 9 節の 6）を省く（--quick）．変わったテストだけを実行するときは省かない */
+if(full)steps.push(['全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js）','node',['tools/dev/shard.js','--quick']]);
 else{if(only.size)run('TEST-'+[...only].sort((a,b)=>a-b).join('，')+'（360×640）',['--only',[...only].sort((a,b)=>a-b).join(',')]);if(ui)run('画面のモード（360×640）',['--ui'])}
 if(ui)run('画面のモード（820×1180）',['--ui','--vp','820x1180']);
 const plan=steps.slice(2).map(s=>s[0]).join(' ＋ ');

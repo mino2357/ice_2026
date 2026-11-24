@@ -7,6 +7,7 @@
      --time   テストごとの所要時間を表示
      --off    MathJax を遮断（オフラインに相当）
      --noperf 性能の記録（時間の検査）を判定しない（記録と表示だけ．npm run verify が使う．SPEC-20 B の 10）
+     --quick  重い検査（仕様書 9 節の 6 の一覧）を省く（npm run verify の段階 1 が使う）
      --ui     画面のモード（[U] の項目だけ．npm test の 5 通りと同じ．SPEC-20 B の 9）
      --file   成果物の代わりに実行する HTML（前の版との比較に使う）
      --json   検査の一覧を JSON で保存（tools/dev/coverage.js の入力）
@@ -19,15 +20,16 @@ const URL='file://'+path.resolve(typeof opt('file')==='string'?opt('file'):path.
 (async()=>{const b=await chromium.launch(),c=await b.newContext({viewport:{width:W,height:H},hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
 await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!opt('off')&&u.startsWith(MJ)){const f=path.join(MJD,u.slice(MJ.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}})}return rt.abort()});
 p.on('pageerror',e=>errs.push(e.message));await p.goto(URL);await p.waitForTimeout(300);
-await p.evaluate(([only,ui,pj])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{if(v===1&&cur){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;cur=0}d=v}});
+await p.evaluate(([only,ui,pj,quick])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{if(v===1&&cur){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;cur=0}d=v}});
   /* テストごとの所要時間：ST[i] が 'run' になった時刻の差．最後のテストは __done が 1 になった時点で締める（以前は 20 ms ごとの見回りで締めていたので，結果を読むのが先になると最後のテストが落ちた） */
   const tm=setInterval(()=>{for(let i=1;i<=NT;i++)if(ST[i]==='run'&&cur!==i){const now=performance.now();if(cur)window.__t[cur]=(window.__t[cur]||0)+now-last;cur=i;last=now}if(d===1)clearInterval(tm)},20);
-  show(3);runAll(only||null,ui,pj)},[only,!!opt('ui'),opt('noperf')?0:1]);
+  RUN.quick=quick;show(3);runAll(only||null,ui,pj)},[only,!!opt('ui'),opt('noperf')?0:1,opt('quick')?1:0]);
 /* 打ち切りは固まったときの止め．所要時間でテストを規定しない（利用者の方針．CLAUDE.md の 10）ので長めにとる */
 await p.waitForFunction(()=>window.__done===1,null,{timeout:1800000});
-const r=await p.evaluate(()=>({sum:document.getElementById('sm').textContent,maxF:RUN.maxF,maxId:RUN.maxId,total:RUN.total,t:window.__t,TR}));
+const r=await p.evaluate(()=>({skip:RUN.skip||[],sum:document.getElementById('sm').textContent,maxF:RUN.maxF,maxId:RUN.maxId,total:RUN.total,t:window.__t,TR}));
 console.log(W+'x'+H,r.sum,'最長フレーム間隔',Math.round(r.maxF),'ms（TEST-'+r.maxId+'）');
 for(const k of Object.keys(r.TR).sort((a,b)=>a-b))for(const q of r.TR[k])if(opt('names')||!q.ok||q.over)console.log((q.over?(q.ok?'  性能 ':'  FAIL '):q.ok?'  ok   ':'  FAIL ')+'TEST-'+String(k).padStart(2,'0')+' | '+q.n+' | 実測 '+String(q.val).slice(0,160)+' | 基準 '+String(q.ref).slice(0,80));
+if(r.skip.length)console.log('段階 1 で省いた重い検査（--quick）：'+r.skip.join('，'));
 if(opt('time'))console.log('所要時間 [s]',Object.keys(r.t).sort((a,b)=>a-b).map(k=>k+':'+(r.t[k]/1e3).toFixed(1)).join(' '));
 if(typeof opt('json')==='string')fs.writeFileSync(opt('json'),JSON.stringify(r.TR));
 if(typeof opt('md')==='string'){const esc=x=>String(x).replace(/\|/g,'／').replace(/\n/g,' '),names=await p.evaluate(()=>TNAME),L=['# アプリ内テストの実測値（第26版）','','`node tools/dev/run.js --md docs/measured_v26.md` で作った一覧（手で書き換えない）．ヘッドレス Chromium，ビューポート '+W+' × '+H+'．'+r.sum.replace(/\s+/g,' ')+'．','','仕様書 8 節のテスト項目に書いた「（実測 …）」のうち第25版の値のままのものは，この一覧の値が第26版（熱物性の既定が化学平衡，噴射方式の既定が直噴）での値である．所要時間とフレーム間隔は実行する計算機で変わる．',''];
