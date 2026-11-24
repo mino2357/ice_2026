@@ -1,6 +1,6 @@
 {
  "tier1": {
-  "at": "2026-11-24T15:00:08.549Z",
+  "at": "2026-11-24T20:44:52.533Z",
   "plan": "全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
@@ -21,7 +21,7 @@
    "src/tests.js#TST-09": "b5d83cc7fe2e4786",
    "src/tests.js#TST-10": "522745e797f16e62",
    "src/tests.js#TST-11": "bcf117c575165c6d",
-   "src/tests.js#TST-12": "fedb83087415f72c",
+   "src/tests.js#TST-12": "b357c2214dd05ba6",
    "src/tests.js#TST-13": "9d5d2859c38ebb53",
    "src/tests.js#TST-14": "fb35449b4a1c5f63",
    "src/tests.js#TST-15": "98d9d43b9448889b",
@@ -35,7 +35,7 @@
    "src/tests.js#TST-23": "d798082b8eaae4d3",
    "src/tests.js#TST-24": "161da42ea76253e9",
    "src/tests.js#TST-25": "a57efefd221fe9f1",
-   "src/tests.js#TST-26": "d8157cac0f1c294d",
+   "src/tests.js#TST-26": "6c3337eb1cabad50",
    "src/tests.js#TST-27": "f5b4ff593fae6bfc",
    "src/tests.js#TST-29": "1732101f7aacf4c4",
    "src/tests.js#TST-30": "5ed02b819ab558c6",
@@ -47,7 +47,7 @@
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "812d8d7a775d6414",
+   "src/tests.js#common": "4e329c04420f17b0",
    "src/ui.js": "d0e452622ba23754",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
@@ -171,7 +171,7 @@
    "docs/specification/s6.md": "1840a7d7d60ed31a",
    "docs/specification/s7.md": "1e05c396199fc7a5",
    "docs/specification/s8.md": "3127d5f7fd5207c0",
-   "docs/specification/s9.md": "1d883e38f8ae0bdb",
+   "docs/specification/s9.md": "2c4db97465b9bd31",
    "docs/gui/REQ-15.md": "ef21e49deb5e097b",
    "docs/gui/REQ-16.md": "cd830e1134187536",
    "docs/gui/REQ-17.md": "361f96c8bce51a32",
@@ -239,7 +239,7 @@
    "tests/headless.js": "f65e88bfb8b6ae40",
    "tools/dev/run.js": "4da502f53b240542",
    "tools/dev/shard.js": "bab108d60ab2fafd",
-   "tools/dev/times.json": "57bddfbc84edefa0"
+   "tools/dev/times.json": "82f366908f30444f"
   }
  },
  "approved": {

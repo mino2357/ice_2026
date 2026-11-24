@@ -753,8 +753,8 @@ TST[11]=function*(){
   const k1=s4.rec.k.find(q=>q.t>=1);
   chkB(11,'S4：スターターを使わず，始動から 1 s で N̄ > 1000 rpm',k1.N>1000,k1.N.toFixed(0)+' rpm')
  }
-/* 5：燃料を止めると駆動して回転数を保つ */
- {
+/* 5：燃料を止めると駆動して回転数を保つ．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(11,'燃料を止めた S4（8 s）')){
   const c=s4.c.clone();
   c.s.fuel=0;
   const k=[];
@@ -762,15 +762,19 @@ TST[11]=function*(){
   const q=k.filter(o=>o.t>c.s.t-3),Nq=q.map(o=>o.N);
   chkB(11,'燃料を止めた S4（8 s）：駆動して最後の 3 s の N̄ が 1500 ±25 rpm，T_c < 0（駆動），完爆の状態のまま',mdev(Nq,1500)<=25&&q.every(o=>o.fc<0)&&c.s.fired===1,`最大偏差 ${mdev(Nq,1500).toFixed(1)} rpm，T_c ${mean(q.map(o=>o.fc)).toFixed(2)} N·m`)
  }
-/* 6，7：容量の判定 */
- const s6=yield*scen('S6'),a=s6.rec.k.slice(s6.n1);
- chkB(11,'S6（定格 3 N·m）：T_c = −T_max に張り付き UNDERPOWER',s6.fc10===-3&&s6.up>=2,`T_c=${s6.fc10} N·m, ${s6.up.toFixed(1)} s`);
- chkB(11,'S6：張り付きの間に |I_T| が増え続けない',Math.abs(s6.If10)<=Math.abs(s6.If5)+1e-12,`${s6.If5.toFixed(4)} → ${s6.If10.toFixed(4)}`);
- const tr=a.find(q=>Math.abs(q.fc)<3);
- chkB(11,'S6：目標を届く値（2000 rpm）にすると 5 s 以内に張り付きが解ける',tr&&tr.t-a[0].t<=5,tr?(tr.t-a[0].t).toFixed(2)+' s':'解けず','≤ 5 s');
- chkB(11,'S6：再整定（2000 ±50 rpm）',Math.abs(a[a.length-1].N-2000)<=50,a[a.length-1].N.toFixed(0)+' rpm');
- const s4b=yield*scen('S4b');
- chkB(11,'大気圧 80 kPa で軸トルク減少（動力計制御）',avg(s4b.rec,5,'tb')<avg(s4.rec,5,'tb'),`${avg(s4.rec,5,'tb').toFixed(1)} → ${avg(s4b.rec,5,'tb').toFixed(1)} N·m`);
+/* 6，7：容量の判定．S6 と大気圧 80 kPa は重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(11,'S6（定格 3 N·m の張り付きと解除）')){
+  const s6=yield*scen('S6'),a=s6.rec.k.slice(s6.n1);
+  chkB(11,'S6（定格 3 N·m）：T_c = −T_max に張り付き UNDERPOWER',s6.fc10===-3&&s6.up>=2,`T_c=${s6.fc10} N·m, ${s6.up.toFixed(1)} s`);
+  chkB(11,'S6：張り付きの間に |I_T| が増え続けない',Math.abs(s6.If10)<=Math.abs(s6.If5)+1e-12,`${s6.If5.toFixed(4)} → ${s6.If10.toFixed(4)}`);
+  const tr=a.find(q=>Math.abs(q.fc)<3);
+  chkB(11,'S6：目標を届く値（2000 rpm）にすると 5 s 以内に張り付きが解ける',tr&&tr.t-a[0].t<=5,tr?(tr.t-a[0].t).toFixed(2)+' s':'解けず','≤ 5 s');
+  chkB(11,'S6：再整定（2000 ±50 rpm）',Math.abs(a[a.length-1].N-2000)<=50,a[a.length-1].N.toFixed(0)+' rpm')
+ }
+ if(!skipQ(11,'大気圧 80 kPa で軸トルク減少')){
+  const s4b=yield*scen('S4b');
+  chkB(11,'大気圧 80 kPa で軸トルク減少（動力計制御）',avg(s4b.rec,5,'tb')<avg(s4.rec,5,'tb'),`${avg(s4.rec,5,'tb').toFixed(1)} → ${avg(s4b.rec,5,'tb').toFixed(1)} N·m`)
+ }
  const s5=yield*scen('S5');
  chkB(11,'S5（定格 10 N·m，全開）：T_c = T_max に張り付き OVERLOAD',s5.c.s.fc===dynMax(s5.c.P,s5.c.s.y[1])&&s5.c.s.ov>=2,`T_c=${s5.c.s.fc} N·m, ${s5.c.s.ov.toFixed(1)} s`);
 /* 8：切替 */
@@ -784,8 +788,8 @@ TST[11]=function*(){
   const okB=c.P.Tl===Math.max(0,f1)&&c.s.fc===c.P.Tl&&Math.abs(c.s.fc-f1)<=1e-3&&Math.abs(c.s.al-a1)<=.01*D;
   chkB(11,'モードの切替で指令が連続（A → B：α_manual ← α，|ΔT_c| ≤ 10⁻³ N·m．B → A：T_load ← max(0, T_c)，|Δα| ≤ 0.01°）',okA&&okB,`A→B：α ${(a0/D).toFixed(3)} → ${(a1/D).toFixed(3)}°，T_c ${f0.toFixed(4)} → ${f1.toFixed(4)}／B→A：α → ${(c.s.al/D).toFixed(3)}°，T_c → ${c.s.fc.toFixed(4)} N·m`)
  }
-/* 9：定格と目標によらない整定（W3000 の続き．(a) そのまま 4 s，(b) 既定の定格・目標 4000 rpm で 8 s） */
- {
+/* 9：定格と目標によらない整定（W3000 の続き．(a) そのまま 4 s，(b) 既定の定格・目標 4000 rpm で 8 s）．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(11,'定格と目標によらない整定')){
   const w3=yield*scen('W3000'),res=[];
   for(const [nm,o,T] of[['(a) 定格 200 N·m，目標 3000 rpm',{},4],['(b) 既定の定格，目標 4000 rpm',{Tr:IT.Tr.d,nt:4000},4]]){
    const c=w3.c.clone();
@@ -895,19 +899,22 @@ TST[12]=function*(){
  chkB(12,'モードBで I_α が更新されない',w.every(q=>q.Ip===w[0].Ip));
  const s4m=yield*scen('S4'),cm=lastM(s4m.rec,25).map(m=>m.ca50);
  chkB(12,'MBT：S4 定常の CA50 が ATDC 10 ± 0.5°（最後の 25 サイクル）',cm.every(v=>Math.abs(v-10)<=.5),`${Math.min(...cm).toFixed(2)}〜${Math.max(...cm).toFixed(2)}°`);
- const sx=s4m.c.s.spa,
-  run2=function*(cfg){
-   const q=s4m.c.clone();
-   Object.assign(q.P,cfg);
-   const ims=[];
-   yield*runC(q,2,{cyc:cc=>ims.push(cc.lastM.imep)});
-   return mean(ims.slice(-10))
-  },
-  ia=yield*run2({}),
-  sw=[];
- for(const dd of[-8,-4,4,8])sw.push(yield*run2({sauto:0,spb:sx+dd}));
- const mx=Math.max(ia,...sw);
- chkB(12,'MBT：自動値の IMEP が ±4°, ±8° 固定の最大値の 99% 以上',ia>=.99*mx,`自動 ${sx.toFixed(1)}°: ${(ia/1e3).toFixed(1)} kPa / 最大 ${(mx/1e3).toFixed(1)} kPa`);
+/* 重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(12,'MBT：自動値と ±4°，±8° 固定の IMEP')){
+  const sx=s4m.c.s.spa,
+   run2=function*(cfg){
+    const q=s4m.c.clone();
+    Object.assign(q.P,cfg);
+    const ims=[];
+    yield*runC(q,2,{cyc:cc=>ims.push(cc.lastM.imep)});
+    return mean(ims.slice(-10))
+   },
+   ia=yield*run2({}),
+   sw=[];
+  for(const dd of[-8,-4,4,8])sw.push(yield*run2({sauto:0,spb:sx+dd}));
+  const mx=Math.max(ia,...sw);
+  chkB(12,'MBT：自動値の IMEP が ±4°, ±8° 固定の最大値の 99% 以上',ia>=.99*mx,`自動 ${sx.toFixed(1)}°: ${(ia/1e3).toFixed(1)} kPa / 最大 ${(mx/1e3).toFixed(1)} kPa`)
+ }
  chk(12,'MBT：x_b(θ_50) = 0.5（Wiebe）',.5,1-Math.exp(-K.wa*Math.pow(z50(),K.wm+1)),1e-12);
  {
   const q=new Core({...mkPT(),sauto:0,spb:23});
@@ -924,6 +931,7 @@ TST[12]=function*(){
   chkB(12,'α_min ≤ α_max（α_max = 5°，T_aux = 20 N·m）',almin({...P,Ta:20,amax:5*D})===5*D)
  }
  for(const Ta of[0,6,10]){
+  if(Ta!==6&&skipQ(12,`冷間始動 T_aux = ${Ta} N·m`))continue;/* 段階 1（RUN.quick）では 6 N·m だけ（仕様書 9 節の 6） */
   const q=yield*scen('CS'+Ta),nm=`冷間始動 T_aux = ${Ta} N·m：`;
   chkB(12,nm+'3 s 以内に完爆し，停止しない',q.tf!=null&&q.tf<=3&&!q.stop&&q.c.s.fired===1,q.tf==null?'完爆せず':q.stop?'停止':'完爆 '+q.tf.toFixed(2)+' s','≤ 3 s，停止なし');
   chkB(12,nm+'完爆後の N̄ の最小 ≥ 450 rpm',!q.stop&&q.Nmin>=450,q.Nmin.toFixed(0)+' rpm','≥ 450');
@@ -1201,8 +1209,8 @@ TST[13]=function*(){
   chkB(13,'最後の段の使い回し（BS3，全開 3000 rpm，200 ステップ）：使い回す値が，同じ状態での右辺と浮動小数点数として同じ．使い回せるステップが 9 割以上',fsn>=180&&fsok===fsn,`使い回せる ${fsn}／200，一致 ${fsok}`);
   chkP(13,'既定の解法の 1 サイクルの計算時間（全開 3000 rpm）',ms,8,'ms',2);
  }
-/* 13：イベントの取りこぼしが無い（回転数が速く変わる始動と，イベントが重なる・ごく近い設定）．終わりの時点で，どのイベントの処理の回数も，サイクルの終端の回数と 1 以内 */
- {
+/* 13：イベントの取りこぼしが無い（回転数が速く変わる始動と，イベントが重なる・ごく近い設定）．終わりの時点で，どのイベントの処理の回数も，サイクルの終端の回数と 1 以内．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(13,'イベントの取りこぼしが無い')){
   const out=[];
   let ok=true;
   for(const[nm,o,T]of[
@@ -1393,8 +1401,8 @@ TST[13]=function*(){
    chkB(13,'互換：設定で DOPRI5 と熱物性 γ(T) を選ぶと，第26版に計算を変えると決めた変更（θ を揃える，下死点のイベント，動力計制御の張り付きの判定）を当てたものと同じ値（動力計制御・全開・目標 3000 rpm の始動から 2 s と，スロットル制御の始動から 3 s の，時刻，ω，p，IMEP，サイクル数．相対 1e-4．処理系が同じならビット単位で同じことを tools/dev/bitcheck.js で確かめる）',e<=1e-4,'相対差の最大 '+e.toExponential(1),'≤ 1e-4')
   }
  }
-/* 13：回転数が自由な運転（アイドル S2，動力計制御 S4）で，BS3 と DOPRI5 の平均回転数と IMEP が合う */
- {
+/* 13：回転数が自由な運転（アイドル S2，動力計制御 S4）で，BS3 と DOPRI5 の平均回転数と IMEP が合う．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(13,'回転数が自由な運転の BS3 と DOPRI5')){
   const out=[];
   let ok=true;
   for(const id of['S2','S4']){
@@ -4598,20 +4606,24 @@ TST[26]=function*(){
  if(!RUN.ui){
   chkB(26,'各点で ω が目標と一致し，サイクルの時間から求めた回転数も目標と一致（どちらも相対誤差 10⁻⁹）',p.every(o=>Math.abs(o.Nw-o.N)<=1e-9*o.N&&Math.abs(o.Na-o.N)<=1e-9*o.N),'最大の相対差 '+Math.max(...p.map(o=>Math.abs(o.Na-o.N)/o.N)).toExponential(1),'≤ 10⁻⁹');
   chkB(26,'P_b = T_b ω，BMEP V_d = 4π T_b（10⁻⁹）',p.every(o=>Math.abs(o.pb-o.tb*w(o))<=1e-9*Math.abs(o.pb)&&Math.abs(o.bmep*geo(mkPT()).Vd-P4*o.tb)<=1e-9*Math.abs(P4*o.tb)));
-  const S2=new Sweep({...mkPT()});
-  while(!S2.run(10))yield;
-  chkB(26,'同じ設定で2回の計測が完全一致',JSON.stringify(S2.pts)===JSON.stringify(p));
-  const t0=performance.now();
-  A5=yield*swRun('a50',{...mkPT()},undefined,50);
-  A1=yield*swRun('a10',{...mkPT()},undefined,10);
-  const el=(performance.now()-t0)/1e3+S.el;
-  chkB(26,'開度 3 つ（90，50，10°）× 28 点の計測（厳格＋流量，上り）が全点で終わる',[S,A5,A1].every(x=>x.pts.length===28),[S,A5,A1].map(x=>x.pts.length).join('，')+' 点','28 点');
-  chkP(26,'開度 3 つ × 28 点の計測の所要',el,30,'s',2);
+/* 2 回目の計測と開度 50°，10° の計測．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6）．省いたときは開度の重ね描きの検査も省く */
+  if(!skipQ(26,'2 回目の計測，開度 50°・10° の計測（と開度の重ね描き）')){
+   const S2=new Sweep({...mkPT()});
+   while(!S2.run(10))yield;
+   chkB(26,'同じ設定で2回の計測が完全一致',JSON.stringify(S2.pts)===JSON.stringify(p));
+   const t0=performance.now();
+   A5=yield*swRun('a50',{...mkPT()},undefined,50);
+   A1=yield*swRun('a10',{...mkPT()},undefined,10);
+   const el=(performance.now()-t0)/1e3+S.el;
+   chkB(26,'開度 3 つ（90，50，10°）× 28 点の計測（厳格＋流量，上り）が全点で終わる',[S,A5,A1].every(x=>x.pts.length===28),[S,A5,A1].map(x=>x.pts.length).join('，')+' 点','28 点');
+   chkP(26,'開度 3 つ × 28 点の計測の所要',el,30,'s',2)
+  }
   const it=p.map(o=>o.tb),ip=p.map(o=>o.pb),kt=it.indexOf(Math.max(...it)),kp=ip.indexOf(Math.max(...ip));
   chkB(26,'全開：T_b の最大が端点以外，P_b 最大の回転数 > T_b 最大の回転数，全点整定',kt>0&&kt<p.length-1&&S.Ns[kp]>S.Ns[kt]&&p.every(o=>o.ok),`T_b 最大 ${Math.max(...it).toFixed(1)} N·m @ ${S.Ns[kt]}，P_b 最大 ${(Math.max(...ip)/1e3).toFixed(2)} kW @ ${S.Ns[kp]} rpm`);
   yield;
   UD=null;
-  {
+/* 重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6）．省いたときは収束の判定の往復差の表示を確かめない */
+  if(!skipQ(26,'手順の一致（上り・往復・独立 × 3 設定）')){
    let worst='',ok=true;
    for(const[nm,cfg]of[['既定',{run:1,Lr:.45}],['L_r 900',{run:1,Lr:.9}],['ランナ OFF',{run:0}]]){
     const P=()=>({...mkPT(),...cfg}),R={};
@@ -4783,7 +4795,7 @@ TST[26]=function*(){
  }
  yield;
  if(!RUN.ui){
-  {
+  if(A5||!RUN.quick){
    const ordT=p.every((o,i)=>A1.pts[i].tb<A5.pts[i].tb),
     ordV=p.every((o,i)=>A1.pts[i].ev<A5.pts[i].ev),
     mono=(g=>g(1000)>g(4000)&&g(4000)>g(7000))(N=>A1.pts.find(o=>o.N===N).tb),
@@ -4807,10 +4819,13 @@ TST[26]=function*(){
   {
    const C=SWC.crit.strict,
     bad=p.filter(o=>o.ok&&!(o.r&&o.r.T<=C.tolR*Math.abs(o.tb)+C.tolA&&o.r.S<=C.tolS&&o.r.ev<=C.tolR&&o.r.mth<=C.tolR&&o.r.pin<=C.tolR&&o.cyc>=C.nmin)).length;
-   SW.cur={sets:UD.sets,pts:UD.pts,sig:swSig(),el:1,P:{...LP},step:SW.step,o:UD.o};
-   swText();
-   const ud=$('swt').textContent;
-   chkB(26,'収束の判定：厳格＋流量で整定した全点の幅（T_b，MBT，η_v，ṁ_th，p_in）が判定値以下・6 サイクル以上，往復で往復差を表示',bad===0&&p.every(o=>o.ok)&&/往復差 [0-9.]+%/.test(ud),`違反 ${bad}，最少サイクル ${Math.min(...p.map(o=>o.cyc))}，「${ud.slice(0,40)}」`)
+   let ud='（往復は段階 1 で省いた）';
+   if(UD){
+    SW.cur={sets:UD.sets,pts:UD.pts,sig:swSig(),el:1,P:{...LP},step:SW.step,o:UD.o};
+    swText();
+    ud=$('swt').textContent
+   }
+   chkB(26,'収束の判定：厳格＋流量で整定した全点の幅（T_b，MBT，η_v，ṁ_th，p_in）が判定値以下・6 サイクル以上，往復で往復差を表示',bad===0&&p.every(o=>o.ok)&&(UD?/往復差 [0-9.]+%/.test(ud):RUN.quick),`違反 ${bad}，最少サイクル ${Math.min(...p.map(o=>o.cyc))}，「${ud.slice(0,40)}」`)
   }
   {
    const PT={...mkPT()},A=new Sweep(PT,[1000,4000],90,{nmin:12,nmax:60});
