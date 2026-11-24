@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 報告のページ（report.html）を作る：vvt0.json の格子と最適点を読み，既定の VVT と最適な初期 VVT の始動を細かく計算して，
+/* 報告のデータ（report_data.json．plot_report.py が図にする）とページ（report.html）を作る：vvt0.json の格子と最適点を読み，既定の VVT と最適な初期 VVT の始動を細かく計算して，
    report.tpl.html の /*DATA*\/ に埋め込む．
    使い方： node experiments/startup/report_data.js */
 'use strict';
@@ -32,6 +32,7 @@ for(const pi of [...new Set([-40,0,best.phin,40])].sort((a,b)=>a-b)){const a=rea
 const grid=V.grid.concat(V.fine).map(g=>g.vhit?{phin:g.phin,phex:g.phex,vhit:1}:{phin:g.phin,phex:g.phex,ok:g.ok,Rmax:r1(g.Rmax),Tst:r1(g.Tst),tFire:g.tFire.map(r3),nc:g.nc,tSettle:g.tSettle.map(v=>v===v?r2(v):null),Est:g.Est.map(r1)});
 const valves=(()=>{const P=mkP();return {ivo:P.ivo/D,ivc:P.ivc/D,evo:P.evo/D,evc:P.evc/D}})();
 const data={S:{...S,Tst:undefined},LOADS,MARGIN,NC_MAX:V.NC_MAX,T_MAX:V.T_MAX,best:{phin:best.phin,phex:best.phex},valves,grid,cases,react};
+fs.writeFileSync(path.resolve(__dirname,'report_data.json'),JSON.stringify(data));
 const tpl=fs.readFileSync(path.resolve(__dirname,'report.tpl.html'),'utf8');
 fs.writeFileSync(path.resolve(__dirname,'report.html'),tpl.replace('/*DATA*/null',JSON.stringify(data)));
 console.log('report.html：'+(fs.statSync(path.resolve(__dirname,'report.html')).size/1e3).toFixed(0)+' kB');
