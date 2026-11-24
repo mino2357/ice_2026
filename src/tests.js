@@ -839,6 +839,33 @@ TST[11]=function*(){
  }
 /* 10：既定 */
  chkB(11,'既定：設定「回転数の制御」の既定値が動力計（1），既定の設定でも動力計制御',IT.mode.d===1&&mkP().mode===1,`項目 ${IT.mode.d}，mkP ${mkP().mode}`,'1，1')
+/* 13：張り付きの判定は平均回転数の偏差で作った指令で（REQ-11 の 6，SPEC-11 の 3，6） */
+ {
+  const c0=new Core(mkP());
+  c0.start();
+  yield*runC(c0,1);
+  const dt=1e-6,
+   nt=1500,
+   one=(eN,ed,If,ov)=>{
+    const q=c0.clone();
+    q.P.nt=nt;
+    const om=(nt+eN)*PI/30;
+    q.s.y[1]=om;
+    q.s.Nb=nt+ed;
+    q.s.If=If;
+    q.s.ov=ov;
+    q.s.up=ov;
+    q.ecu(dt,om);
+    return{dI:q.s.If-If,ov:q.s.ov-ov,up:q.s.up-ov,Tm:dynMax(q.P,om)}
+   },
+   a=one(400,10,50,0),
+   b=one(-400,10,99,0),
+   cc=one(400,-10,-99,0),
+   d=one(-300,150,80,1),
+   e=one(300,-150,-80,1),
+   ok=c0.s.fired===1&&c0.s.mode===1&&a.Tm===100&&a.dI>0&&b.dI===0&&cc.dI===0&&Math.abs(d.ov-dt)<=1e-12&&Math.abs(e.up-dt)<=1e-12;
+  chkB(11,'張り付きの判定は平均回転数の偏差で作った指令 T̄_c：(a) 瞬時の指令だけが上限 → I_T が増える，(b)(c) 平均の指令だけが上限・下限 → I_T が変わらない，(d)(e) 平均の指令が上限・下限で N̄ が目標 ±100 rpm の外 → OVERLOAD・UNDERPOWER の計時が進む',ok,`(a) ΔI ${a.dI.toExponential(1)}，(b) ${b.dI.toExponential(1)}，(c) ${cc.dI.toExponential(1)}，(d) 計時 ${d.ov.toExponential(1)} s，(e) ${e.up.toExponential(1)} s`)
+ }
 };
 TST[12]=function*(){
  const s2=yield*scen('S2');
@@ -1346,7 +1373,7 @@ TST[13]=function*(){
    b=e(.05);
   chkB(13,'BS3 の次数：刻みを半分にすると 1 ステップの誤差が 1/16，誤差の見積もり（3 次と 2 次の差）が 1/8（±10%）',Math.abs(a[0]/b[0]/16-1)<=.1&&Math.abs(a[1]/b[1]/8-1)<=.1,`${(a[0]/b[0]).toFixed(2)}，${(a[1]/b[1]).toFixed(2)}`,'16，8')
  }
-/* 13：互換（REQ-13 の 15）：DOPRI5 と熱物性 γ(T) を選ぶと第26版と同じ値（第26版の値は commit 93f480b を Node.js で実行して求めた．化学平衡の値は REQ-25 の 6 で変わるので比べない） */
+/* 13：互換（REQ-13 の 15）：DOPRI5 と熱物性 γ(T) を選ぶと第26版と同じ値（第26版の値は commit 93f480b に，計算を変えると決めた変更（tools/dev/bitcheck.js の fix，fix26）を当てて Node.js で実行して求めた．化学平衡の値は REQ-25 の 6 で変わるので比べない） */
  {
   const a=new Core({...mkP(),cvar:0,mode:1,alm:90*D,nt:3000,sol:1,gam:0}),
    b=new Core({...mkP(),cvar:0,mode:0,sol:1,gam:0});
@@ -1356,11 +1383,11 @@ TST[13]=function*(){
   yield*runC(b,3);
   const va=[a.s.t,a.s.y[1],a.s.y[2],a.lastM.imep,a.s.cyc],
    vb=[b.s.t,b.s.y[1],b.s.y[2],b.lastM.imep,b.s.cyc],
-   ra=[2.0000159014308676,306.42449191785664,464804.11500222684,1103436.186909774,47],
-   rb=[3.000037960377129,89.42289317922796,92922.10082133336,-35582.19687220702,28];
+   ra=[2.000019579051014,312.79238000550055,111077.0868087778,1103971.865939392,46],
+   rb=[3.000038653983688,89.42286856621932,92922.72046980244,-35582.23262844208,28];
   {
    const rv=[...ra,...rb],vv=[...va,...vb],e=Math.max(...vv.map((v,i)=>Math.abs(v/rv[i]-1)));
-   chkB(13,'互換：設定で DOPRI5 と熱物性 γ(T) を選ぶと，第26版と同じ値（動力計制御・全開・目標 3000 rpm の始動から 2 s と，スロットル制御の始動から 3 s の，時刻，ω，p，IMEP，サイクル数．相対 1e-4．処理系が同じなら，第26版に θ を揃える変更だけを当てたものとビット単位で同じことを tools/dev/bitcheck.js で確かめる）',e<=1e-4,'相対差の最大 '+e.toExponential(1),'≤ 1e-4')
+   chkB(13,'互換：設定で DOPRI5 と熱物性 γ(T) を選ぶと，第26版に計算を変えると決めた変更（θ を揃える，下死点のイベント，動力計制御の張り付きの判定）を当てたものと同じ値（動力計制御・全開・目標 3000 rpm の始動から 2 s と，スロットル制御の始動から 3 s の，時刻，ω，p，IMEP，サイクル数．相対 1e-4．処理系が同じならビット単位で同じことを tools/dev/bitcheck.js で確かめる）',e<=1e-4,'相対差の最大 '+e.toExponential(1),'≤ 1e-4')
   }
  }
 /* 13：回転数が自由な運転（アイドル S2，動力計制御 S4）で，BS3 と DOPRI5 の平均回転数と IMEP が合う */

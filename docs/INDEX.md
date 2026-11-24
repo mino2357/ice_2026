@@ -20,33 +20,33 @@
 | 08 [U] | 壁面熱伝達と壁温 | `requirements/REQ-08.md`（780） | `specification/SPEC-08.md`（2684） | `specification/TEST-08.md`（965） | 551–567 | 26 27 | `core.js`:110,842,1433 `ui.js`:174 |
 | 09 | 筒内圧の式（開いた系の熱力学第一法則） | `requirements/REQ-09.md`（710） | `specification/SPEC-09.md`（2523） | `specification/TEST-09.md`（1673） | 623–650 | 02 05 06 | `core.js`:1000 |
 | 10 | 回転運動，摩擦，スターター | `requirements/REQ-10.md`（627） | `specification/SPEC-10.md`（2268） | `specification/TEST-10.md`（816） | 687–719 | 11 12 | – |
-| 11 | 電動式動力計と運転モード | `requirements/REQ-11.md`（2062） | `specification/SPEC-11.md`（5200） | `specification/TEST-11.md`（2802） | 720–721 | 10 12 13 18 22 31 35 | `core.js`:262,2089,2115 `ui.js`:180 |
-| 12 | ECU（スロットル開度の PI 制御と点火時期の自動最適化） | `requirements/REQ-12.md`（1055） | `specification/SPEC-12.md`（2696） | `specification/TEST-12.md`（2303） | 843–911 | 07 13 | `core.js`:264 |
-| 13 | 数値積分 | `requirements/REQ-13.md`（3027） | `specification/SPEC-13.md`（11929） | `specification/TEST-13.md`（7654） | 912–1067 | 03 04 07 08 10 12 14 25 26 29 30 32 33 | `core.js`:758,989,1138,1282,1529,1692… `ui.js`:74 |
-| 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（959） | `specification/SPEC-14.md`（3919） | `specification/TEST-14.md`（1906） | 1462–1544 | 11 12 13 15 18 29 | `core.js`:1050,1960,2518,2525 |
-| 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（2559） | `gui/SPEC-15.md`（9847） | `gui/TEST-15.md`（6178） | 1597–1693 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,32,55,73,169,193… |
-| 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5683） | `gui/TEST-16.md`（3776） | 2201–2390 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
-| 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4663） | `gui/TEST-17.md`（3653） | 2628–2762 | 11 18 26 30 | `plot.js`:18,55,86,89,164,294… |
-| 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2888–3148 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:111,172,558 |
-| 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1296） | `gui/TEST-19.md`（873） | 3213–3260 | 12 13 15 23 31 | `plot.js`:787,800 |
-| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1214） | `specification/SPEC-20.md`（6746） | `specification/TEST-20.md`（2158） | 3283–3283 | 01 10 13 15 16 17 24 25 26 31 32 33 34 35 36 37 | `ui.js`:995 |
-| 21 [U] | エンジン音 | `requirements/REQ-21.md`（1629） | `specification/SPEC-21.md`（9859） | `specification/TEST-21.md`（5963） | 3359–3404 | 02 18 22 23 27 36 | `core.js`:1145,2623 `audio.js`:15,21,32,38,49,112… `ui.js`:991 |
-| 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3934–4068 | 11 | – |
-| 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 4070–4175 | – | `ui.js`:484,486,489,558,568 |
-| 24 | 内部 EGR と点火時期の妥当性 | `requirements/REQ-24.md`（659） | `specification/SPEC-24.md`（967） | `specification/TEST-24.md`（1433） | 4241–4280 | 05 | – |
-| 25 [U] | 吸気ランナの慣性（慣性過給） | `requirements/REQ-25.md`（1072） | `specification/SPEC-25.md`（3857） | `specification/TEST-25.md`（2504） | 4290–4380 | 02 04 05 29 | `core.js`:1431,1596,1609 |
-| 26 [U] | 性能曲線タブ（回転数に対する特性の計測） | `requirements/REQ-26.md`（1429） | `specification/SPEC-26.md`（3254） `gui/SPEC-26B.md`（1876） | `specification/TEST-26.md`（3906） | 4474–4619 | 10 14 29 31 37 | `core.js`:470,2160,2180,2181,2209,2217… `plot.js`:238 `ui.js`:261,337 |
-| 27 [U] | 排気系（排気管の脈動と背圧） | `requirements/REQ-27.md`（1475） | `specification/SPEC-27.md`（7785） | `specification/TEST-27.md`（2486） | 4860–4922 | 04 08 14 21 25 29 | `core.js`:1015,1115,1247,1326,1337,1342… |
-| 28 | アイドルの妥当性 | `requirements/REQ-28.md`（413） | `specification/SPEC-28.md`（1010） | `specification/TEST-28.md`（462） | 5661–5683 | – | – |
-| 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（2040） | `specification/SPEC-29.md`（7178） `specification/SPEC-29B.md`（10900） | `specification/TEST-29.md`（6017） | 5032–5039 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,391,399,448… |
-| 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 5279–5293 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,675,1105,1279,1571 `plot.js`:480 `ui.js`:173 |
-| 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2954） | `gui/TEST-31.md`（1761） | 5502–5507 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:476 |
-| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5739–5742 | 03 21 33 34 | `core.js`:2600,2714,2729,2752,2771,2896… `plot.js`:1138,1264 `ui.js`:763,777,780 |
-| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5957–5985 | 01 03 10 12 14 29 30 32 | `core.js`:452,3008,3070,3097,3107 `plot.js`:1138,1189,1197,1213 `ui.js`:763,777,873 |
-| 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 6086–6090 | 32 | `core.js`:2635,3155,3157 `plot.js`:1452,1504 `ui.js`:777,884 |
-| 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 6257–6260 | 11 18 22 23 26 | `core.js`:238,242,247,2099 `plot.js`:446 `ui.js`:670 |
-| 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1356） | `specification/SPEC-36.md`（2141） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1861） | 6605–6606 | 07 13 15 | `core.js`:1526 `audio.js`:363,408 `ui.js`:991,993,1169 |
-| 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2589） | 6768–6775 | 26 | `core.js`:2331,2334,2490 `plot.js`:1551 `ui.js`:316,378 |
+| 11 | 電動式動力計と運転モード | `requirements/REQ-11.md`（2149） | `specification/SPEC-11.md`（5496） | `specification/TEST-11.md`（3397） | 720–721 | 10 12 13 18 22 31 35 | `core.js`:262,2090,2091,2118 `ui.js`:180 |
+| 12 | ECU（スロットル開度の PI 制御と点火時期の自動最適化） | `requirements/REQ-12.md`（1055） | `specification/SPEC-12.md`（2696） | `specification/TEST-12.md`（2303） | 870–938 | 07 13 | `core.js`:264 |
+| 13 | 数値積分 | `requirements/REQ-13.md`（3114） | `specification/SPEC-13.md`（11929） | `specification/TEST-13.md`（7838） | 939–1094 | 03 04 07 08 10 11 12 14 25 26 29 30 32 33 | `core.js`:758,989,1138,1282,1529,1692… `ui.js`:74 |
+| 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（959） | `specification/SPEC-14.md`（3919） | `specification/TEST-14.md`（1906） | 1489–1571 | 11 12 13 15 18 29 | `core.js`:1050,1960,2521,2528 |
+| 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（2559） | `gui/SPEC-15.md`（9847） | `gui/TEST-15.md`（6178） | 1624–1720 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,32,55,73,169,193… |
+| 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5683） | `gui/TEST-16.md`（3776） | 2228–2417 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
+| 17 [U] | グラフの軸・目盛・自動レンジ | `gui/REQ-17.md`（1032） | `gui/SPEC-17.md`（4663） | `gui/TEST-17.md`（3653） | 2655–2789 | 11 18 26 30 | `plot.js`:18,55,86,89,164,294… |
+| 18 [U] | 設定画面 | `gui/REQ-18.md`（909） | `gui/SPEC-18.md`（5499） | `gui/TEST-18.md`（2593） | 2915–3175 | 08 11 15 17 23 29 30 | `plot.js`:481 `ui.js`:111,172,558 |
+| 19 [U] | 機関断面図 | `gui/REQ-19.md`（669） | `gui/SPEC-19.md`（1296） | `gui/TEST-19.md`（873） | 3240–3287 | 12 13 15 23 31 | `plot.js`:787,800 |
+| 20 [U] | 検証の基盤 | `requirements/REQ-20.md`（1214） | `specification/SPEC-20.md`（6746） | `specification/TEST-20.md`（2158） | 3310–3310 | 01 10 13 15 16 17 24 25 26 31 32 33 34 35 36 37 | `ui.js`:995 |
+| 21 [U] | エンジン音 | `requirements/REQ-21.md`（1629） | `specification/SPEC-21.md`（9859） | `specification/TEST-21.md`（5963） | 3386–3431 | 02 18 22 23 27 36 | `core.js`:1145,2626 `audio.js`:15,21,32,38,49,112… `ui.js`:991 |
+| 22 [U] | 制御状態の表示 | `gui/REQ-22.md`（370） | `gui/SPEC-22.md`（1101） | `gui/TEST-22.md`（911） | 3961–4095 | 11 | – |
+| 23 [U] | 目標回転数とスロットル開度のスライダ | `gui/REQ-23.md`（694） | `gui/SPEC-23.md`（1218） | `gui/TEST-23.md`（1122） | 4097–4202 | – | `ui.js`:484,486,489,558,568 |
+| 24 | 内部 EGR と点火時期の妥当性 | `requirements/REQ-24.md`（659） | `specification/SPEC-24.md`（967） | `specification/TEST-24.md`（1433） | 4268–4307 | 05 | – |
+| 25 [U] | 吸気ランナの慣性（慣性過給） | `requirements/REQ-25.md`（1072） | `specification/SPEC-25.md`（3857） | `specification/TEST-25.md`（2504） | 4317–4407 | 02 04 05 29 | `core.js`:1431,1596,1609 |
+| 26 [U] | 性能曲線タブ（回転数に対する特性の計測） | `requirements/REQ-26.md`（1429） | `specification/SPEC-26.md`（3254） `gui/SPEC-26B.md`（1876） | `specification/TEST-26.md`（3906） | 4501–4646 | 10 14 29 31 37 | `core.js`:470,2163,2183,2184,2212,2220… `plot.js`:238 `ui.js`:261,337 |
+| 27 [U] | 排気系（排気管の脈動と背圧） | `requirements/REQ-27.md`（1475） | `specification/SPEC-27.md`（7785） | `specification/TEST-27.md`（2486） | 4887–4949 | 04 08 14 21 25 29 | `core.js`:1015,1115,1247,1326,1337,1342… |
+| 28 | アイドルの妥当性 | `requirements/REQ-28.md`（413） | `specification/SPEC-28.md`（1010） | `specification/TEST-28.md`（462） | 5688–5710 | – | – |
+| 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（2040） | `specification/SPEC-29.md`（7178） `specification/SPEC-29B.md`（10900） | `specification/TEST-29.md`（6017） | 5059–5066 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,391,399,448… |
+| 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 5306–5320 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,675,1105,1279,1571 `plot.js`:480 `ui.js`:173 |
+| 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2954） | `gui/TEST-31.md`（1761） | 5529–5534 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:476 |
+| 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5766–5769 | 03 21 33 34 | `core.js`:2603,2717,2732,2755,2774,2899… `plot.js`:1138,1264 `ui.js`:763,777,780 |
+| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5984–6012 | 01 03 10 12 14 29 30 32 | `core.js`:452,3011,3073,3100,3110 `plot.js`:1138,1189,1197,1213 `ui.js`:763,777,873 |
+| 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 6113–6117 | 32 | `core.js`:2638,3158,3160 `plot.js`:1452,1504 `ui.js`:777,884 |
+| 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 6284–6287 | 11 18 22 23 26 | `core.js`:238,242,247,2102 `plot.js`:446 `ui.js`:670 |
+| 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1356） | `specification/SPEC-36.md`（2141） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1861） | 6632–6633 | 07 13 15 | `core.js`:1526 `audio.js`:363,408 `ui.js`:991,993,1169 |
+| 37 [U] | 運転点のマップ（回転数 × 軸トルク） | `requirements/REQ-37.md`（1980） | `specification/SPEC-37.md`（4760） `gui/SPEC-37A.md`（2170） | `specification/TEST-37.md`（2589） | 6795–6802 | 26 | `core.js`:2334,2337,2493 `plot.js`:1551 `ui.js`:316,378 |
 
 ## 2. そのほかの節
 
@@ -103,16 +103,16 @@
 | 用語の定義集 | 2.6 流れと吸排気系 | `glossary/s2.6.md` | 5293 |
 | 用語の定義集 | 2.7 燃焼 | `glossary/s2.7.md` | 2045 |
 | 用語の定義集 | 2.8 壁面熱伝達 | `glossary/s2.8.md` | 744 |
-| 用語の定義集 | 2.9 回転運動，摩擦，動力計 | `glossary/s2.9.md` | 1307 |
+| 用語の定義集 | 2.9 回転運動，摩擦，動力計 | `glossary/s2.9.md` | 1309 |
 | 用語の定義集 | 2.9a 車両（SPEC-35） | `glossary/s2.9a.md` | 846 |
-| 用語の定義集 | 2.10 制御 | `glossary/s2.10.md` | 1070 |
+| 用語の定義集 | 2.10 制御 | `glossary/s2.10.md` | 1252 |
 | 用語の定義集 | 2.11 数値積分 | `glossary/s2.11.md` | 595 |
 | 用語の定義集 | 2.12 性能の指標 | `glossary/s2.12.md` | 2360 |
 | 用語の定義集 | 2.13 エンジン音と振動 | `glossary/s2.13.md` | 1383 |
 | 用語の定義集 | 3. 用語 | `glossary/s3.md` | 10 |
 | 用語の定義集 | 3.1 機関 | `glossary/s3.1.md` | 2123 |
 | 用語の定義集 | 3.2 モデルと数値計算 | `glossary/s3.2.md` | 1353 |
-| 用語の定義集 | 3.3 制御と動力計 | `glossary/s3.3.md` | 1184 |
+| 用語の定義集 | 3.3 制御と動力計 | `glossary/s3.3.md` | 1206 |
 | 用語の定義集 | 3.3a 最適化と熱効率の内訳（SPEC-32〜34） | `glossary/s3.3a.md` | 2642 |
 | 用語の定義集 | 3.4 画面と検証 | `glossary/s3.4.md` | 2888 |
 | 用語の定義集 | 4. 略語 | `glossary/s4.md` | 1052 |
@@ -132,12 +132,12 @@
 | `docs/report_vt.md` | 8968 |
 | `docs/history/changes_v25.md` | 8270 |
 | `docs/history/changes_v26.md` | 31648 |
-| `src/core.js` | 104673 |
+| `src/core.js` | 104812 |
 | `src/audio.js` | 15516 |
 | `src/plot.js` | 65091 |
-| `src/doc.js` | 58599 |
+| `src/doc.js` | 58766 |
 | `src/ui.js` | 53769 |
-| `src/tests.js` | 302823 |
+| `src/tests.js` | 303903 |
 | `docs/changes/2026-11-21-solver.md` | 4176 |
 | `docs/changes/2026-11-21-structure.md` | 3379 |
 | `docs/changes/2026-11-22-burn-dilution.md` | 1760 |
@@ -160,6 +160,7 @@
 | `docs/changes/2026-11-23-review-gemini-4.md` | 4343 |
 | `docs/changes/2026-11-23-review-gemini-5.md` | 7273 |
 | `docs/changes/2026-11-23-run-state-copy.md` | 2494 |
+| `docs/changes/2026-11-24-antiwindup-mean.md` | 2687 |
 | `docs/changes/2026-11-24-avg-ratio-of-sums.md` | 1378 |
 | `docs/changes/2026-11-24-bdc-event.md` | 1726 |
 | `docs/changes/2026-11-24-diverged-halt.md` | 1632 |

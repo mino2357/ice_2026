@@ -2079,6 +2079,7 @@ else{
    s.mode=md
   }
   const e=P.nt-s.Nb,Tm=dynMax(P,om);
+  let fa=0;
   if(!s.fired){s.al=P.alc;s.fc=0}
 else if(s.mode===0){
    const ab=alff(P),am=almin(P),u=ab+P.Kp*e+s.Ip;
@@ -2086,14 +2087,16 @@ else if(s.mode===0){
    s.al=Math.min(P.amax,Math.max(am,ab+P.Kp*e+s.Ip));
    s.fc=Math.min(P.Tl,Tm)
   }
-else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd (N − N_target) + I_T を ±T_max で頭打ち（比例は瞬時の回転数 N，積分は平均回転数 N̄ の偏差 e_d）．張り付いて偏差がそれを深める向きなら積分しない */
-   const ed=-e,ei=om*30/PI-P.nt,u=P.Kpd*ei+s.If;
+else{/* 動力計制御の PI（SPEC-11 の 3）：トルクの指令 T_c = K_pd (N − N_target) + I_T を ±T_max で頭打ち（比例は瞬時の回転数 N，積分は平均回転数 N̄ の偏差 e_d）．
+     張り付きの判定（積分を止めること，容量の判定）は平均回転数の偏差で作った指令 T̄_c = K_pd e_d + I_T で行う（REQ-11 の 6）．張り付いて偏差がそれを深める向きなら積分しない */
+   const ed=-e,ei=om*30/PI-P.nt,u=P.Kpd*ed+s.If;
    if(!((u>=Tm&&ed>0)||(u<=-Tm&&ed<0)))s.If+=P.Kid*ed*dt;
    s.al=P.alm;
-   s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ei+s.If))
+   s.fc=Math.min(Tm,Math.max(-Tm,P.Kpd*ei+s.If));
+   fa=Math.min(Tm,Math.max(-Tm,P.Kpd*ed+s.If))
   }
   s.fe=s.fc+(s.fe-s.fc)*Math.exp(-dt/P.td);
-  if(s.fired&&s.mode===1){s.ov=(s.fc>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(s.fc<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}
+  if(s.fired&&s.mode===1){s.ov=(fa>=Tm&&s.Nb>P.nt+100)?s.ov+dt:0;s.up=(fa<=-Tm&&s.Nb<P.nt-100)?s.up+dt:0}else{s.ov=0;s.up=0}
   this.veh(dt,om)
  }
 /* 車両（SPEC-35 C）：車速を陽的 Euler で進める．機関の計算には影響しない */
