@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-24T22:43:47.699Z",
-  "plan": "第25版とのビット比較 ＋ 全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js） ＋ 画面のモード（820×1180）",
+  "at": "2026-11-24T23:29:08.839Z",
+  "plan": "全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js） ＋ 画面のモード（820×1180）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "d56c89a76a661b6f",
@@ -47,8 +47,8 @@
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "5fc55cba68b25c6c",
-   "src/ui.js": "27e0e2be1b66a738",
+   "src/tests.js#common": "29198f055a7664f2",
+   "src/ui.js": "e918f23ddf2b37eb",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
    "docs/requirements/REQ-03.md": "74223fb7844b846e",
@@ -180,7 +180,7 @@
    "docs/gui/REQ-22.md": "732140486344ce22",
    "docs/gui/REQ-23.md": "ca1a95c9f36ecf1b",
    "docs/gui/REQ-31.md": "0d61ad5993f6a51b",
-   "docs/gui/SPEC-15.md": "5acfaa0237e01d31",
+   "docs/gui/SPEC-15.md": "afd3814f23d1bf0d",
    "docs/gui/SPEC-16.md": "a8bbb292978ab253",
    "docs/gui/SPEC-17.md": "a24c28abf6fcd34a",
    "docs/gui/SPEC-18.md": "818fd81b4c542dbb",
@@ -195,7 +195,7 @@
    "docs/gui/SPEC-35D.md": "0585915b77fa30a1",
    "docs/gui/SPEC-36D.md": "88b653549af8c7db",
    "docs/gui/SPEC-37A.md": "67009613a952ba31",
-   "docs/gui/TEST-15.md": "b9aa8c2aa1fb59e2",
+   "docs/gui/TEST-15.md": "b6f0a8e65a156710",
    "docs/gui/TEST-16.md": "71b5434b28db67cd",
    "docs/gui/TEST-17.md": "218322c25f4c6d86",
    "docs/gui/TEST-18.md": "a128671bf08553cc",

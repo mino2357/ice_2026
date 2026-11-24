@@ -322,10 +322,12 @@ function wkJob(k,a){
  w.postMessage({t:'go',id,k,a:a0.map(v=>v instanceof Core?wkPack(v):v)});
  return o
 }
-/* 終わり（中止，作り直し，完了）：Worker に知らせ，後から届いた写しは使わない */
+/* 終わり（中止，作り直し，完了）：Worker に知らせ，まだ写していない写しと後から届いた写しは使わない */
 function wkEnd(o){
  if(!o||!o.wk||!WK.J.has(o.wk.id))return;
  WK.J.delete(o.wk.id);
+ /* 終える前に届いて，まだ写していない写しも捨てる */
+ o.wk.q=null;
  if(WK.w&&!o.wk.F)WK.w.postMessage({t:'end',id:o.wk.id})
 }
 /* 使えなくなった：計算中のものを，始めたときの引数で作り直してメインスレッドで最初から進める（SPEC-15 L の 7） */
