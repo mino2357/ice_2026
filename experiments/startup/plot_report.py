@@ -120,7 +120,8 @@ def heat(ax, val, title, unit, fmt):
     cb.outline.set_visible(False)
 
 
-fig, axs = plt.subplots(1, 2, figsize=(11, 5))
+fig, axs = plt.subplots(1, 2, figsize=(12.5, 5))
+fig.subplots_adjust(wspace=0.55)
 heat(axs[0], lambda q: q["Tst"], "必要な拘束トルク T_stall = 1.3 (R_max + 6)", "N·m", lambda v: f"{v:.0f}")
 heat(axs[1], lambda q: max(q["tSettle"]), "整定までの時間（負荷 0，3，6 N·m の最悪）", "s", lambda v: f"{v:.1f}")
 fig.text(0.01, -0.02, "○ 既定（0, 0）　★ 最適　斜線：条件（3 サイクル以内に完爆，エンストしない，12 s 以内に整定）を満たさない　VH：弁とピストンが当たる",
@@ -129,6 +130,7 @@ save(fig, "fig2_search.png")
 
 # ---- 図 3：回転数の時間変化 ----
 fig, axs = plt.subplots(1, 3, figsize=(13, 3.9), sharey=True)
+TEND = max(q[0] for cs in (DEF, OPT) for r in cs["runs"] for q in r["tr"])
 nmax = math.ceil(max(q[1] for cs in (DEF, OPT) for r in cs["runs"] for q in r["tr"]) / 200) * 200
 for i, Tl in enumerate(LOADS):
     ax = axs[i]
@@ -138,7 +140,7 @@ for i, Tl in enumerate(LOADS):
         ax.plot([q[0] for q in r["tr"]], [q[1] for q in r["tr"]], color=col, lw=1.1,
                 label=f"{cs['name']}（φin {sgn(cs['phin'])}°，φex {sgn(cs['phex'])}°，T_stall {cs['Tst']:.0f} N·m）")
         ax.axvline(r["tFire"], color=col, lw=1, ls=(0, (3, 3)))
-    ax.set_xlim(0, 8)
+    ax.set_xlim(0, TEND)
     ax.set_ylim(0, nmax)
     ax.set_title(f"負荷 {Tl} N·m")
     ax.set_xlabel("時間 t [s]")

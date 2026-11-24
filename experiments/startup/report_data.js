@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-/* 報告のデータ（report_data.json．plot_report.py が図にする）とページ（report.html）を作る：vvt0.json の格子と最適点を読み，既定の VVT と最適な初期 VVT の始動を細かく計算して，
-   report.tpl.html の /*DATA*\/ に埋め込む．
+/* 報告のデータ（report_data.json．plot_report.py が図にする）を作る：vvt0.json の格子と最適点を読み，既定の VVT と最適な初期 VVT の始動を細かく計算して，
+   JSON に書く．
    使い方： node experiments/startup/report_data.js */
 'use strict';
 const path=require('path'),fs=require('fs');
 const X=require('./startup.js'),{S,K,run,mkP,Core,D,RPM}=X;
 const V=JSON.parse(fs.readFileSync(path.resolve(__dirname,'vvt0.json'),'utf8'));
-const LOADS=V.LOADS,MARGIN=V.MARGIN,T=8;
+const LOADS=V.LOADS,MARGIN=V.MARGIN,T=V.T_MAX;
 function reaction(phin,phex,N=60){
  const c=new Core({...mkP(),cvar:0,mode:1,alm:S.aff*D,Vin:S.Vin,phin:phin*D,phex:phex*D});
  c.fixw=1;c.s.y[1]=N/RPM;c.s.Nb=N;c.P.nt=N;
@@ -33,7 +33,5 @@ const grid=V.grid.concat(V.fine).map(g=>g.vhit?{phin:g.phin,phex:g.phex,vhit:1}:
 const valves=(()=>{const P=mkP();return {ivo:P.ivo/D,ivc:P.ivc/D,evo:P.evo/D,evc:P.evc/D}})();
 const data={S:{...S,Tst:undefined},LOADS,MARGIN,NC_MAX:V.NC_MAX,T_MAX:V.T_MAX,best:{phin:best.phin,phex:best.phex},valves,grid,cases,react};
 fs.writeFileSync(path.resolve(__dirname,'report_data.json'),JSON.stringify(data));
-const tpl=fs.readFileSync(path.resolve(__dirname,'report.tpl.html'),'utf8');
-fs.writeFileSync(path.resolve(__dirname,'report.html'),tpl.replace('/*DATA*/null',JSON.stringify(data)));
-console.log('report.html：'+(fs.statSync(path.resolve(__dirname,'report.html')).size/1e3).toFixed(0)+' kB');
+console.log('report_data.json：'+(fs.statSync(path.resolve(__dirname,'report_data.json')).size/1e3).toFixed(0)+' kB');
 for(const c of cases)console.log(c.name,`φin ${c.phin} φex ${c.phex} R_max ${c.Rmax} T_stall ${c.Tst} ω_nl ${c.wnl}`,c.runs.map(r=>`T_load ${r.Tl}：完爆 ${r.tFire} 整定 ${r.tSettle} E_st ${r.Est} N ${r.Nmin}〜${r.Nmax}`).join('；'));
