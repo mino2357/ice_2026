@@ -956,7 +956,7 @@ TST[13]=function*(){
   const q=s4.c.clone();
   yield*runCyc(q,1);
   q.s.eve=0;
-  q.s.evn=[0,0,0,0,0,0];
+  q.s.evn=[0,0,0,0,0,0,0,0];
   let lo=Infinity,hi=-Infinity,nE=0,bE=0,wE='';
   const dE=q.doEv;
   q.doEv=function(y1,th1){/* イベントを処理した後の θ が，イベントの角度と同じ（サイクルの終端では 0）か（REQ-13 の 3） */
@@ -967,8 +967,8 @@ TST[13]=function*(){
   };
   yield*runCyc(q,3,cc=>{lo=Math.min(lo,cc.s.y[0]);hi=Math.max(hi,cc.s.y[0])});
   delete q.doEv;
-  chkB(13,'イベント（S4，3 サイクル）：終端・IVO・IVC・EVO・EVC・点火の角度の誤差 ≤ 10⁻⁸ rad，各 3 回',q.s.eve<=1e-8&&q.s.evn.every(v=>v===3),`最大の誤差 ${q.s.eve.toExponential(1)} rad，回数 ${q.s.evn.join(' ')}`);
-  chkB(13,'イベントを処理した後の θ がイベントの角度と同じ（サイクルの終端では 0）',nE>=18&&bE===0,`処理 ${nE} 回，合わない ${bE} 回${wE?'（'+wE+'）':''}`);
+  chkB(13,'イベント（S4，3 サイクル）：終端・IVO・IVC・EVO・EVC・点火・下死点（π，3π）の角度の誤差 ≤ 10⁻⁸ rad，各 3 回',q.s.eve<=1e-8&&q.s.evn.length===8&&q.s.evn.every(v=>v===3),`最大の誤差 ${q.s.eve.toExponential(1)} rad，回数 ${q.s.evn.join(' ')}`);
+  chkB(13,'イベントを処理した後の θ がイベントの角度と同じ（サイクルの終端では 0）',nE>=30&&bE===0,`処理 ${nE} 回，合わない ${bE} 回${wE?'（'+wE+'）':''}`);
   chkB(13,'クランク角が [0, 4π] にある（厳密）',lo>=0&&hi<=P4,`${lo.toExponential(1)}〜${hi.toFixed(6)} rad`)
  }
  const f3=yield*scen('F3000');
@@ -1189,7 +1189,7 @@ TST[13]=function*(){
     c.step();
     if(c.s.cyc!==cy){
      cy=c.s.cyc;
-     if(ev){nc++;if(!c.s.evn.every((v,i)=>v-ev[i]===1))ng++}
+     if(ev){nc++;if(c.s.evn.length!==8||!c.s.evn.every((v,i)=>v-ev[i]===1))ng++}
      ev=c.s.evn.slice()
     }
     if((++k&3)===0&&RUN.over())yield
@@ -1198,7 +1198,7 @@ TST[13]=function*(){
    if(!q)ok=false;
    out.push(`${nm}：${nc} サイクル，違反 ${ng}`)
   }
-  chkB(13,'イベントの取りこぼしが無い：始動（BS3，DOPRI5），動力計制御の全開 0 → 7000 rpm，IVC が点火の 0.001° 手前，IVC = 点火 のそれぞれで，どのサイクルでも，サイクルの終端・IVO・IVC・EVO・EVC・点火がちょうど 1 回ずつ処理される（20 サイクル以上）',ok,out.join('；'))
+  chkB(13,'イベントの取りこぼしが無い：始動（BS3，DOPRI5），動力計制御の全開 0 → 7000 rpm，IVC が点火の 0.001° 手前，IVC = 点火 のそれぞれで，どのサイクルでも，サイクルの終端・IVO・IVC・EVO・EVC・点火・下死点（π，3π）がちょうど 1 回ずつ処理される（20 サイクル以上）',ok,out.join('；'))
  }
 /* 13：硬さ（化学平衡のモデルの全状態．項目 10 は γ のモデルと共通の 16 状態だけ）：燃料の質量，液体の燃料，吸気側の燃料蒸気，排気ポートの温度，ポートの空気の質量を含む 23 状態のヤコビアン */
  {

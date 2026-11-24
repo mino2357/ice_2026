@@ -850,7 +850,7 @@ class Core{
    nfe:0,
    eP:1,
    eve:0,
-   evn:[0,0,0,0,0,0],
+   evn:[0,0,0,0,0,0,0,0],
    ig:0,
    tc0:0,
    pq:[0,0,0,0],
@@ -1526,7 +1526,7 @@ else{
   s.ig=1;/* 燃焼の時刻（振動．SPEC-36 A の 3）．状態ではない */
   if(C.on&&C.Q>0){const g=this.igT;g.push(s.t);if(g.length>256)g.shift()}
  }
-/* 次のイベント（REQ-13 4）：サイクルの終端，IVO，IVC，EVO，EVC，点火．th より先で最も近い角度を this.ea に置く */
+/* 次のイベント（REQ-13 4）：サイクルの終端，IVO，IVC，EVO，EVC，点火，下死点（π，3π．W_g の被積分関数が切り替わる）．th より先で最も近い角度を this.ea に置く */
  nextEv(th){
   const V=this.V,lo=th+1e-7;
   let a=P4;
@@ -1539,6 +1539,9 @@ else{
   x=V.gC;
   if(x>lo&&x<a)a=x;
   x=md4(2*PI-this.s.spa*D);
+  if(x>lo&&x<a)a=x;
+  if(PI>lo&&PI<a)a=PI;
+  x=3*PI;
   if(x>lo&&x<a)a=x;
   if(this.P.gam===2&&this.P.inj===1){
    x=md4(this.P.soi);
@@ -1586,6 +1589,8 @@ else{
   }
   if(near(V.gB)){n[3]++;s.YuE=y1[4]/y1[3];s.TE=T;if(SPC&&cy.mb>1e-9)s.zs=cy.z}
   if(near(md4(2*PI-s.spa*D))&&!s.ig){n[5]++;this.ign(T,Yu,y1[2],cy)}
+  if(near(PI))n[6]++;
+  if(near(3*PI))n[7]++;
   if(near(P4)){n[0]++;this.cycleEnd();y1[0]=0}
  }
 /* 運転中にランナ・排気系を ON にしたときの初期化（REQ-25 6，REQ-27 7） */
