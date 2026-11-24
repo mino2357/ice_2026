@@ -2295,11 +2295,15 @@ TST[15]=function*(){
    const o=wkJob('SweepSet',J[0][1]());
    let n=0;
    while(!o.wk.ks.size&&n++<6000){o.run(10);yield'frame'}
+   /* 終える前に届いてまだ写していない写しがある状態で終える（端末の速さによらず確かめるため．実機で，この間に届いた写しを終えた後に写していた） */
+   let m=0;
+   while(!o.wk.q&&m++<6000)yield'frame';
+   const pend=!!o.wk.q;
    wkEnd(o);
    const k0=key(o,'SweepSet'),t0=performance.now();
    while(performance.now()-t0<600){o.run(10);yield'frame'}
    const k1=key(o,'SweepSet');
-   chkB(15,'重い計算の Worker：写しが 1 回届いた後に wkEnd で終えると，その後に届いた写しを使わない（データの欄が変わらない），計算は終わっていない',n<6000&&k0===k1&&!o.run(0)&&!WK.J.has(o.wk.id),`写しまで ${n} フレーム，変化 ${k0===k1?'なし':'あり'}`)
+   chkB(15,'重い計算の Worker：写しが 1 回届いた後，次の写しが届いてまだ写していない状態で wkEnd で終えると，その写しも後に届いた写しも使わない（データの欄が変わらない），計算は終わっていない',n<6000&&pend&&k0===k1&&!o.run(0)&&!WK.J.has(o.wk.id),`写しまで ${n} フレーム，写していない写し ${pend?'あり':'なし'}，変化 ${k0===k1?'なし':'あり'}`)
   }
   {
    /* (d) Worker を使えない状態と，Worker の中の例外 */
