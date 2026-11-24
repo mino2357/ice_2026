@@ -1,0 +1,293 @@
+<title>単気筒の始動と初期 VVT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* 1 段組の技術報告．各節は「本文 → 図 → 図の注」．図は SVG を JS で描く（幅に合わせて描き直す） */
+:root{
+ --bg:#f7f7f4;--panel:#ffffff;--ink:#141413;--ink-2:#4f4e4a;--ink-3:#7a7974;--rule:#e2e1dc;--grid:#ecebe6;
+ --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;
+ --band:rgba(42,120,214,.10);--hatch:#c9c8c2;--na:#efeeea;
+ --q0:#cde2fb;--q1:#9ec5f4;--q2:#6da7ec;--q3:#3987e5;--q4:#256abf;--q5:#184f95;--q6:#0d366b;
+ --f-text:"Inter","Noto Sans JP",system-ui,sans-serif;--f-num:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#161615;--panel:#1d1d1b;--ink:#efeee9;--ink-2:#c3c2b7;--ink-3:#8e8d86;--rule:#33332f;--grid:#2a2a27;
+ --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;
+ --band:rgba(57,135,229,.16);--hatch:#4a4a45;--na:#262624;
+ --q0:#184f95;--q1:#256abf;--q2:#2a78d6;--q3:#3987e5;--q4:#6da7ec;--q5:#9ec5f4;--q6:#cde2fb;color-scheme:dark}}
+:root[data-theme="dark"]{
+ --bg:#161615;--panel:#1d1d1b;--ink:#efeee9;--ink-2:#c3c2b7;--ink-3:#8e8d86;--rule:#33332f;--grid:#2a2a27;
+ --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;
+ --band:rgba(57,135,229,.16);--hatch:#4a4a45;--na:#262624;
+ --q0:#184f95;--q1:#256abf;--q2:#2a78d6;--q3:#3987e5;--q4:#6da7ec;--q5:#9ec5f4;--q6:#cde2fb;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-text);font-size:15px;line-height:1.75}
+.wrap{max-width:960px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px;display:grid;gap:40px}
+header{display:grid;gap:8px}
+h1{font-size:1.75rem;line-height:1.3;margin:0;font-weight:700;text-wrap:balance}
+h2{font-size:1.2rem;margin:0;font-weight:700;text-wrap:balance}
+h3{font-size:1rem;margin:0;font-weight:600}
+p{margin:0;max-width:68ch}
+.lede{color:var(--ink-2)}
+.meta{color:var(--ink-3);font-size:.85rem}
+section{display:grid;gap:16px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.verdict>div{background:var(--panel);padding:14px 16px;display:grid;gap:2px;min-width:0}
+.verdict .k{font-size:.8rem;color:var(--ink-3);letter-spacing:.02em}
+.verdict .v{font-size:1.35rem;font-weight:600;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.verdict .d{font-size:.82rem;color:var(--ink-2)}
+.fig{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:16px;display:grid;gap:10px;min-width:0}
+.fig .cap{font-size:.85rem;color:var(--ink-2)}
+.fig .ttl{font-weight:600;font-size:.95rem}
+.chart{position:relative;width:100%;min-width:0}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--f-text);fill:var(--ink-2);font-size:11px}
+.chart .axl{fill:var(--ink-3);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:16px;height:3px;border-radius:2px}
+.legend i.sq{width:12px;height:12px;border-radius:2px}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:6px 8px;font-size:12px;line-height:1.5;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;z-index:2}
+.tip b{font-weight:600}
+.tip .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.multi{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.multi>div{min-width:0;display:grid;gap:4px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.two>div{min-width:0;display:grid;gap:6px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;font-size:.85rem;width:100%}
+th,td{padding:6px 10px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--ink-3);font-weight:500}
+td{font-variant-numeric:tabular-nums}
+ul{margin:0;padding-left:1.2em;display:grid;gap:4px;max-width:68ch}
+.eq{font-family:var(--f-num);font-size:.9rem;background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:8px 12px;overflow-x:auto;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+<header>
+ <div class="meta">数値実験の報告（実験用ブランチ）．0.5 L 単気筒 4 ストローク SI 機関，直噴，エンジンダイナモメーター（モータリングしない）</div>
+ <h1>単気筒の始動と初期 VVT</h1>
+ <p class="lede">スターターでクランキングし，250 rpm で直噴を始め，完爆してから 800 rpm のアイドルに整定するまでを計算した．単気筒は圧縮を 1 気筒で越えるので，スターターに要るトルクは圧縮の反力の最大で決まる．始動から固定する VVT の位相（初期位置）を，必要なスターターのトルクが最小になり，かつ確実に始動するように選んだ．</p>
+</header>
+
+<section>
+ <h2>結論</h2>
+ <div class="verdict" id="verdict"></div>
+ <p id="verdict-text"></p>
+</section>
+
+<section>
+ <h2>1. 問題設定</h2>
+ <div class="tbl"><table id="setup"></table></div>
+ <p>VVT の位相 φ<sub>in</sub>，φ<sub>ex</sub> は正が遅角で，弁の開閉の時期を同じ角度だけずらす（作用角とリフトの形は変えない）．始動から計算の終わりまで固定する．</p>
+</section>
+
+<section>
+ <h2>2. 圧縮の反力</h2>
+ <p>燃料を止め，60 rpm に固定して回したときの抵抗トルク <span class="num">R(θ) = −(T<sub>ind</sub> − T<sub>f</sub> − T<sub>aux</sub>)</span> である．平均は約 5 N·m だが，圧縮上死点（θ = 360°）の手前で鋭い山になる．スターターは止まった状態からこの山を越える必要がある．吸気の位相を遅らせると，吸気弁が閉じる時期（IVC）が遅れ，閉じ込める空気が減って山が下がる．</p>
+ <div class="fig">
+  <div class="ttl">抵抗トルク R(θ)，燃料 OFF，60 rpm，開度 3.94°</div>
+  <div class="legend" id="lg-react"></div>
+  <div class="chart" id="c-react"></div>
+  <div class="cap" id="cap-react"></div>
+ </div>
+</section>
+
+<section>
+ <h2>3. 初期 VVT の探索</h2>
+ <p>位相の格子（10° 刻み，81 点）の各点で，必要なスターターの拘束トルクを <span class="num">T<sub>stall</sub> = 1.3 (R<sub>max</sub> + 6 N·m)</span> とし（6 N·m は負荷の最大），その強さのスターターで負荷 0，3，6 N·m の始動を計算した．無負荷の回転数 ω<sub>nl</sub> は，燃料 OFF・負荷 6 N·m でクランキングの平均が 300 rpm になるように点ごとに決めた．満たすべき条件は，3 つの負荷のどれでも，噴射開始から 3 サイクル以内に完爆し，エンストせず，12 s 以内に ±25 rpm に整定することである．格子の最良の点から 2° 刻みで詰めた．</p>
+ <div class="two">
+  <div class="fig">
+   <div class="ttl">必要な拘束トルク T<sub>stall</sub> [N·m]</div>
+   <div class="legend" id="lg-hm1"></div>
+   <div class="chart" id="c-hm1"></div>
+  </div>
+  <div class="fig">
+   <div class="ttl">整定までの時間（3 つの負荷の最悪）[s]</div>
+   <div class="legend" id="lg-hm2"></div>
+   <div class="chart" id="c-hm2"></div>
+  </div>
+ </div>
+ <p id="search-text"></p>
+</section>
+
+<section>
+ <h2>4. 始動の経過</h2>
+ <p>既定の VVT（φ<sub>in</sub> = φ<sub>ex</sub> = 0）と最適な初期 VVT を，それぞれに合わせたスターターで比べる．</p>
+ <div class="fig">
+  <div class="ttl">瞬時の回転数 N(t) [rpm]（帯は 800 ± 25 rpm）</div>
+  <div class="legend" id="lg-n"></div>
+  <div class="multi" id="c-n"></div>
+  <div class="cap">細い縦線は完爆の時刻．アイドルでの細かい振れは，1 サイクルに 1 回の燃焼による回転の脈動である．</div>
+ </div>
+ <div class="two">
+  <div class="fig">
+   <div class="ttl">スターターのトルク T<sub>st</sub>(t) [N·m]（負荷 3 N·m）</div>
+   <div class="legend" id="lg-st"></div>
+   <div class="chart" id="c-st"></div>
+   <div class="cap">止まった状態（t = 0）では拘束トルクを出し，回転が上がると直線的に下がる．完爆でスターターを切る．</div>
+  </div>
+  <div class="fig">
+   <div class="ttl">サイクルごとの IMEP [kPa]（負荷 3 N·m）</div>
+   <div class="legend" id="lg-imep"></div>
+   <div class="chart" id="c-imep"></div>
+   <div class="cap">第 1 サイクルは燃料なしの圧縮と膨張で負になる．最初の燃焼のサイクルは，クランキング中に大気圧近くまで満ちた吸気管の空気で大きな値になる．</div>
+  </div>
+ </div>
+ <div class="fig">
+  <div class="ttl">始動の要約</div>
+  <div class="tbl"><table id="summary"></table></div>
+ </div>
+</section>
+
+<section>
+ <h2>5. 限界と次の段階</h2>
+ <ul id="limits"></ul>
+</section>
+</div>
+<script>
+const DATA=/*DATA*/null;
+const $=id=>document.getElementById(id),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS='http://www.w3.org/2000/svg';
+const el=(tag,attrs={},parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e};
+const f=(v,d=1)=>v==null||!(v===v)?'—':(+v).toFixed(d);
+const C=()=>({s1:css('--s1'),s2:css('--s2'),s3:css('--s3'),s4:css('--s4'),grid:css('--grid'),rule:css('--rule'),ink:css('--ink'),ink2:css('--ink-2'),ink3:css('--ink-3'),band:css('--band'),panel:css('--panel'),hatch:css('--hatch'),na:css('--na'),q:[0,1,2,3,4,5,6].map(i=>css('--q'+i))});
+const DEF=DATA.cases[0],OPT=DATA.cases[1];
+/* ---- 目盛り ---- */
+function ticks(lo,hi,n=5){const s=(hi-lo)/n,m=Math.pow(10,Math.floor(Math.log10(s))),r=s/m,st=(r<1.5?1:r<3?2:r<7?5:10)*m,a=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)a.push(+v.toFixed(10));return a}
+/* ---- 折れ線（十字線とツールチップ付き） ---- */
+function lineChart(host,o){
+ host.innerHTML='';const W=Math.max(260,host.clientWidth),H=o.h||Math.round(Math.min(300,Math.max(200,W*.42))),m={l:48,r:12,t:10,b:36},iw=W-m.l-m.r,ih=H-m.t-m.b,c=C();
+ const sx=v=>m.l+(v-o.x.min)/(o.x.max-o.x.min)*iw,sy=v=>m.t+ih-(v-o.y.min)/(o.y.max-o.y.min)*ih;
+ const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':o.aria||''},host);
+ const xt=o.x.ticks||ticks(o.x.min,o.x.max,Math.max(3,Math.round(iw/90))),yt=o.y.ticks||ticks(o.y.min,o.y.max,Math.max(3,Math.round(ih/45)));
+ for(const v of yt){el('line',{x1:m.l,x2:m.l+iw,y1:sy(v),y2:sy(v),stroke:c.grid,'stroke-width':1},svg);const t=el('text',{x:m.l-6,y:sy(v)+4,'text-anchor':'end'},svg);t.textContent=(o.y.fmt||String)(v)}
+ for(const v of xt){const t=el('text',{x:sx(v),y:m.t+ih+16,'text-anchor':'middle'},svg);t.textContent=(o.x.fmt||String)(v)}
+ if(o.y.min<0&&o.y.max>0)el('line',{x1:m.l,x2:m.l+iw,y1:sy(0),y2:sy(0),stroke:c.ink3,'stroke-width':1},svg);
+ el('line',{x1:m.l,x2:m.l+iw,y1:m.t+ih,y2:m.t+ih,stroke:c.rule,'stroke-width':1},svg);
+ const xl=el('text',{x:m.l+iw,y:H-4,'text-anchor':'end',class:'axl'},svg);xl.textContent=o.x.label;
+ const yl=el('text',{x:4,y:m.t+8,'text-anchor':'start',class:'axl'},svg);yl.textContent='';
+ for(const b of o.bands||[])el('rect',{x:m.l,width:iw,y:sy(b[1]),height:sy(b[0])-sy(b[1]),fill:c.band},svg);
+ for(const v of o.vlines||[])el('line',{x1:sx(v.x),x2:sx(v.x),y1:m.t,y2:m.t+ih,stroke:v.color,'stroke-width':1,'stroke-dasharray':'3 3',opacity:.8},svg);
+ const clip='cp'+Math.random().toString(36).slice(2);const cp=el('clipPath',{id:clip},el('defs',{},svg));el('rect',{x:m.l,y:m.t-2,width:iw,height:ih+4},cp);
+ const g=el('g',{'clip-path':`url(#${clip})`},svg);
+ for(const s of o.series){const d=s.pts.map((p,i)=>(i?'L':'M')+sx(p[0]).toFixed(1)+' '+sy(p[1]).toFixed(1)).join('');
+  el('path',{d,fill:'none',stroke:s.color,'stroke-width':s.w||2,'stroke-linejoin':'round','stroke-linecap':'round',opacity:s.op||1},g);
+  if(s.dots)for(const p of s.pts){el('circle',{cx:sx(p[0]),cy:sy(p[1]),r:4,fill:s.color,stroke:c.panel,'stroke-width':2},g)}}
+ for(const a of o.labels||[]){const t=el('text',{x:sx(a.x)+(a.dx||0),y:sy(a.y)+(a.dy||0),'text-anchor':a.anchor||'start'},svg);t.textContent=a.text;t.style.fill=c.ink2}
+ /* ホバー */
+ const cross=el('line',{y1:m.t,y2:m.t+ih,stroke:c.ink3,'stroke-width':1,visibility:'hidden'},svg),dots=o.series.map(s=>el('circle',{r:4,fill:s.color,stroke:c.panel,'stroke-width':2,visibility:'hidden'},svg));
+ const tip=document.createElement('div');tip.className='tip';tip.hidden=true;host.appendChild(tip);
+ const hit=el('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'transparent'},svg);
+ const near=(pts,x)=>{let lo=0,hi=pts.length-1;while(hi-lo>1){const mid=(lo+hi)>>1;if(pts[mid][0]<x)lo=mid;else hi=mid}return Math.abs(pts[lo][0]-x)<Math.abs(pts[hi][0]-x)?pts[lo]:pts[hi]};
+ const move=e=>{const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width,x=o.x.min+(px-m.l)/iw*(o.x.max-o.x.min);if(x<o.x.min||x>o.x.max){leave();return}
+  const ps=o.series.map(s=>near(s.pts,x));cross.setAttribute('x1',sx(ps[0][0]));cross.setAttribute('x2',sx(ps[0][0]));cross.setAttribute('visibility','visible');
+  ps.forEach((p,i)=>{dots[i].setAttribute('cx',sx(p[0]));dots[i].setAttribute('cy',sy(p[1]));dots[i].setAttribute('visibility','visible')});
+  tip.innerHTML=`<b>${o.x.tip(ps[0][0])}</b><br>`+o.series.map((s,i)=>`<span class="sw" style="background:${s.color}"></span>${s.name}：<span class="num">${o.y.tip(ps[i][1])}</span>`).join('<br>');
+  tip.hidden=false;const tx=sx(ps[0][0])*r.width/W,tw=tip.offsetWidth;tip.style.left=Math.min(Math.max(0,tx+12),r.width-tw)+'px';tip.style.top='4px'};
+ const leave=()=>{tip.hidden=true;cross.setAttribute('visibility','hidden');dots.forEach(d=>d.setAttribute('visibility','hidden'))};
+ hit.addEventListener('pointermove',move);hit.addEventListener('pointerleave',leave);
+}
+/* ---- 格子の色の地図 ---- */
+function heatmap(host,o){
+ host.innerHTML='';const c=C(),W=Math.max(260,Math.min(host.clientWidth,460)),m={l:48,r:10,t:8,b:40},iw=W-m.l-m.r,ih=iw,H=ih+m.t+m.b;
+ const xs=[...new Set(o.cells.map(q=>q.phin))].sort((a,b)=>a-b),ys=[...new Set(o.cells.map(q=>q.phex))].sort((a,b)=>a-b),cw=iw/xs.length,ch=ih/ys.length;
+ const lo=xs[0]-5,hi=xs[xs.length-1]+5,sx=v=>m.l+(v-lo)/(hi-lo)*iw,sy=v=>m.t+ih-(v-(ys[0]-5))/(ys[ys.length-1]+5-(ys[0]-5))*ih;
+ const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':o.aria},host);
+ const defs=el('defs',{},svg),pid='h'+Math.random().toString(36).slice(2),pat=el('pattern',{id:pid,width:6,height:6,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'},defs);
+ el('rect',{width:6,height:6,fill:c.na},pat);el('line',{x1:0,y1:0,x2:0,y2:6,stroke:c.hatch,'stroke-width':2},pat);
+ const vals=o.cells.filter(q=>q.ok).map(o.val),vmin=Math.min(...vals),vmax=Math.max(...vals);
+ const col=v=>{const t=(v-vmin)/((vmax-vmin)||1)*6,i=Math.min(5,Math.floor(t)),u=t-i;return mix(c.q[i],c.q[i+1],u)};
+ const tip=document.createElement('div');tip.className='tip';tip.hidden=true;host.appendChild(tip);
+ for(const q of o.cells){const x=sx(q.phin)-cw/2,y=sy(q.phex)-ch/2;
+  const r=el('rect',{x:x+1,y:y+1,width:cw-2,height:ch-2,rx:2,fill:q.vhit?c.na:q.ok?col(o.val(q)):`url(#${pid})`},svg);
+  if(q.vhit){const t=el('text',{x:x+cw/2,y:y+ch/2+4,'text-anchor':'middle'},svg);t.textContent='VH';t.style.fill=c.ink3;t.style.fontSize='9px'}
+  r.addEventListener('pointerenter',()=>{tip.innerHTML=o.tip(q);tip.hidden=false;const rr=svg.getBoundingClientRect(),k=rr.width/W,tw=tip.offsetWidth;tip.style.left=Math.min(Math.max(0,(x+cw)*k+6),rr.width-tw)+'px';tip.style.top=Math.max(0,y*k-8)+'px';r.setAttribute('stroke',c.ink);r.setAttribute('stroke-width',1.5)});
+  r.addEventListener('pointerleave',()=>{tip.hidden=true;r.removeAttribute('stroke')})}
+ for(const v of xs.filter(v=>v%20===0)){const t=el('text',{x:sx(v),y:m.t+ih+16,'text-anchor':'middle'},svg);t.textContent=v}
+ for(const v of ys.filter(v=>v%20===0)){const t=el('text',{x:m.l-8,y:sy(v)+4,'text-anchor':'end'},svg);t.textContent=v}
+ const xl=el('text',{x:m.l+iw,y:H-4,'text-anchor':'end',class:'axl'},svg);xl.textContent='吸気の位相 φin [°]（正が遅角）';
+ const yl=el('text',{x:0,y:0,'text-anchor':'end',class:'axl',transform:`translate(12 ${m.t}) rotate(-90)`},svg);yl.textContent='排気の位相 φex [°]';
+ /* 既定（輪）と最適（星） */
+ const ring=(x,y)=>el('circle',{cx:sx(x),cy:sy(y),r:7,fill:'none',stroke:c.ink,'stroke-width':2},svg);
+ const star=(x,y)=>{const R=9,r=4,pts=[];for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r:R;pts.push((sx(x)+rr*Math.cos(a)).toFixed(1)+','+(sy(y)+rr*Math.sin(a)).toFixed(1))}el('polygon',{points:pts.join(' '),fill:c.s2,stroke:c.panel,'stroke-width':1.5},svg)};
+ ring(0,0);star(DATA.best.phin,DATA.best.phex);
+ return {vmin,vmax}
+}
+function mix(a,b,u){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),A=p(a),B=p(b);return'#'+A.map((v,i)=>Math.round(v+(B[i]-v)*u).toString(16).padStart(2,'0')).join('')}
+function hmLegend(id,r,unit){const c=C();$(id).innerHTML=`<span><i class="sq" style="background:linear-gradient(90deg,${c.q.join(',')});width:80px"></i><span class="num">${f(r.vmin,1)}〜${f(r.vmax,1)} ${unit}</span></span><span><i class="sq" style="background:repeating-linear-gradient(45deg,${c.na} 0 3px,${c.hatch} 3px 5px)"></i>条件を満たさない</span><span><i class="sq" style="background:${c.na}"></i>VH：弁とピストンが当たる</span><span>○ 既定</span><span style="color:${c.s2}">★</span><span style="margin-left:-12px">最適</span>`}
+/* ---- 描画 ---- */
+function render(){
+ const c=C(),best=DATA.best,g=DATA.grid,gd=g.find(q=>q.phin===0&&q.phex===0),gb=g.find(q=>q.phin===best.phin&&q.phex===best.phex);
+ /* 結論 */
+ const dR=(1-OPT.Tst/DEF.Tst)*100,wS=cs=>Math.max(...cs.runs.map(r=>r.tSettle??Infinity)),wF=cs=>Math.max(...cs.runs.map(r=>r.tFire));
+ $('verdict').innerHTML=[
+  ['最適な初期 VVT',`φin ${best.phin>0?'+':''}${best.phin}°`,`φex ${best.phex>0?'+':''}${best.phex}°（正が遅角）`],
+  ['圧縮の反力の最大',`${f(OPT.Rmax)} N·m`,`既定 ${f(DEF.Rmax)} N·m`],
+  ['必要な拘束トルク',`${f(OPT.Tst)} N·m`,`既定 ${f(DEF.Tst)} N·m（−${f(dR,0)} %）`],
+  ['完爆（最悪の負荷）',`${f(wF(OPT),2)} s`,`既定 ${f(wF(DEF),2)} s`],
+  ['整定（最悪の負荷）',`${f(wS(OPT),2)} s`,`既定 ${f(wS(DEF),2)} s`]
+ ].map(([k,v,d])=>`<div><span class="k">${k}</span><span class="v">${v}</span><span class="d">${d}</span></div>`).join('');
+ $('verdict-text').textContent=`吸気の位相を ${best.phin}° 遅らせると，IVC が ${f(DATA.valves.ivc+best.phin,0)}°（下死点後 ${f(DATA.valves.ivc+best.phin-180,0)}°）になり，圧縮の反力の最大が ${f(DEF.Rmax)} から ${f(OPT.Rmax)} N·m に下がる．スターターの拘束トルクは ${f(dR,0)} % 小さくてよい．これより遅らせると，閉じ込める空気が足りず，負荷 6 N·m で完爆しない（または 3 サイクル以内に完爆しない）．`;
+ /* 設定の表 */
+ const S=DATA.S;
+ $('setup').innerHTML='<tr><th>項目</th><th style="text-align:left">設定</th></tr>'+[
+  ['試験の形','スロットル制御．ベンチの動力計はモータリングしない（一定の負荷の吸収と慣性だけ）'],
+  ['負荷','一定のトルク 0，3，6 N·m．クランキング中から．補機の負荷 2 N·m は別'],
+  ['慣性',`I<sub>tot</sub> = ${f(S.I+S.Id,2)} kg·m²（アイドルの回転変動率 C<sub>s</sub> ≈ 0.1 から）`],
+  ['吸気マニホールドの容積',`${f(S.Vin*1e3,1)} L（スロットルボディをポートの近くに置く単気筒）`],
+  ['スターター','T<sub>st</sub> = T<sub>stall</sub> max(0, 1 − ω/ω<sub>nl</sub>)，ワンウェイクラッチ．T<sub>stall</sub> と ω<sub>nl</sub> は VVT の位置ごとに決める（3 節）'],
+  ['噴射',`START では燃料 OFF．N̄ ≥ ${S.NCR} rpm で直噴を始める（吸気上死点後 80°，φ = 1）`],
+  ['完爆',`N̄ > ${S.NF} rpm かつ 1 サイクルの圧縮膨張の図示仕事 > 20 J．スターターを切る`],
+  ['アイドル',`吸気上死点ごとの PI（K<sub>p</sub> = ${S.Kp} °/rpm，K<sub>i</sub> = ${S.Ki} °/(rpm·サイクル)），目標 ${S.NT} rpm，始動開度 ${S.aff}°`],
+  ['基本の弁時期',`IVO ${f(DATA.valves.ivo,0)}°，IVC ${f(DATA.valves.ivc,0)}°，EVO ${f(DATA.valves.evo,0)}°，EVC ${f(DATA.valves.evc,0)}°（吸気上死点 = 0°）`],
+  ['そのほか','暖機後（壁温一定），熱物性は化学平衡，サイクル変動なし，始動の角度は下死点'],
+ ].map(([a,b])=>`<tr><td>${a}</td><td style="text-align:left;white-space:normal">${b}</td></tr>`).join('');
+ /* 図 1 */
+ const colFor=pi=>pi===0?c.s1:pi===best.phin?c.s2:pi<0?c.s3:c.s4;
+ const rs=DATA.react.map(r=>({name:`φin ${r.phin>0?'+':''}${r.phin}°${pi0(r.phin)}`,color:colFor(r.phin),pts:r.R.map((v,i)=>[i,v])}));
+ function pi0(p){return p===0?'（既定）':p===best.phin?'（最適）':''}
+ const ymax=Math.max(...DATA.react.flatMap(r=>r.R)),ymin=Math.min(...DATA.react.flatMap(r=>r.R));
+ $('lg-react').innerHTML=rs.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('');
+ lineChart($('c-react'),{series:rs,x:{min:0,max:720,ticks:[0,180,360,540,720],fmt:v=>({0:'0 吸気TDC',180:'180',360:'360 圧縮TDC',540:'540',720:'720'})[v],label:'クランク角 θ [°]',tip:v=>`θ = ${v}°`},y:{min:Math.floor(ymin/20)*20,max:Math.ceil(ymax/20)*20,tip:v=>f(v)+' N·m'},
+  vlines:DATA.react.map(r=>({x:DATA.valves.ivc+r.phin,color:colFor(r.phin)})),aria:'吸気の位相ごとの抵抗トルクのクランク角に対する変化'});
+ $('cap-react').textContent='点線は各位相の IVC．最大：'+DATA.react.map(r=>`φin ${r.phin}° で ${f(r.max)} N·m`).join('，')+'．';
+ /* 図 2，3 */
+ const cells=g.filter(q=>q.phin%10===0&&q.phex%10===0);
+ const tipC=q=>q.vhit?`φin ${q.phin}°，φex ${q.phex}°<br>弁とピストンが当たる`:`<b>φin ${q.phin}°，φex ${q.phex}°</b><br>R<sub>max</sub> ${f(q.Rmax)} N·m，T<sub>stall</sub> ${f(q.Tst)} N·m<br>完爆 ${q.tFire.map(v=>f(v,2)).join(' / ')} s（${q.nc.map(v=>v==null||!(v===v)?'—':v).join(' / ')} サイクル）<br>整定 ${q.tSettle.map(v=>f(v,2)).join(' / ')} s<br><span style="color:var(--ink-3)">負荷 0 / 3 / 6 N·m</span>${q.ok?'':'<br>条件を満たさない'}`;
+ const r1=heatmap($('c-hm1'),{cells,val:q=>q.Tst,tip:tipC,aria:'位相の格子の上の必要な拘束トルク'});hmLegend('lg-hm1',r1,'N·m');
+ const r2=heatmap($('c-hm2'),{cells,val:q=>Math.max(...q.tSettle),tip:tipC,aria:'位相の格子の上の整定までの時間'});hmLegend('lg-hm2',r2,'s');
+ const fine=g.filter(q=>!(q.phin%10===0&&q.phex%10===0));
+ $('search-text').innerHTML=`T<sub>stall</sub> はほぼ吸気の位相だけで決まり（排気の位相の影響は 1 N·m 程度），遅角ほど小さい．格子では φin = +40° の列が条件を満たさない．2° 刻みで詰めた点：`+fine.map(q=>q.vhit?`(${q.phin}, ${q.phex}) VH`:`(${q.phin}, ${q.phex}) ${f(q.Tst)} N·m ${q.ok?'○':'×'}`).join('，')+`．○ は条件を満たす点．`;
+ /* 図 4 */
+ const cn=$('c-n');cn.innerHTML='';
+ $('lg-n').innerHTML=[DEF,OPT].map((cs,i)=>`<span><i style="background:${i?c.s2:c.s1}"></i>${cs.name}（φin ${cs.phin}°，φex ${cs.phex}°，T<sub>stall</sub> ${f(cs.Tst)} N·m）</span>`).join('');
+ const nmax=Math.ceil(Math.max(...[DEF,OPT].flatMap(cs=>cs.runs.flatMap(r=>r.tr.map(q=>q[1]))))/200)*200;
+ DATA.LOADS.forEach((Tl,i)=>{const d=document.createElement('div');d.innerHTML=`<h3>負荷 ${Tl} N·m</h3>`;const h=document.createElement('div');h.className='chart';d.appendChild(h);cn.appendChild(d);
+  lineChart(h,{h:220,series:[DEF,OPT].map((cs,j)=>({name:cs.name,color:j?c.s2:c.s1,w:1.5,pts:cs.runs[i].tr.map(q=>[q[0],q[1]])})),x:{min:0,max:8,label:'時間 t [s]',tip:v=>`t = ${f(v,2)} s`},y:{min:0,max:nmax,tip:v=>f(v,0)+' rpm'},bands:[[775,825]],
+   vlines:[DEF,OPT].map((cs,j)=>({x:cs.runs[i].tFire,color:j?c.s2:c.s1})),aria:`負荷 ${Tl} N·m の回転数の時間変化`})});
+ /* 図 5 */
+ $('lg-st').innerHTML=$('lg-imep').innerHTML=[DEF,OPT].map((cs,i)=>`<span><i style="background:${i?c.s2:c.s1}"></i>${cs.name}</span>`).join('');
+ const k3=DATA.LOADS.indexOf(3);
+ lineChart($('c-st'),{series:[DEF,OPT].map((cs,j)=>({name:cs.name,color:j?c.s2:c.s1,pts:cs.runs[k3].tr.filter(q=>q[0]<=1.2).map(q=>[q[0],q[3]])})),x:{min:0,max:1.2,label:'時間 t [s]',tip:v=>`t = ${f(v,2)} s`},y:{min:0,max:Math.ceil(DEF.Tst/50)*50,tip:v=>f(v)+' N·m'},aria:'スターターのトルクの時間変化'});
+ const im=[DEF,OPT].map(cs=>cs.runs[k3].cyc.filter(q=>q.k<=15).map(q=>[q.k,q.imep]));
+ lineChart($('c-imep'),{series:[DEF,OPT].map((cs,j)=>({name:cs.name,color:j?c.s2:c.s1,dots:true,pts:im[j]})),x:{min:1,max:15,ticks:[1,3,5,7,9,11,13,15],label:'サイクルの番号 k',tip:v=>`サイクル ${v}`},y:{min:Math.floor(Math.min(...im.flat().map(q=>q[1]))/100)*100,max:Math.ceil(Math.max(...im.flat().map(q=>q[1]))/100)*100,tip:v=>f(v,0)+' kPa'},aria:'サイクルごとの IMEP'});
+ /* 表 */
+ $('summary').innerHTML='<tr><th>場合</th><th>負荷 [N·m]</th><th>噴射開始 [s]</th><th>完爆 [s]</th><th>完爆までのスターターの仕事 [J]</th><th>完爆後の N̄ の最大 [rpm]</th><th>最小 [rpm]</th><th>整定 [s]</th></tr>'+
+  [DEF,OPT].flatMap(cs=>cs.runs.map(r=>`<tr><td>${cs.name}</td><td>${r.Tl}</td><td>${f(r.tInj,2)}</td><td>${f(r.tFire,2)}</td><td>${f(r.Est,0)}</td><td>${f(r.Nmax,0)}</td><td>${f(r.Nmin,0)}</td><td>${r.stall?'エンスト':f(r.tSettle,2)}</td></tr>`)).join('');
+ $('limits').innerHTML=[
+  'VVT は始動から終わりまで固定した．完爆の後に位相を動かす過渡（次の段階）は扱っていない．アイドルでは既定の位相のほうが整定が速い場合があり，完爆の後に位相を戻す価値がある．',
+  '目的は「必要なスターターの拘束トルク」だけである．スターターの電力，電池の電圧降下，始動の時間との重みづけはしていない．',
+  '拘束トルクの余裕 1.3 倍，負荷の最大 6 N·m，クランキングの平均 300 rpm，完爆までの 3 サイクルは，設計の選択である．',
+  '暖機後の再始動だけを扱った．冷間始動（壁温が低い，燃料の壁への付着）では，遅い IVC による有効圧縮比の低下が着火に効くので，最適点は変わると思われる（推定）．',
+  'ECU のゲインは既定の VVT（φ = 0）の応答で決めたままである．'
+ ].map(s=>`<li>${s}</li>`).join('');
+}
+let rt;const rr=()=>{clearTimeout(rt);rt=setTimeout(render,120)};
+render();addEventListener('resize',rr);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>
