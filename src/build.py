@@ -48,7 +48,8 @@ DOCS={}
 for _n,_k in[('requirements.md','req'),('specification.md','spec'),('gui.md','gui'),('glossary.md','glo')]:DOCS[_k]=md2doc(_n,_k)
 _dj=json.dumps(DOCS,ensure_ascii=False,separators=(',',':')).replace('</','<\\/').replace('<!--','<\\!--')
 print('docs',{k:(len(v['chunks']),len(v['toc']),v['nmath'],v['nchar']) for k,v in DOCS.items()})
-h=r('index.tpl.html').replace('/*CSS*/',r('style.css')).replace('/*JS*/','\n'.join(r(f) for f in['core.js','audio.js','plot.js','doc.js','tests.js','ui.js']))
+# core.js は id="coresrc" の <script> に分けて置く（重い計算の Worker がその本文から作る．SPEC-15 L の 2）
+h=r('index.tpl.html').replace('/*CSS*/',r('style.css')).replace('/*JS*/',r('core.js')+'\n</script>\n<script>'+'\n'.join(r(f) for f in['audio.js','plot.js','doc.js','tests.js','ui.js']))
 assert h.count('/*DOCS*/')==1;h=h.replace('/*DOCS*/',_dj)
 # C-8：フォントやバイナリを埋め込まない
 assert '@font-face' not in r('style.css') and not re.search(r'data:[^"\'\s)]*;base64,',h),'成果物に @font-face か base64 のデータがあります（C-8）'
