@@ -13,8 +13,9 @@ const TST={},
  UIT=[8,15,16,17,18,19,20,21,22,23,25,26,27,30,31,32,33,34,35,36,37],
  RUN={t0:0,over:()=>performance.now()-RUN.t0>12,maxF:0,total:0,pj:1,dur:{},at:''};
 const pad=i=>String(i).padStart(2,'0');
-const chk=(id,n,ref,val,tol)=>{
- const e=Math.abs(val-ref)/(Math.abs(ref)||1);
+/* 数値の検査：誤差 = |val − ref| / max(|ref|, sc)（SPEC-20 の 7）．sc は量の大きさの尺度で，基準が差で 0 に近くなりうる項目で与える（基準が小さいと相対誤差が跳ぶため）．与えず基準が 0 のときは 1 */
+const chk=(id,n,ref,val,tol,sc)=>{
+ const e=Math.abs(val-ref)/(Math.max(Math.abs(ref),sc||0)||1);
  (TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})
 };
 const chkB=(id,n,ok,val,ref)=>{
@@ -1491,8 +1492,8 @@ TST[14]=function*(){
  for(const[nm,s]of[['S3',s3],['S4',s4]]){
   const M=lastM(s.rec,1)[0];
   chk(14,`${nm}：IMEP·V_d = W_i,net`,M.W,M.imep*G.Vd,1e-12);
-  chk(14,`${nm}：BMEP = IMEP − FMEP − AMEP`,M.imep-M.fmep-M.amep,M.bmep,1e-9);
-  chk(14,`${nm}：P_b = BMEP·V_d / t_cycle`,M.bmep*G.Vd/M.tc,M.pb,1e-9);
+  chk(14,`${nm}：BMEP = IMEP − FMEP − AMEP（誤差の尺度は IMEP）`,M.imep-M.fmep-M.amep,M.bmep,1e-9,Math.abs(M.imep));
+  chk(14,`${nm}：P_b = BMEP·V_d / t_cycle（誤差の尺度は P_i）`,M.bmep*G.Vd/M.tc,M.pb,1e-9,Math.abs(M.pi));
   chkB(14,`${nm}：0 < η_m < 1，bsfc > 0 有限`,M.em>0&&M.em<1&&M.bsfc>0&&isFinite(M.bsfc),`η_m=${M.em.toFixed(3)}, bsfc=${M.bsfc.toFixed(0)} g/kWh`);
   const ot=1-G.eps**(1-1.4);
   chkB(14,`${nm}：P_i ≤ η_Otto ṁ_f H_u`,lastM(s.rec,5).every(m=>m.pi<=ot*m.mfd*K.Hu),`η_i,実効=${(M.pi/(M.mfd*K.Hu)).toFixed(3)}`,'≤ '+ot.toFixed(3));
@@ -1500,7 +1501,7 @@ TST[14]=function*(){
   chkB(14,`${nm}：動力収支 |W_i − W_f − W_aux − W_dyno|/W_i ≤ 2%`,bal<=.02,(bal*100).toFixed(2)+' %','≤ 2 %')
  }
  const M=lastM(s3.rec,1)[0];
- chk(14,'PMEP·V_d = W_i,net − W_i,gross',M.W-M.Wg,M.pmep*G.Vd,1e-12);
+ chk(14,'PMEP·V_d = W_i,net − W_i,gross（誤差の尺度は W_i,net）',M.W-M.Wg,M.pmep*G.Vd,1e-12,Math.abs(M.W));
  {
   const L=s3.c.last;
   let w=0;
@@ -5347,6 +5348,26 @@ TST[29]=function*(){
    r.push([inj,phi,GAS.stat.of-n0,c.s.cyc,c.s.div])
   }
   chkB(29,'表の当量比の範囲：ポート噴射と直噴，φ 0.6 と 1.4，始動から 1 s で，既燃ガスの物性を求めた φ_r が表の範囲の外に出た回数が 0',r.every(q=>q[2]===0&&q[3]>=5&&!q[4]),r.map(q=>`${q[0]?'直噴':'ポート噴射'} φ ${q[1]}：${q[2]} 回（${q[3]} サイクル）`).join('／'))
+ }/* 16：長い時間の収支（REQ-29 の 12）．サイクル変動あり，始動から 1 s の後の 30 s の通算．途中で開度と目標回転数を 3 回変える */
+ {
+  const r=[];
+  for(const[nm,o]of[['直噴・動力計制御',{inj:1}],['ポート噴射・動力計制御',{inj:0}],['直噴・スロットル制御',{inj:1,mode:0}]]){
+   const c=new Core({...mkP(),cvar:1,...o});
+   c.start();
+   yield*runC(c,1);
+   const y0=c.s.y.slice(),U0=c.cyl(y0).U,t0=c.s.t;
+   for(const[al,nt]of[[15,1500],[40,2500],[90,4000],[10,1200]]){
+    if(al!==15){c.P.alm=al*D;c.P.nt=nt}
+    yield*runC(c,t0+7.5*(1+[15,40,90,10].indexOf(al))-c.s.t)
+   }
+   const y1=c.s.y,
+    d=i=>y1[i]-y0[i],
+    res=c.cyl(y1).U-U0+d(18)+d(32)-d(33)+d(34)-d(43),
+    fH=(o.inj?d(44):d(46))*K.Hu,
+    mr=y1[3]-y0[3]-(d(25)+d(45)-d(26));
+   r.push({nm,e:res/fH,m:mr/d(25),cy:c.s.cyc,ok:Math.abs(res)<=1e-4*fH&&Math.abs(mr)<=1e-9*d(25)&&fH>0&&!c.s.div&&c.s.t>=t0+30-1e-9})
+  }
+  chkB(29,'長い時間の収支（サイクル変動あり，始動から 1 s の後の 30 s，開度と目標回転数を 3 回変える．直噴・ポート噴射，動力計制御・スロットル制御）：筒内の第一法則の残差 ≤ 10⁻⁴ × 供給した燃料の発熱量，質量の収支の残差 ≤ 10⁻⁹ × 吸気弁を通った質量',r.every(q=>q.ok),r.map(q=>`${q.nm}：${q.e.toExponential(1)}，${q.m.toExponential(1)}（${q.cy} サイクル）`).join('／'))
  }
 };
 TST[30]=function*(){
