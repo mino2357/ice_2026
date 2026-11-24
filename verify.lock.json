@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-24T11:57:39.372Z",
-  "plan": "第25版とのビット比較 ＋ 全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）",
+  "at": "2026-11-24T12:01:50.130Z",
+  "plan": "TEST-16（360×640）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "e9629d00136f7b24",
@@ -123,7 +123,7 @@
    "docs/specification/SPEC-29B.md": "0f5ef8e472c83a91",
    "docs/specification/SPEC-30.md": "8a4ee104fd40faa7",
    "docs/specification/SPEC-32.md": "be0532dc3f53d863",
-   "docs/specification/SPEC-33.md": "66697aac3d7af091",
+   "docs/specification/SPEC-33.md": "78972d5a5e0a91b8",
    "docs/specification/SPEC-34.md": "18c8db6369e44879",
    "docs/specification/SPEC-35.md": "4af3c2df4d624beb",
    "docs/specification/SPEC-36.md": "55f1442de5ff7487",

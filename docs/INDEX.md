@@ -42,7 +42,7 @@
 | 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 5306–5320 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,675,1105,1279,1571 `plot.js`:480 `ui.js`:173 |
 | 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2954） | `gui/TEST-31.md`（1761） | 5529–5534 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:476 |
 | 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5766–5769 | 03 21 33 34 | `core.js`:2603,2717,2732,2755,2774,2899… `plot.js`:1138,1264 `ui.js`:763,777,780 |
-| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5223） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5984–6012 | 01 03 10 12 14 29 30 32 | `core.js`:452,3011,3073,3100,3110 `plot.js`:1138,1189,1197,1213 `ui.js`:763,777,873 |
+| 33 [U] | 熱効率の損失の内訳 | `requirements/REQ-33.md`（1559） | `specification/SPEC-33.md`（5657） `gui/SPEC-33C.md`（960） | `specification/TEST-33.md`（1805） | 5984–6012 | 01 03 07 10 12 14 29 30 32 | `core.js`:452,3011,3073,3100,3110 `plot.js`:1138,1189,1197,1213 `ui.js`:763,777,873 |
 | 34 [U] | VVT マップ | `requirements/REQ-34.md`（1380） | `specification/SPEC-34.md`（1581） `gui/SPEC-34A.md`（1620） | `specification/TEST-34.md`（1470） | 6113–6117 | 32 | `core.js`:2638,3158,3160 `plot.js`:1452,1504 `ui.js`:777,884 |
 | 35 [U] | シャシーダイナモメーター | `requirements/REQ-35.md`（1303） | `specification/SPEC-35.md`（3291） `gui/SPEC-35D.md`（1020） | `specification/TEST-35.md`（1693） | 6284–6287 | 11 18 22 23 26 | `core.js`:238,242,247,2102 `plot.js`:446 `ui.js`:670 |
 | 36 [U] | 振動による体感 | `requirements/REQ-36.md`（1356） | `specification/SPEC-36.md`（2141） `gui/SPEC-36D.md`（617） | `specification/TEST-36.md`（1861） | 6632–6633 | 07 13 15 | `core.js`:1526 `audio.js`:363,408 `ui.js`:991,993,1169 |
@@ -167,4 +167,5 @@
 | `docs/changes/2026-11-24-omega-neg-stage.md` | 1402 |
 | `docs/changes/2026-11-24-phir-table-range.md` | 1955 |
 | `docs/changes/2026-11-24-review-gemini-6.md` | 9920 |
+| `docs/changes/2026-11-24-spec33-etac.md` | 909 |
 | `docs/changes/2026-11-24-vtsearch-j0.md` | 963 |
