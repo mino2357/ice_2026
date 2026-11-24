@@ -569,7 +569,15 @@ ${H3(19,'燃料の噴射と気化','30')}<p>設定「噴射」の噴射方式で
  DV.pend.forEach(e=>e.style.display='none')
 }
 /* ===== 数式の表示（SPEC-16 の 3）：MathJax（cdnjs）が使えれば SVG に組み，使えなければ TeX のソースを表示する ===== */
-const MJX={st:'idle',q:[],url:'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js',wait:15000,run:0};
+/* sri：cdnjs が公開する tex-svg.js の SHA-512（REQ-16 の 7）．内容が違えばブラウザが実行せず error になる */
+const MJX={
+ st:'idle',
+ q:[],
+ url:'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js',
+ sri:'sha512-si8sZ9hrLKf+1QHOzVXtT6F9GH5yK4VeeZ4pm0LOBFriwiXFL6Pu6+VMArzgh1sDJb5gKyktGtN0rMT16k1/cQ==',
+ wait:15000,
+ run:0
+};
 const TXM={ok:'数式：MathJax 3.2.2 で表示',fail:'数式：MathJax を読み込めないため TeX のソースを表示',load:'数式：MathJax を読み込み中（TeX のソースを表示）'};
 function txStat(){const e=$('txs');if(e)e.textContent=TXM[MJX.st]||TXM.load}
 function txRaw(el){el.textContent=el.dataset.tex;el.classList.add('raw');el.classList.remove('mj')}
@@ -608,6 +616,8 @@ function txLoad(){
  };
  const sc=document.createElement('script');
  sc.src=MJX.url;
+ sc.integrity=MJX.sri;
+ sc.crossOrigin='anonymous';
  sc.async=true;
  sc.dataset.mj='1';
  sc.onerror=txFail;
