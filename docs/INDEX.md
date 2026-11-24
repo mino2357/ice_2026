@@ -173,5 +173,6 @@
 | `docs/changes/2026-11-24-review-gemini-6.md` | 9920 |
 | `docs/changes/2026-11-24-spec33-etac.md` | 909 |
 | `docs/changes/2026-11-24-vtsearch-j0.md` | 963 |
+| `docs/changes/2026-11-25-node-tests.md` | 2492 |
 | `docs/changes/2026-11-25-stage1-quick.md` | 1847 |
 | `docs/changes/2026-11-25-stage1-quick2.md` | 1840 |

@@ -14,6 +14,7 @@
 | `unused.js` | `src/` の最上位で定義した名前と定数表（`K`，`SWC`）のキーのうち，どこからも使われていないもの | Node.js |
 | `run.js` | アプリ内テストを 1 つのビューポートで実行．`--only 24,26` で一部だけ，`--names` で全検査，`--time` でテストごとの所要時間，`--ui` で画面のモード（[U] の項目だけ），`--json`／`--md` で一覧を保存 | ビルド済みの成果物，Playwright |
 | `shard.js` | 全項目を組に分けて `run.js` を同時に実行（既定は CPU の数の半分，上限 4 組．`--n 2` で組の数）．分け方は `times.json`（テストごとの所要時間の実測）．性能の記録は判定しない．段階 1 の全項目に使う | `run.js`，`times.json` |
+| `node_tests.js` | 計算だけのアプリ内テスト（`NODE_IDS`）を Node.js で実行（ビルドもブラウザも要らない）．`--only`，`--quick`，`--names`，`--time`，`--json` は `run.js` と同じ．段階 1 では使わない（ブラウザと比べて全体が縮まなかった．Node.js と Chromium は数学の関数の最後の桁が違い，値はビット単位では一致しない．`docs/changes/2026-11-25-node-tests.md`） | Node.js |
 | `coverage.js` | 仕様書のテスト項目と，`run.js --json` の検査の名前を，テストごとに並べて表示（漏れは人が読んで判定） | `run.js` の出力 |
 | `bitcheck.js` | 熱物性 γ(T) の経路が第25版（commit `1ef8ff1`）とビット単位で一致するか．`--chromium` でブラウザでも比べる | git，（Playwright） |
 | `node_core.js` | `src/core.js` を Node.js で読み込む（`require('./node_core').load()`）．`sub` でソースを書き換えて感度を調べられる | Node.js |
