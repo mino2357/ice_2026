@@ -1491,10 +1491,10 @@ TST[14]=function*(){
  }
  {
   const h=s3.c.s.Mh,
-   ks=['imep','pmep','ei','pi','ev','xr','pm','Tm','mfd','tb','pb','bmep','fmep','em','bsfc','eb','ybi'],
+   ks=['imep','pmep','ev','xr','pm','Tm','tb','bmep','fmep','ybi'],
    am=avgM(s3.c.s);
   let bad=ks.filter(k=>Math.abs(am[k]-h.reduce((a,q)=>a+q[k],0)/10)>1e-12*Math.abs(am[k])+1e-300);
-  chkB(14,'S3：表示の指標 = 直近 10 サイクルの算術平均（17 指標，10⁻¹²）',h.length===10&&bad.length===0,bad.join(' ')||`${h.length} サイクル`);
+  chkB(14,'S3：算術平均とする表示の指標 = 直近 10 サイクルの算術平均（10 指標，10⁻¹²）',h.length===10&&bad.length===0,bad.join(' ')||`${h.length} サイクル`);
   const q=new Core(mkPT());
   q.start();
   let n0=-1;
@@ -1503,6 +1503,24 @@ TST[14]=function*(){
   const qc=s3.c.clone();
   qc.reset();
   chkB(14,'完爆後 3 サイクルで 3 サイクル平均，コールドリセットで表示が「–」',q.s.Mh.length===3&&Math.abs(a3-r3)<=1e-12*Math.abs(r3)&&metricList(qc,0)[1][1]==='–',`${(a3/1e3).toFixed(1)} kPa`)
+ }
+ /* 10：比で定義する指標は 10 サイクルの和の比（REQ-14 の 4，SPEC-14） */
+ {
+  const c=new Core({...mkP(),cvar:1});
+  c.start();
+  yield*runC(c,3);
+  const h=c.s.Mh,
+   am=avgM(c.s),
+   S=f=>h.reduce((a,q)=>a+f(q),0),
+   T=S(q=>q.tc),
+   mF=S(q=>q.mfd*q.tc),
+   wB=S(q=>q.pb*q.tc),
+   ex={ei:S(q=>q.W)/(S(q=>q.mf)*K.Hu),em:S(q=>q.bmep)/S(q=>q.imep),bsfc:mF/wB*3.6e9,eb:wB/(mF*K.Hu),N:30/PI*P4*h.length/T};
+  for(const k of['pi','pb','Pd','Pf','Pwall','mfd','mth','mr','min','mexv','mepp','mtl'])ex[k]=S(q=>q[k]*q.tc)/T;
+  const bad=Object.keys(ex).filter(k=>!(Math.abs(am[k]-ex[k])<=1e-12*Math.abs(ex[k])+1e-300)),
+   ar=S(q=>q.bsfc)/h.length,
+   dv=Math.abs(ar/ex.bsfc-1);
+  chkB(14,`比で定義する指標（${Object.keys(ex).length} 指標）の表示 = 直近 10 サイクルの分子の和と分母の和の比（サイクル変動 ON，10⁻¹²）．bsfc の和の比と算術平均の差 ≥ 10⁻⁶`,h.length===10&&bad.length===0&&dv>=1e-6,`${bad.length?'合わない：'+bad.join(' ')+'，':''}bsfc：和の比 ${ex.bsfc.toFixed(3)}，算術平均 ${ar.toFixed(3)} g/kWh（差 ${dv.toExponential(1)}）`)
  }
  const c=s3.c.clone(),ref=Base.cp(c.last),keep=Float32Array.from(ref.p);
  c.P.spb+=8;

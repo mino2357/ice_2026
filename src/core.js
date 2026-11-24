@@ -2515,11 +2515,26 @@ class OpMap{
   return b
  }
 }
+/* サイクルの時間で割る量（出力，燃料流量，各断面の平均流量）：時間で重みを付けた平均 Σ X t_c / Σ t_c（SPEC-14） */
+const AVT=['pi','pb','Pd','Pf','Pwall','mfd','mth','mr','min','mexv','mepp','mtl'];
 const avgM=s=>{
  const h=s.Mx&&s.Mh&&s.Mh.length?s.Mh:null;
  if(!h)return{};
  const o={};
  for(const k in h[0]){const v=h[0][k];if(typeof v==='number')o[k]=h.reduce((a,q)=>a+q[k],0)/h.length}
+ /* 比で定義する指標は，分子の和と分母の和の比（REQ-14 の 4，SPEC-14）．どれかのサイクルで定義されない（NaN）効率と bsfc は NaN */
+ const S=f=>h.reduce((a,q)=>a+f(q),0),
+  T=S(q=>q.tc),
+  mF=S(q=>q.mfd*q.tc),
+  wB=S(q=>q.pb*q.tc),
+  all=k=>h.every(q=>q[k]===q[k]);
+ for(const k of AVT)o[k]=S(q=>q[k]*q.tc)/T;
+ o.wb=P4*h.length/T;
+ o.N=o.wb*30/PI;
+ o.ei=all('ei')?S(q=>q.W)/(S(q=>q.mf)*K.Hu):NaN;
+ o.em=all('em')?S(q=>q.bmep)/S(q=>q.imep):NaN;
+ o.bsfc=all('bsfc')?mF/wB*3.6e9:NaN;
+ o.eb=all('eb')?wB/(mF*K.Hu):NaN;
  return o
 };
 function metricList0(c,pg){
