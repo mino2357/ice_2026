@@ -17,7 +17,7 @@ const A=process.argv.slice(2),opt=k=>{const i=A.indexOf('--'+k);return i<0?null:
 const [W,H]=String(opt('vp')||'360x640').split('x').map(Number),pc=W>1000,only=opt('only')?String(opt('only')).split(',').map(Number):null;
 const URL='file://'+path.resolve(typeof opt('file')==='string'?opt('file'):path.join(__dirname,'../../dist/engine.html')),MJ='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/',MJD=path.resolve(__dirname,'../../vendor/mathjax-3.2.2/es5');
 (async()=>{const b=await chromium.launch(),c=await b.newContext({viewport:{width:W,height:H},hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
-await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!opt('off')&&u.startsWith(MJ)){const f=path.join(MJD,u.slice(MJ.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript'})}return rt.abort()});
+await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!opt('off')&&u.startsWith(MJ)){const f=path.join(MJD,u.slice(MJ.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}})}return rt.abort()});
 p.on('pageerror',e=>errs.push(e.message));await p.goto(URL);await p.waitForTimeout(300);
 await p.evaluate(([only,ui,pj])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{d=v}});
   /* テストごとの所要時間：ST[i] が 'run' になった時刻の差 */

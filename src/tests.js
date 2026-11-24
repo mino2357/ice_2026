@@ -2539,6 +2539,52 @@ TST[16]=function*(){
    okL=['MathJax 3.2.2','Apache License 2.0','cdnjs'].every(s=>lt.includes(s));
   chkB(16,'第三者の著作物を埋め込まない（C-8）：@font-face と base64 が無く，MathJax の読み込み元が規定の URL，解説タブに MathJax の名前・版・ライセンス・読み込み元',okF&&okS&&okL,`@font-face ${nf}，base64 ${b64}，フォント ${[...document.fonts].length}，src ${okS}，表示 ${okL}`)
  }
+ {/* 項目 22：MathJax の SRI（REQ-16 の 7，SPEC-16 の 3）：中身の違うスクリプトを同じ読み込みの関数で読ませると実行しない．対照は integrity なしで実行されること */
+  let k=0;
+  while(MJX.st==='load'&&k++<3000)yield 'frame';
+  const SRI='sha512-si8sZ9hrLKf+1QHOzVXtT6F9GH5yK4VeeZ4pm0LOBFriwiXFL6Pu6+VMArzgh1sDJb5gKyktGtN0rMT16k1/cQ==',
+   sc=document.querySelector('script[data-mj]'),
+   okA=!!sc&&sc.integrity===SRI&&sc.crossOrigin==='anonymous',
+   bu=URL.createObjectURL(new Blob(['window.__mjEvil=(window.__mjEvil||0)+1'],{type:'application/javascript'}));
+  window.__mjEvil=0;
+  {
+   const t=document.createElement('script');
+   t.src=bu;
+   t.crossOrigin='anonymous';
+   document.head.appendChild(t);
+   k=0;
+   while(!window.__mjEvil&&k++<200)yield 'frame';
+   t.remove()
+  }
+  const c1=window.__mjEvil===1,
+   M0=window.MathJax,
+   st0=MJX.st,
+   u0=MJX.url,
+   q0=MJX.q.slice(),
+   n0=document.querySelectorAll('script[data-mj]').length;
+  window.__mjEvil=0;
+  MJX.st='idle';
+  MJX.url=bu;
+  txLoad();
+  const s2=[...document.querySelectorAll('script[data-mj]')].pop(),
+   ok2=document.querySelectorAll('script[data-mj]').length===n0+1;
+  k=0;
+  while(MJX.st==='load'&&k++<300)yield 'frame';
+  const st2=MJX.st,
+   ev=window.__mjEvil;
+  for(let j=0;j<10;j++)yield 'frame';
+  const ev2=window.__mjEvil;
+  window.MathJax=M0;
+  MJX.st=st0;
+  MJX.url=u0;
+  MJX.q.length=0;
+  MJX.q.push(...q0);
+  if(ok2)s2.remove();
+  txStat();
+  URL.revokeObjectURL(bu);
+  delete window.__mjEvil;
+  chkB(16,'MathJax の SRI：読み込む <script> に integrity（cdnjs の SHA-512）と crossorigin=anonymous．中身の違うスクリプトは実行されず「読み込めない」になる（対照：integrity なしでは実行される）',okA&&c1&&ok2&&st2==='fail'&&ev===0&&ev2===0,`integrity ${okA}，対照の実行 ${c1}，違う中身：状態 ${st2}，実行 ${ev2}`)
+ }
  {/* 項目 19：TeX の表示（MathJax の有無によらず） */
   const e=E.querySelector('.mx .tx[data-d="1"]'),w=e&&e.closest('.mx');
   let okR=false,okM=true;
