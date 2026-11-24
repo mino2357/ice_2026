@@ -69,7 +69,7 @@
 | 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 4137 |
 | 要件定義書 | 7. 改訂の記録 | `requirements/s7.md` | 13 |
 | 要件定義書 | 7.1 版の一覧 | `requirements/s7.1.md` | 917 |
-| 要件定義書 | 7.2 未決事項と既知の限界 | `requirements/s7.2.md` | 5317 |
+| 要件定義書 | 7.2 未決事項と既知の限界 | `requirements/s7.2.md` | 6821 |
 | 要件定義書 | 7.3 経緯の記録の場所 | `requirements/s7.3.md` | 392 |
 | 仕様書 | 単気筒4ストロークSI機関シミュレータ 仕様書（第26版） | `specification/_head.md` | 33 |
 | 仕様書 | 0. この文書について | `specification/s0.md` | 969 |
@@ -165,6 +165,7 @@
 | `docs/changes/2026-11-24-bdc-event.md` | 1726 |
 | `docs/changes/2026-11-24-check-scale-longbal.md` | 1938 |
 | `docs/changes/2026-11-24-diverged-halt.md` | 1632 |
+| `docs/changes/2026-11-24-limits-s72.md` | 779 |
 | `docs/changes/2026-11-24-mathjax-sri.md` | 1739 |
 | `docs/changes/2026-11-24-omega-neg-stage.md` | 1402 |
 | `docs/changes/2026-11-24-phir-table-range.md` | 1955 |

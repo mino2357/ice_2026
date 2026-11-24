@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-24T12:39:37.400Z",
-  "plan": "全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）",
+  "at": "2026-11-24T12:42:37.194Z",
+  "plan": "TEST-16（360×640）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "e9629d00136f7b24",
@@ -95,7 +95,7 @@
    "docs/requirements/s5.md": "972a28b6bcd23246",
    "docs/requirements/s6.md": "ec5aa9ffbba92d67",
    "docs/requirements/s7.1.md": "25ce936db9d985e8",
-   "docs/requirements/s7.2.md": "4cd1a396b8c6f9d2",
+   "docs/requirements/s7.2.md": "287e862ab409d219",
    "docs/requirements/s7.3.md": "dec35c3218446b13",
    "docs/requirements/s7.md": "d40ddb6ddf1548b7",
    "docs/specification/SPEC-01.md": "f0883358409f3d40",
@@ -243,7 +243,7 @@
   }
  },
  "approved": {
-  "commit": "6be40dcd9b3eadfe27ad1c244547a510c25715e5",
-  "at": "2026-11-24T12:28:06.460Z"
+  "commit": "fc1d2a6d6e4fa4767b28eba4413ab5b1218c7dae",
+  "at": "2026-11-24T12:40:57.176Z"
  }
 }
