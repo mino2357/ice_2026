@@ -18,6 +18,8 @@ const chk=(id,n,ref,val,tol,sc)=>{
  const e=Math.abs(val-ref)/(Math.max(Math.abs(ref),sc||0)||1);
  (TR[id]=TR[id]||[]).push({n,ref:fnum(ref),val:fnum(val),err:e.toExponential(2),ok:e<=tol})
 };
+/* 段階 1（npm run verify．RUN.quick）で省く重い検査（仕様書 9 節の 6）．省いたものを RUN.skip に記録し，true を返す */
+const skipQ=(id,n)=>{if(!RUN.quick)return false;(RUN.skip=RUN.skip||[]).push(`TEST-${pad(id)}：${n}`);return true};
 const chkB=(id,n,ok,val,ref)=>{
  (TR[id]=TR[id]||[]).push({n,ref:ref==null?'成立':String(ref),val:val==null?(ok?'成立':'不成立'):String(val),err:'–',ok:!!ok})
 };
@@ -820,8 +822,8 @@ TST[11]=function*(){
   const f3=d.s.fired===0&&d.s.fuel===0;
   chkB(11,'モータリングの操作：動力計制御の start() でスターターなしに 1 s で N̄ > 1000 rpm，4 s で 1500 ±25 rpm，stop()（FUEL CUT）の 3 s 後も運転中で 1500 ±25 rpm・T_c < 0・図示仕事 < 0，もう一度 stop()（STOP）で停止・T_c = 0．スロットル制御は stop() 1 回で停止',st0&&N1>1000&&Math.abs(N4-1500)<=25&&f1&&mdev(Nq,1500)<=25&&Tc<0&&W<0&&f2&&f3,`${st0?1:0}${f1?1:0}${f2?1:0}${f3?1:0}，1 s 後 ${N1.toFixed(0)}，4 s 後 ${N4.toFixed(0)} rpm，モータリング 最大偏差 ${mdev(Nq,1500).toFixed(1)} rpm，T_c ${Tc.toFixed(2)} N·m`)
  }
-/* 12：40000 rpm のモータリング */
- {
+/* 12：40000 rpm のモータリング．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!skipQ(11,'40000 rpm のモータリング')){
   const c=new Core({...mkPT(),mode:1,nt:40000,alm:90*D});
   c.start();
   c.stop();
@@ -2432,17 +2434,23 @@ TST[16]=function*(){
    const h1=!!P().querySelector('h1');
    let nm=0,pm=-1;
    const c0=cbad.length;
+   /* 数式の数と見出しは，全ページを表示せずに解析して数える．表示・組版・切り替えの時間・断片が 1 つであることは，抜き取りのページ（最初，数式が 3 つ以上の最初のページ，最後）で確かめる（REQ-16 の 6．全ページを表示すると開発用の計算機で 1 分かかった） */
    for(let i=0;i<np;i++){
+    const T=document.createElement('template');
+    T.innerHTML=q.chunks[i];
+    const n=TXS(T.content).length;
+    nm+=n;
+    if(pm<0&&n>=3)pm=i;
+    T.content.querySelectorAll('h2,h3,h4').forEach(h=>heads[k].push(h.textContent));
+    if(!(i%40))yield
+   }
+   for(const i of[...new Set([0,Math.max(pm,0),np-1])]){
     const t0=performance.now();
     docPage(k,i);
     void el.offsetHeight;
     pmax=Math.max(pmax,performance.now()-t0);
-    const txs=TXS(P());
-    nm+=txs.length;
-    if(pm<0&&txs.length>=3)pm=i;
     one=one&&el.querySelectorAll('.dpg').length===1&&P().querySelectorAll('h2,h3').length===(i?1:0);
-    P().querySelectorAll('h2,h3,h4').forEach(h=>heads[k].push(h.textContent));
-    if(MJ)yield* txc(txs);
+    if(MJ)yield* txc(TXS(P()));
     yield
    }
    {
@@ -2492,7 +2500,7 @@ TST[16]=function*(){
     res.push({k,nm,nt:as.length,ok:f.every(x=>x),f:f.map(x=>x?1:0).join('')})
    }
   }
-  chkB(16,'文書の閲覧：切替のボタン 5 つ（44 px 以上，文字の余裕），4 文書とも題・数式（全ページの合計がビルド時の数と一致，MathJax のときは全数式が誤りなく組め，表示範囲の式が組まれている）・目次（最初と最後の項目でそのページに替わり見出しが上端 ±4 px）があり，横スクロールしない',okB&&res.length===4&&res.every(r=>r.ok),res.map(r=>`${['','要件定義書','仕様書','画面の文書','用語集'][r.k]}：数式 ${r.nm}，目次 ${r.nt}${r.ok?'':' ×'+r.f}`).join('／'));
+  chkB(16,'文書の閲覧：切替のボタン 5 つ（44 px 以上，文字の余裕），4 文書とも題・数式（全ページを解析した合計がビルド時の数と一致，MathJax のときは抜き取りのページの数式が誤りなく組め，表示範囲の式が組まれている）・目次（最初と最後の項目でそのページに替わり見出しが上端 ±4 px）があり，横スクロールしない',okB&&res.length===4&&res.every(r=>r.ok),res.map(r=>`${['','要件定義書','仕様書','画面の文書','用語集'][r.k]}：数式 ${r.nm}，目次 ${r.nt}${r.ok?'':' ×'+r.f}`).join('／'));
   const hc=(ks,re)=>{
     const c={};
     ks.forEach(k=>heads[k].forEach(s=>{const m=s.match(re);if(m)c[m[1]]=(c[m[1]]||0)+1}));
@@ -2521,7 +2529,7 @@ TST[16]=function*(){
   const back=E.offsetHeight>100&&$('dv2').offsetHeight===0&&E.querySelectorAll('h3[data-sec]').length===21;
   chkB(16,'文書の見出し：全ページを通して要件定義書と画面の文書を合わせて REQ-01〜37，仕様書と画面の文書を合わせて SPEC-01〜37 と TEST-01〜37 が 1 つずつ．[式の解説] で元の表示に戻り，文書ごとに表示中のページと縦スクロール位置を保つ',okH&&back&&Math.abs(p2-300)<=1&&Math.abs(p3-120)<=1&&g2===L2&&g3===L3,`見出し ${okH}，戻る ${back}，ページ ${g2===L2&&g3===L3}，位置 ${p2} / ${p3} px`,'300 / 120 ±1');
   chkB(16,'ページ：画面にある断片は表示中の 1 ページだけ，[◀ 前] [次 ▶] で 1 ページずつ移動（端では無効，44 px 以上）',one&&navOk,`1 ページだけ ${one}，移動 ${navOk}`);
-  chkP(16,'ページの切り替え（4 文書の全ページの最長）',pmax,100,'ms',0);
+  chkP(16,'ページの切り替え（4 文書の抜き取りのページの最長）',pmax,100,'ms',0);
   for(const k of[1,2,3,4])docPage(k,pg0[k]);
   DV.top=tops0.slice();
   docShow(doc0)
@@ -2625,15 +2633,27 @@ TST[16]=function*(){
   for(const kd of KD)for(let i=1;i<=NT;i++){
    const n=pad(i),x=`${kd}-${n}`,t=tg[x];
    if(!t){rb.push(x);continue}
-   if(DV.cur!==t.k)tapEl(sw[t.k]);
-   docBuild(t.k);
-   if(DV.ix[t.k][t.id]!==DV.pg[t.k])docPage(t.k,DV.ix[t.k][t.id]);
-   const h=document.getElementById(t.id),
+   /* 対応の行は，見出しのページを表示せずに解析して調べる（表示のときと同じ関数 xrRows で足す）．44 px の大きさは，抜き取りの見出し（各種類の 1 番と最後）だけ表示して測る（REQ-16 の 6） */
+   const sz=i===1||i===NT;
+   let h;
+   if(sz){
+    if(DV.cur!==t.k)tapEl(sw[t.k]);
+    docBuild(t.k);
+    if(DV.ix[t.k][t.id]!==DV.pg[t.k])docPage(t.k,DV.ix[t.k][t.id]);
+    h=document.getElementById(t.id)
+   }else{
+    docBuild(t.k);
+    const T=document.createElement('div');
+    T.innerHTML=DOCS[DOCK[t.k]].chunks[DV.ix[t.k][t.id]];
+    xrRows(T);
+    h=T.querySelector('#'+CSS.escape(t.id))
+   }
+   const
     r=h&&h.nextElementSibling&&h.nextElementSibling.classList.contains('xrow')?h.nextElementSibling:null,
     have=xs(r),
     want=[...KD.filter(q=>q!==kd).map(q=>`${q}-${n}`),...(sec[n]||[])];
    if(!r||!want.every(w=>have.includes(w))||!have.every(ok))rb.push(x);
-   if(r&&!(i%7))for(const a of r.querySelectorAll('a.xr')){const b=a.getBoundingClientRect();if(b.height<43.5||b.width<43.5)big=false}
+   if(r&&sz)for(const a of r.querySelectorAll('a.xr')){const b=a.getBoundingClientRect();if(b.height<43.5||b.width<43.5)big=false}
    if(!(++cnt%6))yield
   }
   tapEl(sw[0]);
@@ -2897,7 +2917,7 @@ TST[17]=function*(){
    chkB(17,'印の記号の配置（バルブタイミングの画面）：IVO・IVC・EVO・EVC を設定範囲の端にした 4 通り × 2 つの大きさで，記号が互いにも印にも枠にも重ならない',bad===0&&nl>=8*4,`記号 ${nl} 個，重なり ${bad}${o.length?'：'+o.join('，'):''}`)
   }
  }
- if(!RUN.ui){/* 12：範囲がデータを含む（SPEC-17 B）．20 ステップごと（サイクルの途中）に軸を更新して，線図①〜⑦の全系列が範囲の中にあることを確かめる */
+ if(!RUN.ui&&!skipQ(17,'範囲がデータを含む（過渡の運転）')){/* 12：範囲がデータを含む（SPEC-17 B）．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6）．20 ステップごと（サイクルの途中）に軸を更新して，線図①〜⑦の全系列が範囲の中にあることを確かめる */
   const outN=(c,A)=>{
     let n=0;
     for(let sub=0;sub<7;sub++)for(const q of screenSpec(c,A,sub,{now:0}))for(const s of q.ser)for(const v of s.Y)if(Number.isFinite(v)&&(v<q.ya.a-(q.ya.a===0?.002*q.ya.b:1e-9*Math.abs(q.ya.a))-1e-12||v>q.ya.b+1e-9*Math.abs(q.ya.b)+1e-12))n++;
@@ -5895,8 +5915,8 @@ TST[32]=function*(){
    ok=Math.abs(c.s.y[1]/(E.N0*PI/30)-1)<=1e-12&&c.s.al===E.al0&&c.P.cvar===0&&c.P.sauto===1&&c.fixTw===1&&c.s.y[5]===Tw&&E.ok;
   chkB(32,'評価の条件（S4）：角速度 = π N̄₀/30（相対 1e-12），開度 = α₀，サイクル変動 OFF，点火の自動最適化 ON，壁温一定，周期定常の判定を満たす',ok,`N̄₀ ${E.N0.toFixed(1)} rpm，α₀ ${(E.al0/D).toFixed(2)}°，${E.h.length} サイクル，T_b ${E.J.toFixed(3)} N·m`)
  }
-/* 4：機関での探索（S4，軸トルク最大） */
- if(!RUN.ui){
+/* 4：機関での探索（S4，軸トルク最大）．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!RUN.ui&&!skipQ(32,'機関での探索（S4，全開 4000 rpm）')){
   const op=new VTOpt(s4.c,0);
   while(!op.run(10))yield;
   const R=op.R,E=new VTEval(s4.c,0),tol=2*(OPT.tol.fine.r*Math.abs(R.J)+OPT.tol.fine.a),nb=[];
@@ -6225,9 +6245,9 @@ TST[34]=function*(){
   chkB(34,'補間：格子の点で一致（1e-12），f = 2φin + 3φex で一致（1e-9）．等高線 f = 50 の端点が f = 50（1e-9），線分あり．順序：段階 9／16／56 点，81 点が 1 度ずつ',e1<=1e-12&&e2<=1e-9&&e3<=1e-9&&sg.length>0&&cnt.join()==='9,16,56'&&uniq===81&&o.length===81,`${e1.toExponential(1)}，${e2.toExponential(1)}，${e3.toExponential(1)}（${sg.length} 本），${cnt.join('／')}`)
  }
  yield;
-/* 3：機関（S4） */
+/* 3：機関（S4）．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
  const s4=yield*scen('S4');
- if(!RUN.ui){
+ if(!RUN.ui&&!skipQ(34,'機関でのマップの計算（S4）')){
   const m=new VVTMap(s4.c);
   while(!m.run(10))yield;
   const ph=VVM.ph,miss=[];
@@ -6396,8 +6416,8 @@ TST[35]=function*(){
     v=[.25,.3,.45].map(c=>vehPerf({...P0,Cd:c},25e3).vmax*kmh);
    chkB(35,'傾向：車重 400 < 600 < 900 kg で 0→100 km/h が延びる，C_d 0.25 > 0.30 > 0.45 で最高速度が下がる（P_max = 25 kW）',t[0]<t[1]&&t[1]<t[2]&&v[0]>v[1]&&v[1]>v[2],`${t.map(x=>x.toFixed(1)).join(' < ')} s，${v.map(x=>x.toFixed(0)).join(' > ')} km/h`)
   }
-/* 5：実時間の走行 */
-  {
+/* 5：実時間の走行．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+  if(!skipQ(35,'実時間の走行（9 s）')){
    const c=new Core({...mkPT(),bench:1,nt:4000,alm:90*D,mv:200});
    c.start();
    let mn=1e9,mx=0;
@@ -6501,6 +6521,7 @@ async function runAll(only,ui,pj){
  if(ui)only=only?only.filter(k=>UIT.includes(k)):UIT;
  TR={};
  SC={};
+ RUN.skip=[];
  for(let i=1;i<=NT;i++)ST[i]='';
  const snap=snapLive(),js0=JSON.stringify(snap.s),jp0=JSON.stringify(snap.P),tStart=performance.now();
  RUN.maxF=0;
@@ -6938,8 +6959,8 @@ TST[37]=function*(){
   chkB(37,'等高線：1 次関数の場で端点が値に一致（1e-9）し領域の中，10 本以下で刻みが {1, 2, 2.5, 5} × 10^k（5 つの量と 4 つの範囲），色の画像は領域の中だけ',e3<=1e-9&&inn&&ends.length>0&&C.seg.length>=1&&C.seg.length<=10&&lvOk&&bad===0&&nc>0&&nt>0,`端点 ${ends.length} 点（${e3.toExponential(1)}，領域の中 ${inn}），${C.seg.length} 本（${C.lev.join('，')}），本数 ${lv.map(l=>l.length).join('／')}，色の画素 ${nc}／透明 ${nt}／不一致 ${bad}`)
  }
  yield;
-/* 3：機関（既定の設定） */
- if(!RUN.ui){
+/* 3：機関（既定の設定）．重いので段階 1（RUN.quick）では省く（仕様書 9 節の 6） */
+ if(!RUN.ui&&!skipQ(37,'機関でのマップの計算（既定の設定）')){
   const P0={...mkP()},M=new OpMap(P0);
   while(!M.run(10))yield;
   const C=M.cols(),

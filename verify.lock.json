@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-24T13:58:32.727Z",
-  "plan": "第25版とのビット比較 ＋ 全項目（360×640．組に分けて同時に実行．tools/dev/shard.js）",
+  "at": "2026-11-24T15:00:08.549Z",
+  "plan": "全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "e9629d00136f7b24",
@@ -47,7 +47,7 @@
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "2f23140e9f996df4",
+   "src/tests.js#common": "812d8d7a775d6414",
    "src/ui.js": "d0e452622ba23754",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
@@ -90,7 +90,7 @@
    "docs/requirements/s2.md": "01fa73771fbeaeca",
    "docs/requirements/s3.md": "7cde784ab2e2df54",
    "docs/requirements/s4.md": "3f988def07da7323",
-   "docs/requirements/s5.1.md": "9356551dc88cb3da",
+   "docs/requirements/s5.1.md": "2dc0486cf3537ccb",
    "docs/requirements/s5.2.md": "d83a27f4d8afe4b8",
    "docs/requirements/s5.md": "972a28b6bcd23246",
    "docs/requirements/s6.md": "ec5aa9ffbba92d67",
@@ -112,7 +112,7 @@
    "docs/specification/SPEC-12.md": "4abf3800d663a336",
    "docs/specification/SPEC-13.md": "c2656ff25387e9af",
    "docs/specification/SPEC-14.md": "4c2995ca78af454c",
-   "docs/specification/SPEC-20.md": "012a3259cfdfd335",
+   "docs/specification/SPEC-20.md": "563a593c38a18e24",
    "docs/specification/SPEC-21.md": "dfdedd75e5d6c121",
    "docs/specification/SPEC-24.md": "4330b903d9dc05ea",
    "docs/specification/SPEC-25.md": "800f76e1e2d36c9d",
@@ -171,9 +171,9 @@
    "docs/specification/s6.md": "1840a7d7d60ed31a",
    "docs/specification/s7.md": "1e05c396199fc7a5",
    "docs/specification/s8.md": "3127d5f7fd5207c0",
-   "docs/specification/s9.md": "7a4d4c5e97168bc3",
+   "docs/specification/s9.md": "1d883e38f8ae0bdb",
    "docs/gui/REQ-15.md": "ef21e49deb5e097b",
-   "docs/gui/REQ-16.md": "d360d3a882b47eef",
+   "docs/gui/REQ-16.md": "cd830e1134187536",
    "docs/gui/REQ-17.md": "361f96c8bce51a32",
    "docs/gui/REQ-18.md": "b0c6d787c0c56c05",
    "docs/gui/REQ-19.md": "7d49ae01e6c762ab",
@@ -196,7 +196,7 @@
    "docs/gui/SPEC-36D.md": "88b653549af8c7db",
    "docs/gui/SPEC-37A.md": "67009613a952ba31",
    "docs/gui/TEST-15.md": "fcf4b53853e58860",
-   "docs/gui/TEST-16.md": "357c2464e5a13aca",
+   "docs/gui/TEST-16.md": "71b5434b28db67cd",
    "docs/gui/TEST-17.md": "218322c25f4c6d86",
    "docs/gui/TEST-18.md": "a128671bf08553cc",
    "docs/gui/TEST-19.md": "404ef9e4b9e17d9b",
@@ -237,13 +237,13 @@
    "docs/glossary/s3.md": "140a3d1fbe89fce2",
    "docs/glossary/s4.md": "5b0476929eb847cd",
    "tests/headless.js": "f65e88bfb8b6ae40",
-   "tools/dev/run.js": "7e9d92c2670e5dfb",
+   "tools/dev/run.js": "4da502f53b240542",
    "tools/dev/shard.js": "bab108d60ab2fafd",
-   "tools/dev/times.json": "a79f4f5e73986bb9"
+   "tools/dev/times.json": "57bddfbc84edefa0"
   }
  },
  "approved": {
-  "commit": "457f6df58dff1336d6272abe73c97a3524ebcc87",
-  "at": "2026-11-24T13:41:34.347Z"
+  "commit": "e492280bd77a6d8afc2ec00b9d0a9ae78d8f521d",
+  "at": "2026-11-24T14:39:37.893Z"
  }
 }
