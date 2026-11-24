@@ -38,7 +38,7 @@
 | 26 [U] | 性能曲線タブ（回転数に対する特性の計測） | `requirements/REQ-26.md`（1429） | `specification/SPEC-26.md`（3254） `gui/SPEC-26B.md`（1876） | `specification/TEST-26.md`（3906） | 4456–4601 | 10 14 29 31 37 | `core.js`:469,2152,2172,2173,2201,2209… `plot.js`:238 `ui.js`:261,337 |
 | 27 [U] | 排気系（排気管の脈動と背圧） | `requirements/REQ-27.md`（1475） | `specification/SPEC-27.md`（7785） | `specification/TEST-27.md`（2486） | 4842–4904 | 04 08 14 21 25 29 | `core.js`:1012,1112,1244,1323,1334,1339… |
 | 28 | アイドルの妥当性 | `requirements/REQ-28.md`（413） | `specification/SPEC-28.md`（1010） | `specification/TEST-28.md`（462） | 5632–5654 | – | – |
-| 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（1845） | `specification/SPEC-29.md`（6851） `specification/SPEC-29B.md`（10900） | `specification/TEST-29.md`（5626） | 5014–5021 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,398,469,561… |
+| 29 | 化学種の熱物性と化学平衡（第26版） | `requirements/REQ-29.md`（2040） | `specification/SPEC-29.md`（6851） `specification/SPEC-29B.md`（10900） | `specification/TEST-29.md`（5626） | 5014–5021 | 02 04 05 06 07 08 09 13 14 15 20 25 26 27 30 | `core.js`:162,296,390,398,469,561… |
 | 30 [U] | 燃料の噴射と気化（第26版） | `requirements/REQ-30.md`（1181） | `specification/SPEC-30.md`（6594） | `specification/TEST-30.md`（3805） | 5250–5264 | 05 07 12 13 14 18 25 29 31 | `core.js`:65,672,1102,1276,1565 `plot.js`:480 `ui.js`:173 |
 | 31 [U] | 全体図（系統図） | `gui/REQ-31.md`（908） | `gui/SPEC-31.md`（2954） | `gui/TEST-31.md`（1761） | 5473–5478 | 15 19 30 | `plot.js`:781,809,813,824,848,942 `ui.js`:476 |
 | 32 [U] | 最適化（バルブタイミング） | `requirements/REQ-32.md`（2189） | `specification/SPEC-32.md`（6162） `gui/SPEC-32A.md`（2458） | `specification/TEST-32.md`（2333） | 5710–5713 | 03 21 33 34 | `core.js`:2577,2694,2709,2732,2751,2876… `plot.js`:1138,1264 `ui.js`:763,777,780 |
@@ -66,7 +66,7 @@
 | 要件定義書 | 5. 受入 | `requirements/s5.md` | 10 |
 | 要件定義書 | 5.1 納品条件 | `requirements/s5.1.md` | 608 |
 | 要件定義書 | 5.2 実機目視チェックリスト [M]（Galaxy S26+／Chrome） | `requirements/s5.2.md` | 1532 |
-| 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 4096 |
+| 要件定義書 | 6. 要件・仕様・テストの対応 | `requirements/s6.md` | 4105 |
 | 要件定義書 | 7. 改訂の記録 | `requirements/s7.md` | 13 |
 | 要件定義書 | 7.1 版の一覧 | `requirements/s7.1.md` | 917 |
 | 要件定義書 | 7.2 未決事項と既知の限界 | `requirements/s7.2.md` | 5317 |
