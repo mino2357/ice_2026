@@ -22,7 +22,7 @@
 | 10 | 回転運動，摩擦，スターター | `requirements/REQ-10.md`（627） | `specification/SPEC-10.md`（2268） | `specification/TEST-10.md`（816） | 687–719 | 11 12 | – |
 | 11 | 電動式動力計と運転モード | `requirements/REQ-11.md`（2062） | `specification/SPEC-11.md`（5200） | `specification/TEST-11.md`（2802） | 720–721 | 10 12 13 18 22 31 35 | `core.js`:262,2084,2110 `ui.js`:180 |
 | 12 | ECU（スロットル開度の PI 制御と点火時期の自動最適化） | `requirements/REQ-12.md`（1055） | `specification/SPEC-12.md`（2696） | `specification/TEST-12.md`（2303） | 843–911 | 07 13 | `core.js`:264 |
-| 13 | 数値積分 | `requirements/REQ-13.md`（2997） | `specification/SPEC-13.md`（11634） | `specification/TEST-13.md`（7609） | 912–1067 | 03 04 07 08 10 12 14 25 26 29 30 32 33 | `core.js`:758,989,1138,1282,1529,1687… `ui.js`:74 |
+| 13 | 数値積分 | `requirements/REQ-13.md`（3027） | `specification/SPEC-13.md`（11634） | `specification/TEST-13.md`（7609） | 912–1067 | 03 04 07 08 10 12 14 25 26 29 30 32 33 | `core.js`:758,989,1138,1282,1529,1687… `ui.js`:74 |
 | 14 | 性能の指標と基準サイクル | `requirements/REQ-14.md`（823） | `specification/SPEC-14.md`（3035） | `specification/TEST-14.md`（1481） | 1462–1526 | 11 12 13 15 18 29 | `core.js`:1050,1955 |
 | 15 [U] | 画面の構成と操作 | `gui/REQ-15.md`（2559） | `gui/SPEC-15.md`（9847） | `gui/TEST-15.md`（6178） | 1579–1675 | 03 13 14 16 17 18 19 20 21 22 23 26 29 31 32 33 34 36 | `core.js`:189 `plot.js`:359,497,498 `ui.js`:7,32,55,73,169,193… |
 | 16 [U] | 解説タブ | `gui/REQ-16.md`（1471） | `gui/SPEC-16.md`（5683） | `gui/TEST-16.md`（3776） | 2183–2372 | 01 02 03 04 05 06 07 08 09 10 11 12 13 14 20 21 25 26 27 29 30 36 | – |
