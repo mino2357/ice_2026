@@ -23,7 +23,7 @@ ax.annotate(f"最小 φin = +{B['phin']}°，φex = {B['phex']}°：{B['Rhat']:.
 ax.set_xlim(-42, 42)
 ax.set_xlabel("吸気の位相 φin [°]（正が遅角．範囲 ±40°）")
 ax.set_ylabel("圧縮の反力の最大 [N·m]")
-ax.set_title("圧縮の反力の最大と吸気の位相（燃料 OFF，開度 3.94°，φex = 0°）")
+ax.set_title(f"圧縮の反力の最大と吸気の位相（燃料 OFF，開度 {V['alpha']}°，φex = 0°）")
 ax.legend(fontsize=8.5, ncol=2, loc="upper right")
 p = os.path.join(HERE, "fig", "fig5_rmin.png")
 fig.savefig(p)

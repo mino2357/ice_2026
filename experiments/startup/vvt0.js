@@ -13,7 +13,7 @@ const X=require('./startup.js'),{S,K,run,mkP,Core,D,RPM}=X;
 const STEP=+process.argv[2]||10,FINE=+process.argv[3]||2,LOADS=[0,3,6],T_MAX=12,NC_MAX=3,MARGIN=1.3;
 /* A：圧縮の反力 */
 function reaction(phin,phex,N=60){
- const c=new Core({...mkP(),cvar:0,mode:1,alm:S.aff*D,Vin:S.Vin,phin:phin*D,phex:phex*D});
+ const c=new Core({...mkP(),cvar:0,mode:1,alm:S.aff*D,alc:S.aff*D,Vin:S.Vin,phin:phin*D,phex:phex*D});
  if(c.vhit)return null;
  c.fixw=1;c.s.y[1]=N/RPM;c.s.Nb=N;c.P.nt=N;
  let cy=c.s.cyc,n=0;while(n<4){c.step();if(c.s.cyc!==cy){cy=c.s.cyc;n++}}

@@ -21,7 +21,8 @@ const S={
  NF:500,            /* 完爆の回転数 N_fire */
  NT:800,            /* 目標のアイドル回転数 */
  TLMAX:6,
- aff:3.94,          /* T̄_b(α, 800 rpm) = 0 の開度（Vin = 0.3 L の計測．補機の負荷 2 N·m を含む）．始動開度もこれにする */
+ aff:3.94,          /* T̄_b(α, 800 rpm) = 0 の開度（Vin = 0.3 L の計測．補機の負荷 2 N·m を含む）．完爆の時点で PI がここから始める */
+ acrank:null,       /* 完爆の前（クランキング中）の開度 [°]．null なら aff */
  alo:2.5,ahi:90,    /* 開度の上下限 [°] */
  Kp:.0045,Ki:.0006, /* サイクルに同期した PI（design.js）：°/rpm，°/(rpm·サイクル) */
  phin:0,phex:0,     /* VVT の位相 [°]（正が遅角）．始動から終わりまで固定 */
@@ -35,7 +36,7 @@ Core.prototype.ecu=function(dt,om){
  ecu0.call(this,dt,om);
  const s=this.s,E=this.E;
  if(!E||s.mode!==0||S.oldEcu)return;
- if(!s.fired){s.al=S.aff*D;E.on=0;E.cy=s.cyc;return}
+ if(!s.fired){s.al=(S.acrank??S.aff)*D;E.on=0;E.cy=s.cyc;return}
  if(!E.on){E.on=1;E.z=0;E.al=S.aff;E.cy=s.cyc}
  if(s.cyc!==E.cy){/* サイクルの境目（吸気上死点）：直前のサイクルの平均回転数 N_k で開度を決め，次の境目まで保つ */
   E.cy=s.cyc;const N=this.lastM.N,e=S.NT-N,u=S.aff+S.Kp*e+E.z;
@@ -45,7 +46,7 @@ Core.prototype.ecu=function(dt,om){
 function run(o){
  const T=o.T||TT;
  K.I=S.I;
- const c=new Core({...mkP(),cvar:0,mode:0,Tl:o.Tl,Id:S.Id,nt:S.NT,Vin:S.Vin,alc:S.aff*D,phin:(o.phin??S.phin)*D,phex:(o.phex??S.phex)*D});
+ const c=new Core({...mkP(),cvar:0,mode:0,Tl:o.Tl,Id:S.Id,nt:S.NT,Vin:S.Vin,alc:(S.acrank??S.aff)*D,phin:(o.phin??S.phin)*D,phex:(o.phex??S.phex)*D});
  c.E={on:0};
  c.start();c.s.fuel=0;c.kFy=null;
  const R={...o,tInj:NaN,tFire:NaN,cInj:NaN,cFire:NaN,Nmax:0,Nmin:1e9,stall:0,Est:0,vhit:c.vhit,cyc:[],tr:[]};

@@ -8,7 +8,7 @@ const X=require('./startup.js'),{S,K,run,mkP,Core,D,RPM}=X;
 const V=JSON.parse(fs.readFileSync(path.resolve(__dirname,'vvt0.json'),'utf8'));
 const LOADS=V.LOADS,MARGIN=V.MARGIN,T=V.T_MAX;
 function reaction(phin,phex,N=60){
- const c=new Core({...mkP(),cvar:0,mode:1,alm:S.aff*D,Vin:S.Vin,phin:phin*D,phex:phex*D});
+ const c=new Core({...mkP(),cvar:0,mode:1,alm:S.aff*D,alc:S.aff*D,Vin:S.Vin,phin:phin*D,phex:phex*D});
  c.fixw=1;c.s.y[1]=N/RPM;c.s.Nb=N;c.P.nt=N;
  let cy=c.s.cyc,n=0;while(n<4){c.step();if(c.s.cyc!==cy){cy=c.s.cyc;n++}}
  const Ti=Array.from(c.tr.Ti),Tf=Array.from(c.tr.Tf),R=Ti.map((v,i)=>-(v-Tf[i]-c.P.Ta));
@@ -31,7 +31,7 @@ const react=[];
 for(const pi of [...new Set([-40,0,best.phin,40])].sort((a,b)=>a-b)){const a=reaction(pi,best.phex);react.push({phin:pi,max:r1(a.max),R:a.R.filter((_,i)=>i%2===0).map(r1)})}
 const grid=V.grid.concat(V.fine).map(g=>g.vhit?{phin:g.phin,phex:g.phex,vhit:1}:{phin:g.phin,phex:g.phex,ok:g.ok,Rmax:r1(g.Rmax),Tst:r1(g.Tst),tFire:g.tFire.map(r3),nc:g.nc,tSettle:g.tSettle.map(v=>v===v?r2(v):null),Est:g.Est.map(r1)});
 const valves=(()=>{const P=mkP();return {ivo:P.ivo/D,ivc:P.ivc/D,evo:P.evo/D,evc:P.evc/D}})();
-const data={S:{...S,Tst:undefined},LOADS,MARGIN,NC_MAX:V.NC_MAX,T_MAX:V.T_MAX,best:{phin:best.phin,phex:best.phex},valves,grid,cases,react};
+const data={areact:S.aff,S:{...S,Tst:undefined},LOADS,MARGIN,NC_MAX:V.NC_MAX,T_MAX:V.T_MAX,best:{phin:best.phin,phex:best.phex},valves,grid,cases,react};
 fs.writeFileSync(path.resolve(__dirname,'report_data.json'),JSON.stringify(data));
 console.log('report_data.json：'+(fs.statSync(path.resolve(__dirname,'report_data.json')).size/1e3).toFixed(0)+' kB');
 for(const c of cases)console.log(c.name,`φin ${c.phin} φex ${c.phex} R_max ${c.Rmax} T_stall ${c.Tst} ω_nl ${c.wnl}`,c.runs.map(r=>`T_load ${r.Tl}：完爆 ${r.tFire} 整定 ${r.tSettle} E_st ${r.Est} N ${r.Nmin}〜${r.Nmax}`).join('；'));
