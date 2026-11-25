@@ -15,7 +15,7 @@ cols = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
 fig, ax = plt.subplots(figsize=(8, 4.4))
 for j, N in enumerate(V["NS"]):
     ax.plot([g["phin"] for g in row], [g["byN"][j] for g in row], color=cols[j], lw=1.6, label=f"N = {N} rpm")
-ax.plot([g["phin"] for g in row], [g["Rhat"] for g in row], color="#141413", lw=2.6, label="R̂ = 回転数についての最大")
+ax.plot([g["phin"] for g in row], [g["Rhat"] for g in row], color="#141413", lw=2.2, ls=(0, (5, 3)), label="R̂ = 回転数についての最大")
 ax.plot(0, [g["Rhat"] for g in row if g["phin"] == 0][0], "o", ms=11, mfc="none", mec="#141413", mew=1.8)
 ax.plot(B["phin"], B["Rhat"], "*", ms=17, mfc="#eb6834", mec="#ffffff", mew=1.2)
 ax.annotate(f"既定 0°：{[g['Rhat'] for g in row if g['phin'] == 0][0]:.1f} N·m", (0, [g["Rhat"] for g in row if g["phin"] == 0][0]), xytext=(8, 10), textcoords="offset points", fontsize=9, color="#4f4e4a")
