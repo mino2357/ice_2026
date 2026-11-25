@@ -84,7 +84,7 @@
 | 仕様書 | 6. エンジン音と振動 | `specification/s6.md` | 16 |
 | 仕様書 | 7. 検証 | `specification/s7.md` | 10 |
 | 仕様書 | 8. テスト項目 | `specification/s8.md` | 313 |
-| 仕様書 | 9. 開発時検証 [D] | `specification/s9.md` | 3081 |
+| 仕様書 | 9. 開発時検証 [D] | `specification/s9.md` | 3249 |
 | 画面の文書 | 単気筒4ストロークSI機関シミュレータ 画面の文書（第26版） | `gui/_head.md` | 35 |
 | 画面の文書 | 0. この文書について | `gui/s0.md` | 628 |
 | 画面の文書 | 1. 要件 | `gui/s1.md` | 10 |
@@ -173,6 +173,7 @@
 | `docs/changes/2026-11-24-review-gemini-6.md` | 9920 |
 | `docs/changes/2026-11-24-spec33-etac.md` | 909 |
 | `docs/changes/2026-11-24-vtsearch-j0.md` | 963 |
+| `docs/changes/2026-11-25-no-vendor-mathjax.md` | 1392 |
 | `docs/changes/2026-11-25-node-tests.md` | 2492 |
 | `docs/changes/2026-11-25-rerun-isolation.md` | 2536 |
 | `docs/changes/2026-11-25-stage1-quick.md` | 1847 |

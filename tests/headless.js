@@ -4,10 +4,11 @@
 // 使い方: npm test  （初回は npm install && npx playwright install chromium）
 const {chromium}=require('playwright'),path=require('path');
 const URL='file://'+path.resolve(__dirname,'..','dist','engine.html'),fs=require('fs');
-// MathJax（C-1．成果物は実行時に cdnjs から読む）：手元の同じ版に振り向ける．極端な利用者状態では遮断する（オフラインに相当）
-const MJ_URL='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/',MJ_DIR=process.env.MATHJAX||path.resolve(__dirname,'..','vendor','mathjax-3.2.2','es5');
+// MathJax（C-1．成果物は実行時に cdnjs から読む）：同じ版を tools/dev/mathjax.js で用意し（初回は cdnjs から取り寄せ，成果物の SRI と照合してキャッシュに置く．リポジトリには置かない），そこに振り向ける．極端な利用者状態では遮断する（オフラインに相当）
+let MJP=null;
+const MJ_URL='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/',MJ_DIR=()=>(MJP=MJP||require('../tools/dev/mathjax.js').ensure());
 async function run(vp,extreme,pc,ui){const b=await chromium.launch(),c=await b.newContext({viewport:vp,hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
-await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!extreme&&u.startsWith(MJ_URL)){const f=path.join(MJ_DIR,u.slice(MJ_URL.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}});errs.push('MathJax の手元に無いファイル: '+u)}return rt.abort()});
+await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!extreme&&u.startsWith(MJ_URL)){const f=path.join(await MJ_DIR(),u.slice(MJ_URL.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}});errs.push('MathJax の手元に無いファイル: '+u)}return rt.abort()});
 p.on('pageerror',e=>errs.push(e.message));await p.goto(URL);await p.waitForTimeout(300);
 if(extreme)await p.evaluate(()=>{for(const it of ITEMS){if(it.c==='r')continue;if(it.ch)LP[it.k]=it.vals?it.vals[it.vals.length-1]:it.ch.length-1;else LP[it.k]=it.hi==null?gv(it,1000):gv(it,gmax(it))}LP.mode=1;LP.sol=0;U.x10=1;U.pend={eps:gv(IT.eps,gmax(IT.eps))};U.pg=5;live.start();Sim.spd=1;for(let i=0;i<3000;i++)live.step();rs()});
 await p.evaluate(__ui=>{window.__b=JSON.stringify({s:live.s,P:LP});let d=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{d=v;if(v===1)window.__a=JSON.stringify({s:live.s,P:LP})}});show(3);runAll(null,__ui)},ui);

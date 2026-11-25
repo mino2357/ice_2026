@@ -25,7 +25,7 @@ for(const f of ch){
  else if(f==='src/tests.js#common')full=true;
  else if(f==='src/core.js'){full=true;bit=true}
  else if(/^src\/(ui\.js|plot\.js|style\.css|index\.tpl\.html)$/.test(f))ui=true;
- else if(f==='tests/headless.js'||f==='tools/dev/run.js')only.add(16);
+ else if(f==='tests/headless.js'||f==='tools/dev/run.js'||f==='tools/dev/mathjax.js')only.add(16);
  else if(f==='tools/dev/shard.js'||f==='tools/dev/times.json')full=true;
  else full=true}
 const steps=[['点検（npm run check）','npm',['run','check','--silent']],['ビルド','npm',['run','build','--silent']]];

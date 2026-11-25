@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-25T01:05:34.139Z",
-  "plan": "npm test（7 通り）",
+  "at": "2026-11-25T10:13:02.689Z",
+  "plan": "TEST-16（360×640）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "d56c89a76a661b6f",
@@ -171,7 +171,7 @@
    "docs/specification/s6.md": "1840a7d7d60ed31a",
    "docs/specification/s7.md": "1e05c396199fc7a5",
    "docs/specification/s8.md": "3127d5f7fd5207c0",
-   "docs/specification/s9.md": "2c4db97465b9bd31",
+   "docs/specification/s9.md": "b6a70f8346946434",
    "docs/gui/REQ-15.md": "8a2c56b7d3435fa5",
    "docs/gui/REQ-16.md": "cd830e1134187536",
    "docs/gui/REQ-17.md": "361f96c8bce51a32",
@@ -236,8 +236,9 @@
    "docs/glossary/s3.4.md": "26b2284ebfbc7f33",
    "docs/glossary/s3.md": "140a3d1fbe89fce2",
    "docs/glossary/s4.md": "5b0476929eb847cd",
-   "tests/headless.js": "f65e88bfb8b6ae40",
-   "tools/dev/run.js": "4da502f53b240542",
+   "tests/headless.js": "d45cb02326f7db7d",
+   "tools/dev/run.js": "8ce23cfb10403f63",
+   "tools/dev/mathjax.js": "83ddfc46bc8a5d72",
    "tools/dev/shard.js": "bab108d60ab2fafd",
    "tools/dev/times.json": "82f366908f30444f"
   }
