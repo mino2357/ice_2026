@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-24T23:29:08.839Z",
-  "plan": "全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js） ＋ 画面のモード（820×1180）",
+  "at": "2026-11-25T00:02:12.382Z",
+  "plan": "全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "d56c89a76a661b6f",
@@ -42,12 +42,12 @@
    "src/tests.js#TST-31": "8a500377296cf075",
    "src/tests.js#TST-28": "d9b5eb182a582c43",
    "src/tests.js#TST-32": "44adb69f98c5a666",
-   "src/tests.js#TST-33": "d1000ef83852b45e",
+   "src/tests.js#TST-33": "809e17d4345f7fd7",
    "src/tests.js#TST-34": "bebbba3f2e053727",
    "src/tests.js#TST-35": "db3b051f172c9437",
    "src/tests.js#TST-36": "f856ce7182bd7b94",
    "src/tests.js#TST-37": "8c3be51518ed3a3b",
-   "src/tests.js#common": "29198f055a7664f2",
+   "src/tests.js#common": "6af0a7db03274b80",
    "src/ui.js": "e918f23ddf2b37eb",
    "docs/requirements/REQ-01.md": "30de87c75b2a4f74",
    "docs/requirements/REQ-02.md": "62b2b5eb97b080e5",
