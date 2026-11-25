@@ -174,7 +174,7 @@
 | `docs/changes/2026-11-24-spec33-etac.md` | 909 |
 | `docs/changes/2026-11-24-vtsearch-j0.md` | 963 |
 | `docs/changes/2026-11-25-node-tests.md` | 2492 |
-| `docs/changes/2026-11-25-rerun-isolation.md` | 1412 |
+| `docs/changes/2026-11-25-rerun-isolation.md` | 2536 |
 | `docs/changes/2026-11-25-stage1-quick.md` | 1847 |
 | `docs/changes/2026-11-25-stage1-quick2.md` | 1840 |
 | `docs/changes/2026-11-25-web-worker.md` | 3150 |

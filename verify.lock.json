@@ -1,7 +1,7 @@
 {
  "tier1": {
-  "at": "2026-11-25T00:02:12.382Z",
-  "plan": "全項目（360×640．組に分けて同時に実行．重い検査は省く．tools/dev/shard.js）",
+  "at": "2026-11-25T01:05:34.139Z",
+  "plan": "npm test（7 通り）",
   "files": {
    "src/audio.js": "ecb73a3bf657824e",
    "src/build.py": "d56c89a76a661b6f",
