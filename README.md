@@ -13,5 +13,5 @@ npm test
 ```
 
 ## ライセンス
-- 数式フォント `src/fonts/lmmath-subset.otf` は Latin Modern Math（B. Jackowski，J. M. Nowacki，GUST e-foundry）のサブセットで，GUST Font License に従う（`src/fonts/GUST-FONT-LICENSE.txt`）．ライセンスの要請に従い，改変版として別名（ICE-Sim Math Subset）を付けている．
+- 数式は，成果物が実行時に MathJax 3.2.2（Apache License 2.0）を cdnjs から読み込んで組む（読み込めなければ TeX のソースを表示する）．フォントも MathJax もリポジトリと成果物には含めない．検証（`npm test`）は，`tools/dev/mathjax.js` が同じ版を cdnjs から取り寄せ，成果物の SRI と照合して `~/.cache/ice_2026/` に置いたものを使う．
 - それ以外（コード・文書）は Apache License 2.0（`LICENSE`）．

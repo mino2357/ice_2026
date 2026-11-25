@@ -16,8 +16,10 @@
 const {chromium}=require('playwright'),path=require('path'),fs=require('fs');
 const A=process.argv.slice(2),opt=k=>{const i=A.indexOf('--'+k);return i<0?null:(A[i+1]&&!A[i+1].startsWith('--')?A[i+1]:true)};
 const [W,H]=String(opt('vp')||'360x640').split('x').map(Number),pc=W>1000,only=opt('only')?String(opt('only')).split(',').map(Number):null;
-const URL='file://'+path.resolve(typeof opt('file')==='string'?opt('file'):path.join(__dirname,'../../dist/engine.html')),MJ='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/',MJD=path.resolve(__dirname,'../../vendor/mathjax-3.2.2/es5');
-(async()=>{const b=await chromium.launch(),c=await b.newContext({viewport:{width:W,height:H},hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
+const URL='file://'+path.resolve(typeof opt('file')==='string'?opt('file'):path.join(__dirname,'../../dist/engine.html')),MJ='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/';
+(async()=>{/* MathJax：tools/dev/mathjax.js で用意したもの（初回は cdnjs から取り寄せ，SRI と照合．--off のときは要らない） */
+const MJD=opt('off')?null:await require('./mathjax.js').ensure();
+const b=await chromium.launch(),c=await b.newContext({viewport:{width:W,height:H},hasTouch:!pc,isMobile:!pc,deviceScaleFactor:pc?1:2,colorScheme:'dark'}),p=await c.newPage(),errs=[];
 await c.route(/^https?:\/\//,async rt=>{const u=rt.request().url();if(!opt('off')&&u.startsWith(MJ)){const f=path.join(MJD,u.slice(MJ.length));if(fs.existsSync(f))return rt.fulfill({path:f,contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'}})}return rt.abort()});
 p.on('pageerror',e=>errs.push(e.message));await p.goto(URL);await p.waitForTimeout(300);
 await p.evaluate(([only,ui,pj,quick])=>{window.__t={};let d=0,last=performance.now(),cur=0;Object.defineProperty(window,'__done',{configurable:true,get:()=>d,set:v=>{if(v===1&&cur){window.__t[cur]=(window.__t[cur]||0)+performance.now()-last;cur=0}d=v}});

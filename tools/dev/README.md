@@ -12,6 +12,7 @@
 | `docsrc.js` | 4 文書の断片を連結して読む（`check_docs.js`，`coverage.js`，`index.js` が使う） | Node.js |
 | `fmt.js` | `src/*.js` の整形（`npm run fmt`）．空白だけを変え，構文木が同じことを確かめる | Node.js（`--expose-internals`） |
 | `unused.js` | `src/` の最上位で定義した名前と定数表（`K`，`SWC`）のキーのうち，どこからも使われていないもの | Node.js |
+| `mathjax.js` | 検証で使う MathJax 3.2.2（`es5/tex-svg.js`）を用意する：初回に cdnjs から取り寄せ，成果物の SRI（`src/doc.js` の `MJX.sri`）と一致したものだけを `~/.cache/ice_2026/mathjax-3.2.2/es5/` に置く（環境変数 `MATHJAX` で場所を変えられる）．`run.js` と `tests/headless.js` が使う．リポジトリには置かない | Node.js，ネットワーク（初回） |
 | `run.js` | アプリ内テストを 1 つのビューポートで実行．`--only 24,26` で一部だけ，`--names` で全検査，`--time` でテストごとの所要時間，`--ui` で画面のモード（[U] の項目だけ），`--json`／`--md` で一覧を保存 | ビルド済みの成果物，Playwright |
 | `shard.js` | 全項目を組に分けて `run.js` を同時に実行（既定は CPU の数の半分，上限 4 組．`--n 2` で組の数）．分け方は `times.json`（テストごとの所要時間の実測）．性能の記録は判定しない．段階 1 の全項目に使う | `run.js`，`times.json` |
 | `node_tests.js` | 計算だけのアプリ内テスト（`NODE_IDS`）を Node.js で実行（ビルドもブラウザも要らない）．`--only`，`--quick`，`--names`，`--time`，`--json` は `run.js` と同じ．段階 1 では使わない（ブラウザと比べて全体が縮まなかった．Node.js と Chromium は数学の関数の最後の桁が違い，値はビット単位では一致しない．`docs/changes/2026-11-25-node-tests.md`） | Node.js |
