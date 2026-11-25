@@ -2276,7 +2276,8 @@ TST[15]=function*(){
     return{o,key:r?cut(structuredClone(r)):key(o,k),sync:!r||cut(wkSnap(pick(o,r2,k),WKD[k]))===cut(structuredClone(r2)),ui:o.sig==='画面の印',mx,w}
    };
   onEnd(()=>{U.noWk=0;if(WK.ok===false){WK.ok=null;WK.w=null}});
-  WK.ok=null;
+  /* Worker が失敗した後の状態だけを作り直す（テストの前にアプリが作った Worker はそのまま使う．無条件に WK.ok を戻すと，残った Worker を返す wkGet が WK.ok を true にしない） */
+  if(WK.ok===false){WK.ok=null;WK.w=null}
   U.noWk=0;
   const R={},out=[];
   let okA=true,mx=0;
@@ -6180,6 +6181,11 @@ TST[32]=function*(){
 /* ---- TEST-33 熱効率の損失の内訳 ---- */
 TST[33]=function*(){
  uiDefault();
+ /* 内訳の計算の状態を控えて戻す（REQ-20 の 8．戻さないと，同じページで 2 回目の実行のときに，前の回と同じサイクル数を「計算済み」と見て画面の項目で計算が始まらない） */
+ {
+  const o={lb:OP.lb,lres:OP.lres,lt:OP.lt,lcy:OP.lcy};
+  onEnd(()=>Object.assign(OP,o))
+ }
  const lb=function*(c){const L=new LossBk(c);while(!L.run(8))yield;return L.res};
  const s4=yield*scen('S4'),w3=RUN.ui?null:yield*scen('W3000'),res=[];
  if(!RUN.ui)for(const [nm,sc] of[['S4',s4],['W3000',w3]]){const r=yield*lb(sc.c);res.push([nm,r])}
@@ -6232,6 +6238,7 @@ TST[33]=function*(){
   OP.lres=null;
   OP.lb=null;
   OP.lt=-1e9;
+  OP.lcy=-1;
   let t=performance.now(),mx=0,n=0;
   const t0=t;
   while(!OP.lres&&performance.now()-t0<3000){lossTick(6);drawLossT();yield 'frame';const t1=performance.now();mx=Math.max(mx,t1-t);t=t1;n++}
