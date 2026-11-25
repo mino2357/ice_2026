@@ -13,27 +13,7 @@ D = json.load(open(os.path.join(HERE, "report_data.json"), encoding="utf-8"))
 OUT = os.path.join(HERE, "fig")
 os.makedirs(OUT, exist_ok=True)
 
-plt.rcParams.update({
-    "font.family": ["Inter", "IPAPGothic"],
-    "font.size": 10,
-    "axes.edgecolor": "#b9b8b2",
-    "axes.labelcolor": "#4f4e4a",
-    "axes.titlesize": 11,
-    "axes.titleweight": "bold",
-    "axes.titlelocation": "left",
-    "axes.spines.top": False,
-    "axes.spines.right": False,
-    "axes.grid": True,
-    "grid.color": "#ecebe6",
-    "grid.linewidth": 0.8,
-    "xtick.color": "#4f4e4a",
-    "ytick.color": "#4f4e4a",
-    "legend.frameon": False,
-    "figure.dpi": 150,
-    "savefig.dpi": 200,
-    "savefig.bbox": "tight",
-    "figure.facecolor": "#ffffff",
-})
+import figstyle  # noqa: F401（共通の見た目）
 BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
 INK2, INK3 = "#4f4e4a", "#7a7974"
 SEQ = LinearSegmentedColormap.from_list("seq", ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"])
